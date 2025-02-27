@@ -9,6 +9,9 @@
 The projects purpose is to create a marketplace that is curated for just the students on the campus of UNC Greensboro. 
 
 ## Technologies
+- Node.js
+- React
+- Supabase
 
 ## Setup
 
