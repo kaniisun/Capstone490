@@ -1,115 +1,167 @@
-import React from 'react';
-import './products.css';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../../../supabaseClient";
+import { useNavigate } from "react-router-dom";
+import "./products.css";
 
-export const Products = () => {
+function Products() {
+  // export const Products = () => {
 
-    return (
-        <div>
-            <>
-                <section id="filters">
-                    <h2>Filter by</h2>
-                    <div className="filter-list">
-                        <label>
-                            Category:
-                            <select id="categoryFilter">
-                                <option value="all">All</option>
-                                <option value="math">Math</option>
-                                <option value="science">Science</option>
-                                <option value="literature">Literature</option>
-                            </select>
-                        </label>
-                        <label>
-                            Price Range:
-                            <input
-                                type="range"
-                                id="priceFilter"
-                                min={0}
-                                max={100}
-                                defaultValue={50}
-                            />
-                        </label>
-                        <label>
-                            Condition:
-                            <select id="conditionFilter">
-                                <option value="all">All</option>
-                                <option value="new">New</option>
-                                <option value="used">Used</option>
-                            </select>
-                        </label>
-                    </div>
-                </section>
-                <section id="featured-products">
-            <h2>Available Textbooks</h2>
-            <div className="product-list" id="productList">
-                <div className="product">
-                    <img src="calculus.jpg" alt="Product 1"/>
-                    <h3>Product 1</h3>
-                    <p>Description</p>
-                    <h4>$15.00</h4>
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-                    {/* <div className="chat-container">
-                        <p>Chat with Seller</p>
-                        <button className="chat">Chat</button>
-                    </div>
-                    <button className="add">Add</button> */}
+  // fetch all products from the database
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase.from("products").select("*");
 
-                </div>
-                <div className="product">
-                    <img src="physics.jpg" alt="Product 2"/>
-                    <h3>Product 2</h3>
-                    <p>Description</p>
-                    <h4>$15.00</h4>
+      console.log("Fetched Products:", data);
 
-                    {/* <div className="chat-container">
-                        <p>Chat with Seller</p>
-                        <button className="chat">Chat</button>
-                    </div>
-                    <button className="add">Add</button> */}
-                </div>
-                <div className="product">
-                    <img src="calculus.jpg" alt="Product 3"/>
-                    <h3>Product 3</h3>
-                    <p>Description</p>
-                    <h4>$15.00</h4>
+      if (error) {
+        console.error("Error fetching products:", error);
+      } else {
+        setProducts(data);
+      }
+      setLoading(false);
+    };
 
-                    {/* <div className="chat-container">
-                        <p>Chat with Seller</p>
-                        <button className="chat">Chat</button>
-                    </div>
-                    <button className="add">Add</button> */}
+    fetchProducts();
+  }, []);
 
-                </div>
-                <div className="product">
-                    <img src="physics.jpg" alt="Product 4"/>
-                    <h3>Product 4</h3>
-                    <p>Description</p>
-                    <h4>$15.00</h4>
-
-                    {/* <div className="chat-container">
-                        <p>Chat with Seller</p>
-                        <button className="chat">Chat</button>
-                    </div>
-                    <button className="add">Add</button> */}
-                </div>
-                <div className="product">
-                    <img src="physics1.jpg" alt="Product 5"/>
-                    <h3>Product 5</h3>
-                    <p>Description</p>
-                    <h4>$15.00</h4>
-
-                    {/* <div className="chat-container">
-                        <p>Chat with Seller</p>
-                        <button className="chat">Chat</button>
-                    </div>
-                    <button className="add">Add</button> */}
-                
-                </div>
-
-            </div>
+  //   returns all the products in database
+  return (
+    // FILTER
+    <div>
+      <>
+        <section id="filters">
+          <h2>Filter by</h2>
+          <div className="filter-list">
+            <label>
+              Category:
+              <select id="categoryFilter">
+                <option value="all">All</option>
+                <option value="math">Math</option>
+                <option value="science">Science</option>
+                <option value="literature">Literature</option>
+              </select>
+            </label>
+            <label>
+              Price Range:
+              <input
+                type="range"
+                id="priceFilter"
+                min={0}
+                max={100}
+                defaultValue={50}
+              />
+            </label>
+            <label>
+              Condition:
+              <select id="conditionFilter">
+                <option value="all">All</option>
+                <option value="new">New</option>
+                <option value="used">Used</option>
+              </select>
+            </label>
+          </div>
         </section>
-            </>
 
+        {/* PRODUCTS */}
+        <section id="featured-products">
+          <h2>All Listings</h2>
+          {loading ? (
+            <p>Loading products...</p>
+          ) : (
+            // products displayed
+            <div className="product-list">
+              {products.map((product) => (
+                // goes to product details when clicked
+                <div
+                  key={product.productID}
+                  className="product"
+                  onClick={() => navigate(`/product/${product.productID}`)}
+                >
+                  <img
+                    src={product.image || "placeholder.jpg"}
+                    alt={product.name}
+                  />
+                  <h3>{product.name}</h3>
+                  <h4>${product.price}</h4>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
-        </div>)
+        {/* OLD CODE */}
+        {/* <section id="featured-products">
+          <h2>Available Textbooks</h2>
+          <div className="product-list" id="productList">
+            <div className="product">
+              <img src="calculus.jpg" alt="Product 1" />
+              <h3>Product 1</h3>
+              <p>Description</p>
+              <h4>$15.00</h4>
+
+              <div className="chat-container">
+                <p>Chat with Seller</p>
+                <button className="chat">Chat</button>
+              </div>
+              <button className="add">Add</button>
+            </div>
+            <div className="product">
+              <img src="physics.jpg" alt="Product 2" />
+              <h3>Product 2</h3>
+              <p>Description</p>
+              <h4>$15.00</h4>
+
+              <div className="chat-container">
+                <p>Chat with Seller</p>
+                <button className="chat">Chat</button>
+              </div>
+              <button className="add">Add</button>
+            </div>
+            <div className="product">
+              <img src="calculus.jpg" alt="Product 3" />
+              <h3>Product 3</h3>
+              <p>Description</p>
+              <h4>$15.00</h4>
+
+              <div className="chat-container">
+                <p>Chat with Seller</p>
+                <button className="chat">Chat</button>
+              </div>
+              <button className="add">Add</button>
+            </div>
+            <div className="product">
+              <img src="physics.jpg" alt="Product 4" />
+              <h3>Product 4</h3>
+              <p>Description</p>
+              <h4>$15.00</h4>
+
+              <div className="chat-container">
+                <p>Chat with Seller</p>
+                <button className="chat">Chat</button>
+              </div>
+              <button className="add">Add</button>
+            </div>
+            <div className="product">
+              <img src="physics1.jpg" alt="Product 5" />
+              <h3>Product 5</h3>
+              <p>Description</p>
+              <h4>$15.00</h4>
+
+              <div className="chat-container">
+                <p>Chat with Seller</p>
+                <button className="chat">Chat</button>
+              </div>
+              <button className="add">Add</button>
+            </div>
+          </div>
+        </section> */}
+      </>
+    </div>
+  );
 }
 
+export default Products;

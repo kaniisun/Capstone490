@@ -1,44 +1,53 @@
-import React from 'react';
+import React from "react";
 import { Link } from "react-router-dom";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import { faHome, faBell, faTruck, faShoppingCart, faUser } from '@fortawesome/free-solid-svg-icons';
-import './header.css';
+import {
+  faHome,
+  faBell,
+  faTruck,
+  faShoppingCart,
+  faUser,
+} from "@fortawesome/free-solid-svg-icons";
+import "./header.css";
 
 const Header = () => {
-    return (
-        <div>
-            <header>
-                <div className="logo">Students Marketplace</div>
-                <nav>
-                    <ul>
-                        <a href="/#" className="nav-icon" data-tooltip="Chatroom">
-                            <img src="chats.png" alt="Chat" className="nav-icon-image" />
-                        </a>
+  return (
+    <div>
+      <header>
+        {/* LOGO */}
+        {/* clicking on logo leads to homepage */}
+        <Link to="/" className="logo">
+          Student Marketplace
+        </Link>
 
-                        <a href="/#" className="nav-icon" data-tooltip="Home">
-                            <FontAwesomeIcon icon={faHome} />
-                        </a>
-                        <a href="/#" className="nav-icon" data-tooltip="Notifications">
-                            <FontAwesomeIcon icon={faBell} />
-                        </a>
-                        <a href="/#" className="nav-icon" data-tooltip="Order History">
-                            <FontAwesomeIcon icon={faTruck} />
-                        </a>
-                        <a href="/#" className="nav-icon" data-tooltip="Cart">
-                            <FontAwesomeIcon icon={faShoppingCart} />
-                        </a>
-                        
-                            <Link to="/register" className="nav-icon" data-tooltip="Profile">
-                                <FontAwesomeIcon icon={faUser} />
-                            </Link>
-                        
-                    </ul>
-                </nav>
-            </header>
-
-        </div>
-    );
+        <nav>
+          <ul>
+            {/* NAVIGATION */}
+            {/* icons link to according pages */}
+            <a href="/" className="nav-icon" data-tooltip="Chatroom">
+              <img src="chats.png" alt="Chat" className="nav-icon-image" />
+            </a>
+            <Link to="/" className="nav-icon" data-tooltip="Home">
+              <FontAwesomeIcon icon={faHome} />
+            </Link>
+            <a href="/#" className="nav-icon" data-tooltip="Notifications">
+              <FontAwesomeIcon icon={faBell} />
+            </a>
+            <a href="/#" className="nav-icon" data-tooltip="Order History">
+              <FontAwesomeIcon icon={faTruck} />
+            </a>
+            <a href="/cart" className="nav-icon" data-tooltip="Cart">
+              <FontAwesomeIcon icon={faShoppingCart} />
+            </a>
+            <Link to="/register" className="nav-icon" data-tooltip="Profile">
+              <FontAwesomeIcon icon={faUser} />
+            </Link>
+          </ul>
+        </nav>
+      </header>
+    </div>
+  );
 };
 
 export default Header;

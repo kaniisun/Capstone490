@@ -1,16 +1,65 @@
-import React from 'react';
-import './home.css';
+import React, { useState, useEffect } from "react";
+import { supabase } from "../../../supabaseClient";
+import { useNavigate } from "react-router-dom";
+import "./home.css";
 
 export const Home = () => {
-    // const [name, setName] = useState()
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-    // const handleNameInput = (value)=> {
-    // setName(value)
-    // }
+  //   function to fetch featured products on homepage
+  // right now it just grabs the first 5 products in the database
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .limit(5); // limited the amount of products to be displayed to 5
 
-    return (
-        <div>
-            <section id="featured-products">
+      console.log("Fetched Products:", data);
+
+      if (error) {
+        console.error("Error fetching products:", error);
+      } else {
+        setProducts(data);
+      }
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, []);
+
+  // returns featured products
+  return (
+    <div>
+      <section id="featured-products">
+        <h2>Featured Listings</h2>
+        {loading ? (
+          <p>Loading products...</p>
+        ) : (
+          // products displayed
+          <div className="product-list">
+            {products.map((product) => (
+              // goes to product details when clicked
+              <div
+                key={product.productID}
+                className="product"
+                onClick={() => navigate(`/product/${product.productID}`)}
+              >
+                <img
+                  src={product.image || "placeholder.jpg"}
+                  alt={product.name}
+                />
+                <h3>{product.name}</h3>
+                <h4>${product.price}</h4>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* <section id="featured-products">
                 <h2>Featured Products</h2>
                 <div className="product-list" id="productList">
                     <div className="product">
@@ -54,7 +103,9 @@ export const Home = () => {
                         <p>$35.00</p>
                     </div>
                 </div>
-            </section>
+            </section> */}
+    </div>
+  );
+};
 
-        </div>)
-}
+export default Home;
