@@ -23,12 +23,17 @@
 .product {
     padding: 20px;
     margin: 10px;
-    border-radius: 10px;
+    border-radius: 5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     width: 200px;
     height: 230px;
-    text-align: center;
+    text-align: left;
     position: relative;
+    cursor: pointer;
+}
+
+.product p {
+    font-weight: bold;
 }
 
 .product img {
@@ -37,28 +42,32 @@
     aspect-ratio: -4/3;
     object-fit: contain;
     border-radius: 5px;
-    border: 2px solid #ccc;
+    border: 2px solid #1e1b1b00;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease;
-    background-color: white;
+    background-color: rgba(255, 255, 255, 0.373);
     display: block;
+    object-fit: scale-down;
+    object-fit: cover;
 }
 
 .product img:hover {
     transform: rotate(-5deg);
+    cursor: pointer;
 }
 
 .product::before {
     content: '';
     position: absolute;
-    top: -20px;
+    top: -8px;
     left: 50%;
-    width: 24px;
-    height: 24px;
-    background-image: url('../../../../public/pin.png');
+    width: 26px;
+    height: 26px;
+    background-image: url('../../public/redpin.png');
     background-size: cover;
     background-repeat: no-repeat;
     transform: translateX(-50%);
+    cursor: pointer;
 }
 
 .product::after {
@@ -71,4 +80,5 @@
     background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
     border-radius: 0 0 10px 0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
 }
