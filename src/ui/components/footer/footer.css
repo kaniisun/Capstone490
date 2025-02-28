@@ -31,6 +31,7 @@
 }
 
 .about a::after {
+    margin-bottom: 7px;
     content: '';
     position: absolute;
     width: 100%;
@@ -44,6 +45,7 @@
 }
 
 .about a:hover::after {
+    margin-bottom: 7px;
     transform: scaleX(1);
     transform-origin: bottom left;
 }
@@ -62,6 +64,7 @@
 }
 
 .terms a::after {
+    margin-bottom: -3px;
     content: '';
     position: absolute;
     width: 100%;
@@ -75,6 +78,7 @@
 }
 
 .terms a:hover::after {
+    margin-bottom: -3px;
     transform: scaleX(1);
     transform-origin: bottom left;
 }
@@ -103,6 +107,7 @@
 }
 
 .social a::after {
+    margin-bottom: -5px;
     content: '';
     position: absolute;
     width: 100%;
@@ -116,6 +121,7 @@
 }
 
 .social a:hover::after {
+    margin-bottom: -5px;
     transform: scaleX(1);
     transform-origin: bottom left;
 }

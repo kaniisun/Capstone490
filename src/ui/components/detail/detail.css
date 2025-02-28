@@ -16,11 +16,12 @@
     text-align: left;
     flex-direction: row;
     position: relative;
+    background-color: #ffb71b;
 }
 
 .content-container .prod-image img {
     width: 300px;
-    height: 350px;
+    height: 500px;
     /* object-fit: cover; */
     border-radius: 5px;
     border: 2px solid #ccc;
