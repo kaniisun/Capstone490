@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import { faHome, faBell, faTruck, faShoppingCart, faUser } from '@fortawesome/free-solid-svg-icons';
@@ -27,9 +28,11 @@ const Header = () => {
                         <a href="/#" className="nav-icon" data-tooltip="Cart">
                             <FontAwesomeIcon icon={faShoppingCart} />
                         </a>
-                        <a href="/#" className="nav-icon" data-tooltip="Profile">
-                            <FontAwesomeIcon icon={faUser} />
-                        </a>
+                        
+                            <Link to="/register" className="nav-icon" data-tooltip="Profile">
+                                <FontAwesomeIcon icon={faUser} />
+                            </Link>
+                        
                     </ul>
                 </nav>
             </header>
