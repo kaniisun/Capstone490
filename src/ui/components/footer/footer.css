@@ -20,17 +20,32 @@
 .about a {
     color: rgb(229, 229, 236);
     text-decoration: none;
+    display: inline-block;
+    position: relative;
 }
 
 .about h3 {
     font-size: 20px;
-    margin-bottom: -5px;
+    margin-bottom: 5px;
     color: rgb(229, 229, 236);
 }
 
-.about a:hover {
-    background-color: #ccc;
-    transform: scale(1.3);
+.about a::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    transform: scaleX(0);
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: #0087ca;
+    transform-origin: bottom right;
+    transition: transform 0.25s ease-out;
+}
+
+.about a:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
 }
 
 
@@ -41,16 +56,32 @@
 .terms a {
     color: rgb(229, 229, 236);
     text-decoration: none;
+    display: inline-block;
+    position: relative;
+    margin-bottom: 4px;
 }
 
-.terms a:hover {
-    transform: scale(1.3);
-    background-color: #ccc;
+.terms a::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    transform: scaleX(0);
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: #0087ca;
+    transform-origin: bottom right;
+    transition: transform 0.25s ease-out;
+}
+
+.terms a:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
 }
 
 .terms h3 {
     font-size: 20px;
-    margin-bottom: -5px;
+    margin-bottom: 5px;
     color: rgb(229, 229, 236);
 }
 
@@ -61,14 +92,30 @@
     text-decoration: none;
     font-size: larger;
     padding-inline: 5px;
+    display: inline-block;
+    position: relative;
 }
 
 .social h3 {
     font-size: 20px;
+    margin-bottom: 5px;
     color: rgb(229, 229, 236);
 }
 
-.social a:hover {
-    transform: scale(2);
-    background-color: #ccc;
+.social a::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    transform: scaleX(0);
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: #0087ca;
+    transform-origin: bottom right;
+    transition: transform 0.25s ease-out;
+}
+
+.social a:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
 }

@@ -9,7 +9,7 @@
     font-size: 1.5em;
     color: #333;
     text-align: left;
-    margin-left: 5px;
+    margin-left: 17px;
     /* margin-bottom:20px; */
 }
 
@@ -63,7 +63,7 @@
     left: 50%;
     width: 26px;
     height: 26px;
-    background-image: url('../../public/redpin.png');
+    background-image: url('../../../../public/redpin.png');
     background-size: cover;
     background-repeat: no-repeat;
     transform: translateX(-50%);

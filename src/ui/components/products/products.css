@@ -47,12 +47,28 @@
     margin: 10px;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 230px;
-    height: 300px;
+    width: 200px;
+    height: 230px;
     text-align: center;
     position: relative;
     display: flex;
     flex-direction: column;
+    cursor: pointer;
+}
+
+.product h3 {
+    margin-top: 4px;
+    text-align: left;
+}
+
+.product p {
+    text-align: left;
+    margin-top: -20px;
+}
+
+.product h4 {
+    text-align: left;
+    margin-top: -5px;
 }
 
 .product img {
@@ -61,11 +77,12 @@
     /* Set the maximum height */
     object-fit: scale-down;
     /* Ensure the whole image is visible */
-    /* object-fit: cover; */
+    object-fit: cover;
     border-radius: 5px;
-    border: 2px solid #ccc;
+    border: 2px solid #cccccc5d;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease;
+    cursor: pointer;
 }
 
 .product .add {
@@ -75,7 +92,7 @@
     bottom: 10px;
     right: 10px;
     padding: 5px 10px;
-    background: #888383;
+    background: #ddd;
     border: none;
     border-radius: 5px;
     cursor: pointer;
@@ -105,7 +122,7 @@
 .product .chat {
     font-size: larger;
     color: white;
-    background: #053160;
+    background: #007bff;
     border: none;
     border-radius: 5px;
     padding: 5px 10px;
@@ -113,7 +130,7 @@
 }
 
 .product .chat:hover {
-    background: #2e537a;
+    background: #0056b3;
 }
 
 
@@ -121,13 +138,11 @@
 .product::before {
     content: '';
     position: absolute;
-    top: -20px;
-    /* Adjust position as needed */
+    top: -8px;
     left: 50%;
-    width: 24px;
-    /* Adjust size as needed */
-    height: 24px;
-    background-image: url('../../../../public/pin.png');
+    width: 26px;
+    height: 26px;
+    background-image: url('../../../../public/redpin.png');
     /* Path to the pin image */
     background-size: cover;
     background-repeat: no-repeat;
@@ -145,5 +160,6 @@
     border-radius: 0 0 10px 0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
 
 

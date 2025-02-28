@@ -15,17 +15,6 @@ import  SignUp  from './ui/components/registration/SignUp';  // Add this import 
 
 function App() {
   return (
-<<<<<<< HEAD
-    <div>
-      <Header/>
-      <Home/>
-      <Search />
-      <Detail />
-      <Products />
-      <Cart />
-      <Footer />
-    </div>
-=======
     <BrowserRouter>
       <div>
         <Header />
@@ -33,15 +22,13 @@ function App() {
           <Route path="/" element={<><Home/> <Search/></>} />
           <Route path="/register" element={<SignUp />} />
         </Routes>
-        {/* <Home/> */}
-       
-        {/* <Detail /> */}
-        {/* <Products /> */}
-        {/* <Cart /> */}
+        {/* <Home/> */}       
+        {/* <Detail />
+        <Products />
+        <Cart /> */}
         <Footer />
       </div>
     </BrowserRouter>
->>>>>>> 0229e207c3cde5d3096b1d905e774602ee7fb6b7
   );
 }
 
