@@ -18,7 +18,7 @@ export const Footer = () => {
                     </div>
                     <div className="terms">
                         <h3>Our Policy</h3>
-                        <a href="/#">Trems &amp; Condition</a>
+                        <a href="/#">Terms &amp; Condition</a>
                         <a href="/#">Return Policy</a>
                         <a href="/#">Privacy Policy</a>
                         <a href="/#">Cookie Policy</a>
