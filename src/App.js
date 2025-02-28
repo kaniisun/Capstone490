@@ -6,6 +6,7 @@ import { Detail } from './ui/components/detail/detail';
 import { Footer } from './ui/components/footer/footer';
 import { Products } from './ui/components/products/products';
 import { Cart } from './ui/components/cart/cart';
+import { Search } from './ui/components/search/search';
 
 
 
@@ -14,7 +15,8 @@ function App() {
     <div>
       <Header/>
       {/* <Home/> */}
-      <Detail />
+      <Search />
+      {/* <Detail /> */}
       {/* <Products /> */}
       {/* <Cart /> */}
       <Footer />
