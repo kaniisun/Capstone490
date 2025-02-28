@@ -1,0 +1,149 @@
+#filters {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.filter-list {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filter-list label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.filter-list select,
+.filter-list input[type="range"] {
+    padding: 5px;
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+
+#featured-products {
+    text-align: center;
+}
+
+#featured-products h2 {
+    font-size: 1.5em;
+    color: #333;
+    /* margin-bottom:20px; */
+}
+
+.product-list {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.product {
+    padding: 20px;
+    margin: 10px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 230px;
+    height: 300px;
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.product img {
+    width: 100%;
+    max-height: 150px;
+    /* Set the maximum height */
+    object-fit: scale-down;
+    /* Ensure the whole image is visible */
+    /* object-fit: cover; */
+    border-radius: 5px;
+    border: 2px solid #ccc;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.product .add {
+    font-size: larger;
+    color: rgb(28, 49, 49);
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    background: #888383;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.product .add:hover {
+    background: #bbb;
+}
+
+.product img:hover {
+    transform: rotate(-5deg);
+}
+
+.chat-container {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    text-align: center;
+}
+
+.chat-container p {
+    font-size: 12px;
+    margin-bottom: 3px;
+    color: #666;
+}
+
+.product .chat {
+    font-size: larger;
+    color: white;
+    background: #053160;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.product .chat:hover {
+    background: #2e537a;
+}
+
+
+
+.product::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    /* Adjust position as needed */
+    left: 50%;
+    width: 24px;
+    /* Adjust size as needed */
+    height: 24px;
+    background-image: url('../../../../public/pin.png');
+    /* Path to the pin image */
+    background-size: cover;
+    background-repeat: no-repeat;
+    transform: translateX(-50%);
+}
+
+.product::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
+    border-radius: 0 0 10px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+

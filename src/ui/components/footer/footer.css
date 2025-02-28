@@ -1,0 +1,73 @@
+/* FOOTER */
+.footer {
+    display: grid;
+    justify-content: space-between;
+    grid-template-columns: auto auto auto auto;
+    position: relative;
+    width: 100%;
+    background-color: #0f2044;
+    text-align: center;
+    margin-top: 10px;
+    height: auto;
+}
+
+.about {
+    padding-left: 150px;
+    display: inline-grid;
+}
+
+.about a {
+    color: rgb(229, 229, 236);
+    text-decoration: none;
+}
+
+.about h3 {
+    font-size: 20px;
+    margin-bottom: -5px;
+    color: rgb(229, 229, 236);
+}
+
+.about a:hover {
+    background-color: #ccc;
+    transform: scale(1.3);
+}
+
+
+.terms {
+    display: inline-grid;
+}
+
+.terms a {
+    color: rgb(229, 229, 236);
+    text-decoration: none;
+}
+
+.terms a:hover {
+    transform: scale(1.3);
+    background-color: #ccc;
+}
+
+.terms h3 {
+    font-size: 20px;
+    margin-bottom: -5px;
+    color: rgb(229, 229, 236);
+}
+
+/* connects */
+
+.social a {
+    color: rgb(229, 229, 236);
+    text-decoration: none;
+    font-size: larger;
+    padding-inline: 5px;
+}
+
+.social h3 {
+    font-size: 20px;
+    color: rgb(229, 229, 236);
+}
+
+.social a:hover {
+    transform: scale(2);
+    background-color: #ccc;
+}
