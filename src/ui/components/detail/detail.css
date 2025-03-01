@@ -1,3 +1,4 @@
+/* Existing styles */
 .content-container {
     display: flex;
     justify-content: center;
@@ -22,7 +23,6 @@
 .content-container .prod-image img {
     width: 300px;
     height: 500px;
-    /* object-fit: cover; */
     border-radius: 5px;
     border: 2px solid #ccc;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -70,9 +70,6 @@
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    /* width: 100px;
-    text-align: center;
-    display: inline-block; */
 }
 
 .add {
@@ -104,6 +101,111 @@
     color: #666;
 }
 
+/* Admin buttons (Edit and Delete) */
+.admin-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.edit,
+.delete {
+    font-size: medium;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.edit {
+    background: #ff9800;
+    color: white;
+}
+
+.edit:hover {
+    background: #e68a00;
+}
+
+.delete {
+    background: #e74c3c;
+    color: white;
+}
+
+.delete:hover {
+    background: #c0392b;
+}
+
+/* Confirmation Popup Styles */
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.popup {
+    background: #ffb71b;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    width: 300px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+    border: 2px solid #333;
+}
+
+.popup h3 {
+    margin: 0;
+    font-size: 1.5em;
+    color: #333;
+}
+
+.popup p {
+    margin: 10px 0;
+    color: #222;
+}
+
+.popup-buttons {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
+.confirm-delete {
+    background: #e74c3c;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.confirm-delete:hover {
+    background: #c0392b;
+}
+
+.cancel-delete {
+    background: #333;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.cancel-delete:hover {
+    background: #222;
+}
+
+/* Decorative Elements */
 .product::before {
     content: '';
     position: absolute;
@@ -128,4 +230,3 @@
     border-radius: 0 0 10px 0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-
