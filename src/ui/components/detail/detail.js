@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../../supabaseClient";
 import "./detail.css";
 
@@ -7,8 +7,24 @@ export const Detail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState(null);
+  const navigate = useNavigate();
 
-  //   function to fetch product details by id
+  // Fetch current user ID
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  // Fetch product details by id
   useEffect(() => {
     const fetchProduct = async () => {
       const { data, error } = await supabase
@@ -28,10 +44,18 @@ export const Detail = () => {
     fetchProduct();
   }, [id]);
 
+  const handleDelete = async () => {
+    const { error } = await supabase.from("products").delete().eq("productID", id);
+    if (error) {
+      console.error("Error deleting product:", error);
+    } else {
+      navigate("/"); // Redirect to home after deletion
+    }
+  };
+
   if (loading) return <p>Loading product details...</p>;
   if (!product) return <p>Product not found.</p>;
 
-  //   display product details
   return (
     <div className="content-container">
       <div className="product">
@@ -60,41 +84,20 @@ export const Detail = () => {
             </div>
             <button className="add">Add to Cart</button>
           </div>
+
+          {/* Show Edit and Delete buttons if user is the creator */}
+          {/* {userId === product.user_id && ( */}
+            <div className="admin-buttons">
+              <button className="edit" onClick={() => navigate(`/edit/${id}`)}>
+                Edit
+              </button>
+              <button className="delete" onClick={handleDelete}>
+                Delete
+              </button>
+            </div>
+         {/* )} */}
         </div>
       </div>
-
-      {/*<div>
-            <div className="content-container">
-                <div className="product">
-                    <div className="prod-image">
-                        <img id="prod-image" src="purse.jpg" alt="pink purse" />
-                    </div>
-                    <div className="prod-info">
-                        <h2 id="prod-name">Product Name</h2>
-                        <p className="prod-info-item" id="prod-size">
-                            Size: Medium
-                        </p>
-                        <p className="prod-info-item" id="prod-detail">
-                            Detail: This is a detailed description of the product.
-                        </p>
-                        <p className="prod-info-item" id="prod-condition">
-                            Condition: New
-                        </p>
-                        <p className="price" id="prod-price">
-                            $15.00
-                        </p>
-                        <div className="button-container">
-                            <div className="chat-container">
-                                <p>Chat with Seller</p>
-                                <button className="chat">Chat</button>
-                            </div>
-                            <button className="add">Add</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>*/}
     </div>
   );
 };
