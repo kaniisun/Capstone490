@@ -8,6 +8,7 @@ export const Detail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false); // State for confirmation popup
   const navigate = useNavigate();
 
   // Fetch current user ID
@@ -44,11 +45,13 @@ export const Detail = () => {
     fetchProduct();
   }, [id]);
 
+  // Delete product function
   const handleDelete = async () => {
     const { error } = await supabase.from("products").delete().eq("productID", id);
     if (error) {
       console.error("Error deleting product:", error);
     } else {
+      setShowConfirm(false); // Close confirmation popup
       navigate("/"); // Redirect to home after deletion
     }
   };
@@ -91,13 +94,27 @@ export const Detail = () => {
               <button className="edit" onClick={() => navigate(`/edit/${id}`)}>
                 Edit
               </button>
-              <button className="delete" onClick={handleDelete}>
+              <button className="delete" onClick={() => setShowConfirm(true)}>
                 Delete
               </button>
             </div>
-         {/* )} */}
+          {/* )} */}
         </div>
       </div>
+
+      {/* Confirmation Popup */}
+      {showConfirm && (
+        <div className="popup-overlay">
+          <div className="popup">
+            <h3>Are you sure?</h3>
+            <p>Do you really want to delete this product? This action cannot be undone.</p>
+            <div className="popup-buttons">
+              <button className="confirm-delete" onClick={handleDelete}>Yes, Delete</button>
+              <button className="cancel-delete" onClick={() => setShowConfirm(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
