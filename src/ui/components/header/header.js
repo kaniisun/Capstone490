@@ -26,7 +26,7 @@ const Header = () => {
             {/* NAVIGATION */}
             {/* icons link to according pages */}
             <Link to="/chatroom" className="nav-icon" data-tooltip="Chatroom">
-                <img src="chats.png" alt="Chat" className="nav-icon-image"/>
+              <img src="chats.png" alt="Chat" className="nav-icon-image" />
             </Link>
             <Link to="/" className="nav-icon" data-tooltip="Home">
               <FontAwesomeIcon icon={faHome} />
@@ -40,9 +40,22 @@ const Header = () => {
             <a href="/cart" className="nav-icon" data-tooltip="Cart">
               <FontAwesomeIcon icon={faShoppingCart} />
             </a>
-            <Link to="/register" className="nav-icon" data-tooltip="Profile">
-              <FontAwesomeIcon icon={faUser} />
-            </Link>
+
+            <div className="user-icon-container">
+              <Link to="/register" className="nav-icon" data-tooltip="Profile">
+                <FontAwesomeIcon icon={faUser} />
+              </Link>
+
+              <div className="dropdown-menu">
+                <Link to="/account" className="dropdown-item">
+                  Edit User
+                </Link>
+                <button className="dropdown-item">Logout</button>
+              </div>
+            </div>
+
+
+
           </ul>
         </nav>
       </header>
