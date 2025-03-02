@@ -9,6 +9,7 @@ import Products from "./ui/components/products/products";
 import { Cart } from "./ui/components/cart/cart";
 import { Search } from "./ui/components/search/search";
 import SignUp from "./ui/components/registration/SignUp"; // Add this import at the top with other imports
+import { Chatroom } from "./ui/components/chatroom/chatroom";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/products" element={<Products />} /> {/* product display */}
           <Route path="/product/:id" element={<Detail />} /> {/* route to product by id */}
           <Route path="/cart" element={<Cart />} /> {/* cart route */}
+          <Route path="/chatroom" element={<Chatroom />} /> {/* chatroom route */}
         </Routes>
         <Footer />
       </div>
