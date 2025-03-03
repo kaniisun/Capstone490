@@ -1,85 +1,143 @@
+/* Hero Section */
+#hero {
+  background-color: #f0f0f0;
+  padding: 50px;
+  text-align: center;
+}
+
+#hero h1 {
+  font-size: 2.5em;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+#hero p {
+  font-size: 1.2em;
+  color: #666;
+}
+
+/* Category Section */
+#categories {
+  padding: 20px;
+  background-color: #fff;
+}
+
+#categories h2 {
+  font-size: 1.5em;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: left;
+  margin-left: 17px;
+}
+
+.category-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.category {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  border-radius: 8px;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.category:hover {
+  transform: translateY(-5px);
+  background-color: #e8e8e8;
+}
+
+.category-icon {
+  font-size: 2rem;
+  color: #2c3e50;
+}
+
+.category span {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* Existing Featured Products Styles */
 #featured-products {
-    text-align: center;
-    padding-top: 1px;
-    padding-bottom: 100px;
-    background-color: #ecf0f9;
+  text-align: center;
+  padding-top: 1px;
+  padding-bottom: 100px;
+  background-color: #ecf0f9;
 }
 
 #featured-products h2 {
-    font-size: 1.5em;
-    color: #333;
-    text-align: left;
-    margin-left: 17px;
-    /* margin-bottom:20px; */
+  font-size: 1.5em;
+  color: #333;
+  text-align: left;
+  margin-left: 17px;
 }
 
 .product-list {
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    gap: 10px;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .product {
-    padding: 20px;
-    margin: 10px;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 200px;
-    height: 230px;
-    text-align: left;
-    position: relative;
-    cursor: pointer;
-    background-color: #ffb71b;
-}
-
-.product p {
-    font-weight: bold;
+  padding: 20px;
+  margin: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 200px;
+  height: 230px;
+  text-align: left;
+  position: relative;
+  cursor: pointer;
+  background-color: #ffb71b;
 }
 
 .product img {
-    width: 100%;
-    height: 160px;
-    aspect-ratio: -4/3;
-    object-fit: contain;
-    border-radius: 5px;
-    border: 2px solid #1e1b1b00;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
-    background-color: rgba(255, 255, 255, 0.373);
-    display: block;
-    object-fit: scale-down;
-    object-fit: cover;
+  width: 100%;
+  height: 160px;
+  aspect-ratio: -4/3;
+  object-fit: contain;
+  border-radius: 5px;
+  border: 2px solid #1e1b1b00;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  background-color: rgba(255, 255, 255, 0.373);
+  display: block;
+  object-fit: cover;
 }
 
 .product img:hover {
-    transform: rotate(-5deg);
-    cursor: pointer;
+  transform: rotate(-5deg);
 }
 
 .product::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 50%;
-    width: 26px;
-    height: 26px;
-    background-image: url('../../../../public/redpin.png');
-    background-size: cover;
-    background-repeat: no-repeat;
-    transform: translateX(-50%);
-    cursor: pointer;
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  background-image: url("../../../../public/redpin.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+  transform: translateX(-50%);
 }
 
 .product::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
-    border-radius: 0 0 10px 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
+  border-radius: 0 0 10px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
