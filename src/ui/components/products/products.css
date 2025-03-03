@@ -1,157 +1,135 @@
 /* FILTER  */
 #filters {
-    text-align: center;
-    margin: 20px 0;
+  text-align: center;
+  margin: 20px 0;
 }
 
 .filter-list {
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    gap: 10px;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .filter-list label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .filter-list select,
 .filter-list input[type="range"] {
-    padding: 5px;
-    margin-top: 5px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
+  padding: 5px;
+  margin-top: 5px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
 }
 
 /* PRODUCTS */
 #featured-products {
-    text-align: center;
+  padding: 20px;
+  max-width: 100%;
+  margin: 0 auto;
+  background-color: #f9f9f9;
 }
 
 #featured-products h2 {
-    font-size: 1.5em;
-    color: #333;
-    /* margin-bottom:20px; */
+  font-size: 1.5em;
+  color: #333;
+  /* margin-bottom:20px; */
 }
 
 .product-list {
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    gap: 10px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .product {
-    padding: 20px;
-    margin: 10px;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 200px;
-    height: 230px;
-    text-align: center;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    cursor: pointer;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  width: 50%;
+  height: 80%;
 }
 
-.product h3 {
-    margin-top: 4px;
-    text-align: left;
+.product:hover {
+  transform: translateY(-5px);
 }
 
-.product p {
-    text-align: left;
-    margin-top: -20px;
-}
-
-.product h4 {
-    text-align: left;
-    margin-top: -5px;
-}
-
-.product img {
-    width: 100%;
-    max-height: 150px;
-    /* Set the maximum height */
-    object-fit: scale-down;
-    /* Ensure the whole image is visible */
-    object-fit: cover;
-    border-radius: 5px;
-    border: 2px solid #cccccc5d;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
-    cursor: pointer;
-}
-
-/* ADD */
-.product .add {
-    font-size: larger;
-    color: rgb(28, 49, 49);
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    padding: 5px 10px;
-    background: #ddd;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.product .add:hover {
-    background: #bbb;
+.product-image {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto;
 }
 
 .product img:hover {
-    transform: rotate(-5deg);
+  transform: rotate(-5deg);
 }
 
-/* CHAT */
-.chat-container {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    text-align: center;
+.product-info {
+  padding: 15px;
 }
 
-.chat-container p {
-    font-size: 12px;
-    margin-bottom: 3px;
-    color: #666;
+.product-info h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: #333;
 }
 
-.product .chat {
-    font-size: larger;
-    color: white;
-    background: #007bff;
-    border: none;
-    border-radius: 5px;
-    padding: 5px 10px;
-    cursor: pointer;
+.description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
 }
 
-.product .chat:hover {
-    background: #0056b3;
+.price {
+  font-weight: bold;
+  color: #007bff;
+  margin-bottom: 10px;
+}
+
+.condition,
+.status,
+.bundle,
+.flag,
+.created,
+.modified {
+  font-size: 13px;
+  color: #555;
+  margin: 5px 0;
+}
+
+.bundle {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.flag {
+  color: #dc3545;
+  font-weight: bold;
 }
 
 .product::before {
-    content: '';
+    content: "";
     position: absolute;
     top: -8px;
     left: 50%;
     width: 26px;
     height: 26px;
-    background-image: url('../../../../public/redpin.png');
-    /* Path to the pin image */
+    background-image: url("../../../../public/redpin.png");
     background-size: cover;
     background-repeat: no-repeat;
     transform: translateX(-50%);
-}
-
-.product::after {
-    content: '';
+  }
+  
+  .product::after {
+    content: "";
     position: absolute;
     bottom: 0;
     right: 0;
@@ -160,7 +138,50 @@
     background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
     border-radius: 0 0 10px 0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+/* ADD */
+.product .add {
+  font-size: larger;
+  color: rgb(28, 49, 49);
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  padding: 5px 10px;
+  background: #ddd;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
+.product .add:hover {
+  background: #bbb;
+}
 
+/* CHAT */
+.chat-container {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  text-align: center;
+}
 
+.chat-container p {
+  font-size: 12px;
+  margin-bottom: 3px;
+  color: #666;
+}
+
+.product .chat {
+  font-size: larger;
+  color: white;
+  background: #007bff;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.product .chat:hover {
+  background: #0056b3;
+}

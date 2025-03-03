@@ -45,7 +45,7 @@ function Search() {
           type="text"
           value={searchTerm}
           onChange={handleInputChange}
-          placeholder="Search for products..."
+          placeholder="Search..."
           className="search-input"
         />
       </form>

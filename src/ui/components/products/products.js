@@ -28,6 +28,8 @@ function Products() {
     fetchProducts();
   }, []);
 
+  
+
   //   returns all the products in database
   return (
     // FILTER
@@ -83,10 +85,27 @@ function Products() {
                 >
                   <img
                     src={product.image || "placeholder.jpg"}
-                    alt={product.name}
+                    alt={product.name} className="product-image"
                   />
-                  <h3>{product.name}</h3>
-                  <h4>${product.price}</h4>
+                  <div className="product-info">
+                    <h3>{product.name}</h3>
+                    <p className="description">{product.description}</p>
+                    <p className="price">${product.price.toFixed(2)}</p>
+                    <p className="condition">Condition: {product.condition}</p>
+                    <p className="category">Category: {product.category}</p>
+                    <p className="status">Status: {product.status}</p>
+                    {product.is_bundle && <p className="bundle">Bundle Item</p>}
+                    {product.flag && <p className="flag">Flagged</p>}
+                    <p className="created">
+                      Added: {new Date(product.created_at).toLocaleDateString()}
+                    </p>
+                    {product.modified_at && (
+                      <p className="modified">
+                        Last Updated:{" "}
+                        {new Date(product.modified_at).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

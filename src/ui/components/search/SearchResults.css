@@ -45,6 +45,11 @@
   object-fit: cover;
   display: block;
   margin: 0 auto;
+  padding-top: 20px;
+}
+
+.product-image:hover {
+  transform: rotate(-5deg);
 }
 
 .product-info {
@@ -55,6 +60,18 @@
   margin: 0 0 10px;
   font-size: 18px;
   color: #333;
+}
+
+.result-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
+  border-radius: 0 0 10px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .description {

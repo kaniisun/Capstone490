@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import "@fortawesome/fontawesome-free/css/all.min.css";
+import { faCartShopping } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from "../../../supabaseClient";
 import "./detail.css";
 
@@ -83,9 +86,9 @@ export const Detail = () => {
           <div className="button-container">
             <div className="chat-container">
               <p>Chat with Seller</p>
-              <button className="chat">Chat</button>
+              <Link to="/chatroom"><button className="chat">Chat</button></Link>
             </div>
-            <button className="add">Add to Cart</button>
+            <button className="add"><FontAwesomeIcon icon={faCartShopping} /></button>
           </div>
 
           {/* Show Edit and Delete buttons if user is the creator */}
