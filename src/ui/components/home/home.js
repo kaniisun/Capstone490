@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
 import { useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faBook,
+  faLaptop,
+  faCouch,
+  faTshirt,
+} from "@fortawesome/free-solid-svg-icons";
 import "./home.css";
-
+import Search from "../search/search";
 export const Home = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  //   function to fetch featured products on homepage
-  // right now it just grabs the first 5 products in the database
   useEffect(() => {
     const fetchProducts = async () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .limit(5); // limited the amount of products to be displayed to 5
+        .limit(5);
 
       console.log("Fetched Products:", data);
 
@@ -30,18 +35,58 @@ export const Home = () => {
     fetchProducts();
   }, []);
 
-  // returns featured products
   return (
     <div>
+      {/* Hero Section - Unique to homepage */}
+      <section id="hero">
+        <h1>Your Campus Marketplace</h1>
+        <p>Buy, sell, and connect with fellow students</p>
+        <Search />
+      </section>
+
+      {/* Category Section - Unique to homepage */}
+      <section id="categories">
+        <h2>Browse Categories</h2>
+        <div className="category-list">
+          <div
+            className="category"
+            onClick={() => navigate("/products?category=Textbooks")}
+          >
+            <FontAwesomeIcon icon={faBook} className="category-icon" />
+            <span>Textbooks</span>
+          </div>
+          <div
+            className="category"
+            onClick={() => navigate("/products?category=Electronics")}
+          >
+            <FontAwesomeIcon icon={faLaptop} className="category-icon" />
+            <span>Electronics</span>
+          </div>
+          <div
+            className="category"
+            onClick={() => navigate("/products?category=Furniture")}
+          >
+            <FontAwesomeIcon icon={faCouch} className="category-icon" />
+            <span>Furniture</span>
+          </div>
+          <div
+            className="category"
+            onClick={() => navigate("/products?category=Clothing")}
+          >
+            <FontAwesomeIcon icon={faTshirt} className="category-icon" />
+            <span>Clothing</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Products - Already implemented */}
       <section id="featured-products">
         <h2>Featured Listings</h2>
         {loading ? (
           <p>Loading products...</p>
         ) : (
-          // products displayed
           <div className="product-list">
             {products.map((product) => (
-              // goes to product details when clicked
               <div
                 key={product.productID}
                 className="product"
@@ -58,52 +103,6 @@ export const Home = () => {
           </div>
         )}
       </section>
-
-      {/* <section id="featured-products">
-                <h2>Featured Products</h2>
-                <div className="product-list" id="productList">
-                    <div className="product">
-                        <img src="physics1.jpg" alt="Product 1" />
-                        <h3>Product 1</h3>
-                        <p>$10.00</p>
-                    </div>
-                    <div className="product">
-                        <img src="lamp.jpg" alt="Product 2" />
-                        <h3>Product 2</h3>
-                        <p>$15.00</p>
-                    </div>
-                    <div className="product">
-                        <img src="purse.jpg" alt="Product 3" />
-                        <h3>Product 3</h3>
-                        <p>$20.00</p>
-                    </div>
-                    <div className="product">
-                        <img src="shoes.jpg" alt="Product 4" />
-                        <h3>Product 4</h3>
-                        <p>$25.00</p>
-                    </div>
-                    <div className="product">
-                        <img src="sofa.jpg" alt="Product 5" />
-                        <h3>Product 5</h3>
-                        <p>$30.00</p>
-                    </div>
-                    <div className="product">
-                        <img src="table.jpg" alt="Product 6" />
-                        <h3>Product 6</h3>
-                        <p>$35.00</p>
-                    </div>
-                    <div className="product">
-                        <img src="tsirt.jpg" alt="Product 6" />
-                        <h3>Product 6</h3>
-                        <p>$35.00</p>
-                    </div>
-                    <div className="product">
-                        <img src="purse.jpg" alt="Product 6" />
-                        <h3>Product 6</h3>
-                        <p>$35.00</p>
-                    </div>
-                </div>
-            </section> */}
     </div>
   );
 };
