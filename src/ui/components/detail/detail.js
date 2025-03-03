@@ -50,7 +50,10 @@ export const Detail = () => {
 
   // Delete product function
   const handleDelete = async () => {
-    const { error } = await supabase.from("products").delete().eq("productID", id);
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("productID", id);
     if (error) {
       console.error("Error deleting product:", error);
     } else {
@@ -73,34 +76,44 @@ export const Detail = () => {
           />
         </div>
         <div className="prod-info">
-          <h2 id="prod-name">{product.name}</h2>
-          <p className="prod-info-item" id="prod-detail">
-            {product.description}
+          <h2>{product.name}</h2>
+          <p className="price">${product.price.toFixed(2)}</p>
+          <p className="description">{product.description}</p>
+          {product.is_bundle && <p className="bundle">Bundle Item</p>}
+          {product.flag && <p className="flag">Flagged</p>}
+          <p className="condition">Condition: {product.condition}</p>
+          <p className="status">Status: {product.status}</p>
+          {/*<p className="category">Category: {product.category}</p>*/}
+          <p className="created">
+            Added: {new Date(product.created_at).toLocaleDateString()}
           </p>
-          <p className="prod-info-item" id="prod-condition">
-            Condition: {product.condition}
-          </p>
-          <p className="price" id="prod-price">
-            ${product.price}
-          </p>
+          {product.modified_at && (
+            <p className="modified">
+              Last Updated: {new Date(product.modified_at).toLocaleDateString()}
+            </p>
+          )}
           <div className="button-container">
             <div className="chat-container">
               <p>Chat with Seller</p>
-              <Link to="/chatroom"><button className="chat">Chat</button></Link>
+              <Link to="/chatroom">
+                <button className="chat">Chat</button>
+              </Link>
             </div>
-            <button className="add"><FontAwesomeIcon icon={faCartShopping} /></button>
+            <button className="add">
+              <FontAwesomeIcon icon={faCartShopping} />
+            </button>
           </div>
 
           {/* Show Edit and Delete buttons if user is the creator */}
           {/* {userId === product.user_id && ( */}
-            <div className="admin-buttons">
-              <button className="edit" onClick={() => navigate(`/edit/${id}`)}>
-                Edit
-              </button>
-              <button className="delete" onClick={() => setShowConfirm(true)}>
-                Delete
-              </button>
-            </div>
+          <div className="admin-buttons">
+            <button className="edit" onClick={() => navigate(`/edit/${id}`)}>
+              Edit
+            </button>
+            <button className="delete" onClick={() => setShowConfirm(true)}>
+              Delete
+            </button>
+          </div>
           {/* )} */}
         </div>
       </div>
@@ -110,10 +123,20 @@ export const Detail = () => {
         <div className="popup-overlay">
           <div className="popup">
             <h3>Are you sure?</h3>
-            <p>Do you really want to delete this product? This action cannot be undone.</p>
+            <p>
+              Do you really want to delete this product? This action cannot be
+              undone.
+            </p>
             <div className="popup-buttons">
-              <button className="confirm-delete" onClick={handleDelete}>Yes, Delete</button>
-              <button className="cancel-delete" onClick={() => setShowConfirm(false)}>Cancel</button>
+              <button className="confirm-delete" onClick={handleDelete}>
+                Yes, Delete
+              </button>
+              <button
+                className="cancel-delete"
+                onClick={() => setShowConfirm(false)}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

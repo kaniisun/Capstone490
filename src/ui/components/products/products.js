@@ -89,16 +89,11 @@ function Products() {
                   />
                   <div className="product-info">
                     <h3>{product.name}</h3>
-                    <p className="description">{product.description}</p>
                     <p className="price">${product.price.toFixed(2)}</p>
                     <p className="condition">Condition: {product.condition}</p>
-                    <p className="category">Category: {product.category}</p>
                     <p className="status">Status: {product.status}</p>
                     {product.is_bundle && <p className="bundle">Bundle Item</p>}
                     {product.flag && <p className="flag">Flagged</p>}
-                    <p className="created">
-                      Added: {new Date(product.created_at).toLocaleDateString()}
-                    </p>
                     {product.modified_at && (
                       <p className="modified">
                         Last Updated:{" "}
