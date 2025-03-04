@@ -1,21 +1,57 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import Filter from "../filter/Filter";
 import "./products.css";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faThumbtack } from "@fortawesome/free-solid-svg-icons";
 
 function Products() {
-  // export const Products = () => {
-
+  const location = useLocation();
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
-  // fetch all products from the database
+  // Use the same filters structure as SearchResults
+  const [filters, setFilters] = useState({
+    categories: [],
+    minPrice: "",
+    maxPrice: "",
+    condition: "",
+    isBundle: false,
+  });
+
+  // Get category from URL and fetch products when component mounts or filters change
   useEffect(() => {
     const fetchProducts = async () => {
-      const { data, error } = await supabase.from("products").select("*");
+      setLoading(true);
+      const params = new URLSearchParams(location.search);
+      const categoryFromUrl = params.get("category");
 
-      console.log("Fetched Products:", data);
+      let query = supabase.from("products").select("*");
+
+      // If there's a category in the URL, use that instead of filters.categories
+      if (categoryFromUrl) {
+        query = query.eq("category", categoryFromUrl);
+      } else if (filters.categories.length > 0) {
+        query = query.in("category", filters.categories);
+      }
+
+      // Apply other filters
+      if (filters.minPrice !== "") {
+        query = query.gte("price", Number(filters.minPrice));
+      }
+      if (filters.maxPrice !== "") {
+        query = query.lte("price", Number(filters.maxPrice));
+      }
+      if (filters.condition) {
+        query = query.eq("condition", filters.condition);
+      }
+      if (filters.isBundle) {
+        query = query.eq("is_bundle", true);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching products:", error);
@@ -26,61 +62,28 @@ function Products() {
     };
 
     fetchProducts();
-  }, []);
+  }, [location.search, filters]);
 
-  //   returns all the products in database
   return (
-    // FILTER
-    <div>
-      <>
-        <section id="filters">
-          <h2>Filter by</h2>
-          <div className="filter-list">
-            <label>
-              Category:
-              <select id="categoryFilter">
-                <option value="all">All</option>
-                <option value="math">Math</option>
-                <option value="science">Science</option>
-                <option value="literature">Literature</option>
-              </select>
-            </label>
-            <label>
-              Price Range:
-              <input
-                type="range"
-                id="priceFilter"
-                min={0}
-                max={100}
-                defaultValue={50}
-              />
-            </label>
-            <label>
-              Condition:
-              <select id="conditionFilter">
-                <option value="all">All</option>
-                <option value="new">New</option>
-                <option value="used">Used</option>
-              </select>
-            </label>
-          </div>
-        </section>
-
-        {/* PRODUCTS */}
+    <div className="products-page-container">
+      <Filter filters={filters} setFilters={setFilters} />
+      <main className="products-main-content">
         <section id="featured-products">
           <h2>All Listings</h2>
           {loading ? (
             <p>Loading products...</p>
           ) : (
-            // products displayed
             <div className="product-list">
               {products.map((product) => (
-                // goes to product details when clicked
                 <div
                   key={product.productID}
                   className="product"
                   onClick={() => navigate(`/product/${product.productID}`)}
                 >
+                  <FontAwesomeIcon icon={faThumbtack} className="pin-icon" />
+                  {product.is_bundle && (
+                    <span className="bundle-tag">Bundle</span>
+                  )}
                   <img
                     src={product.image || "placeholder.jpg"}
                     alt={product.name}
@@ -92,74 +95,7 @@ function Products() {
             </div>
           )}
         </section>
-
-        {/* OLD CODE */}
-        {/* <section id="featured-products">
-          <h2>Available Textbooks</h2>
-          <div className="product-list" id="productList">
-            <div className="product">
-              <img src="calculus.jpg" alt="Product 1" />
-              <h3>Product 1</h3>
-              <p>Description</p>
-              <h4>$15.00</h4>
-
-              <div className="chat-container">
-                <p>Chat with Seller</p>
-                <button className="chat">Chat</button>
-              </div>
-              <button className="add">Add</button>
-            </div>
-            <div className="product">
-              <img src="physics.jpg" alt="Product 2" />
-              <h3>Product 2</h3>
-              <p>Description</p>
-              <h4>$15.00</h4>
-
-              <div className="chat-container">
-                <p>Chat with Seller</p>
-                <button className="chat">Chat</button>
-              </div>
-              <button className="add">Add</button>
-            </div>
-            <div className="product">
-              <img src="calculus.jpg" alt="Product 3" />
-              <h3>Product 3</h3>
-              <p>Description</p>
-              <h4>$15.00</h4>
-
-              <div className="chat-container">
-                <p>Chat with Seller</p>
-                <button className="chat">Chat</button>
-              </div>
-              <button className="add">Add</button>
-            </div>
-            <div className="product">
-              <img src="physics.jpg" alt="Product 4" />
-              <h3>Product 4</h3>
-              <p>Description</p>
-              <h4>$15.00</h4>
-
-              <div className="chat-container">
-                <p>Chat with Seller</p>
-                <button className="chat">Chat</button>
-              </div>
-              <button className="add">Add</button>
-            </div>
-            <div className="product">
-              <img src="physics1.jpg" alt="Product 5" />
-              <h3>Product 5</h3>
-              <p>Description</p>
-              <h4>$15.00</h4>
-
-              <div className="chat-container">
-                <p>Chat with Seller</p>
-                <button className="chat">Chat</button>
-              </div>
-              <button className="add">Add</button>
-            </div>
-          </div>
-        </section> */}
-      </>
+      </main>
     </div>
   );
 }

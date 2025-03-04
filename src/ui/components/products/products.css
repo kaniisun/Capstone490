@@ -1,166 +1,247 @@
+/* Add these new styles at the top of your existing CSS file */
+.products-page-container {
+  display: flex;
+  gap: 24px;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.filters-sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  height: fit-content;
+  position: sticky;
+  top: 20px;
+}
+
+.filter-section {
+  margin-bottom: 24px;
+}
+
+.filter-section h2 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.checkbox-group label,
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #333;
+  cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"],
+.radio-group input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.price-slider {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.price-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.price-inputs input {
+  width: calc(50% - 4px);
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.products-main-content {
+  flex: 1;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
 /* FILTER  */
 #filters {
-    text-align: center;
-    margin: 20px 0;
+  text-align: center;
+  margin: 20px 0;
 }
 
 .filter-list {
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .filter-list label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .filter-list select,
 .filter-list input[type="range"] {
-    padding: 5px;
-    margin-top: 5px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
 
 /* PRODUCTS */
 #featured-products {
-    text-align: center;
+  text-align: center;
 }
 
 #featured-products h2 {
-    font-size: 1.5em;
-    color: #333;
-    /* margin-bottom:20px; */
+  font-size: 1.5em;
+  color: #333;
+  /* margin-bottom:20px; */
 }
 
 .product-list {
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    gap: 10px;
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .product {
-    padding: 20px;
-    margin: 10px;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 200px;
-    height: 230px;
-    text-align: center;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    cursor: pointer;
+  padding: 20px;
+  margin: 10px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 200px;
+  height: 230px;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
 }
 
 .product h3 {
-    margin-top: 4px;
-    text-align: left;
+  margin-top: 4px;
+  text-align: left;
 }
 
 .product p {
-    text-align: left;
-    margin-top: -20px;
+  text-align: left;
+  margin-top: -20px;
 }
 
 .product h4 {
-    text-align: left;
-    margin-top: -5px;
+  text-align: left;
+  margin-top: -5px;
 }
 
 .product img {
-    width: 100%;
-    max-height: 150px;
-    /* Set the maximum height */
-    object-fit: scale-down;
-    /* Ensure the whole image is visible */
-    object-fit: cover;
-    border-radius: 5px;
-    border: 2px solid #cccccc5d;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
-    cursor: pointer;
+  width: 100%;
+  max-height: 150px;
+  /* Set the maximum height */
+  object-fit: scale-down;
+  /* Ensure the whole image is visible */
+  object-fit: cover;
+  border-radius: 5px;
+  border: 2px solid #cccccc5d;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  cursor: pointer;
 }
 
 /* ADD */
 .product .add {
-    font-size: larger;
-    color: rgb(28, 49, 49);
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    padding: 5px 10px;
-    background: #ddd;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+  font-size: larger;
+  color: rgb(28, 49, 49);
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  padding: 5px 10px;
+  background: #ddd;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
 .product .add:hover {
-    background: #bbb;
+  background: #bbb;
 }
 
 .product img:hover {
-    transform: rotate(-5deg);
+  transform: rotate(-5deg);
 }
 
 /* CHAT */
 .chat-container {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    text-align: center;
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  text-align: center;
 }
 
 .chat-container p {
-    font-size: 12px;
-    margin-bottom: 3px;
-    color: #666;
+  font-size: 12px;
+  margin-bottom: 3px;
+  color: #666;
 }
 
 .product .chat {
-    font-size: larger;
-    color: white;
-    background: #007bff;
-    border: none;
-    border-radius: 5px;
-    padding: 5px 10px;
-    cursor: pointer;
+  font-size: larger;
+  color: white;
+  background: #007bff;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
 }
 
 .product .chat:hover {
-    background: #0056b3;
+  background: #0056b3;
 }
 
 .product::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 50%;
-    width: 26px;
-    height: 26px;
-    background-image: url('../../../../public/redpin.png');
-    /* Path to the pin image */
-    background-size: cover;
-    background-repeat: no-repeat;
-    transform: translateX(-50%);
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  background-image: url("../../../../public/redpin.png");
+  /* Path to the pin image */
+  background-size: cover;
+  background-repeat: no-repeat;
+  transform: translateX(-50%);
 }
 
 .product::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
-    border-radius: 0 0 10px 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
+  border-radius: 0 0 10px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-
-
+.bundle-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
