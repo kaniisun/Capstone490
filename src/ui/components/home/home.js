@@ -7,6 +7,7 @@ import {
   faLaptop,
   faCouch,
   faTshirt,
+  faEllipsisH,
 } from "@fortawesome/free-solid-svg-icons";
 import "./home.css";
 import Search from "../search/search";
@@ -75,6 +76,13 @@ export const Home = () => {
           >
             <FontAwesomeIcon icon={faTshirt} className="category-icon" />
             <span>Clothing</span>
+          </div>
+          <div
+            className="category"
+            onClick={() => navigate("/products?category=Miscellaneous")}
+          >
+            <FontAwesomeIcon icon={faEllipsisH} className="category-icon" />
+            <span>Miscellaneous</span>
           </div>
         </div>
       </section>

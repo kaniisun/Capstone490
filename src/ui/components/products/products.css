@@ -1,3 +1,75 @@
+/* Add these new styles at the top of your existing CSS file */
+.products-page-container {
+  display: flex;
+  gap: 24px;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.filters-sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  height: fit-content;
+  position: sticky;
+  top: 20px;
+}
+
+.filter-section {
+  margin-bottom: 24px;
+}
+
+.filter-section h2 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.checkbox-group label,
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #333;
+  cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"],
+.radio-group input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.price-slider {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.price-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.price-inputs input {
+  width: calc(50% - 4px);
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.products-main-content {
+  flex: 1;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
 /* FILTER  */
 #filters {
   text-align: center;
@@ -6,31 +78,33 @@
 
 .filter-list {
   display: flex;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 10px;
+
+  flex-direction: column;
+  gap: 20px;
+
 }
 
 .filter-list label {
   display: flex;
   flex-direction: column;
-  align-items: center;
+
+  gap: 8px;
+
 }
 
 .filter-list select,
 .filter-list input[type="range"] {
-  padding: 5px;
-  margin-top: 5px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
+
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+
 }
 
 /* PRODUCTS */
 #featured-products {
-  padding: 20px;
-  max-width: 100%;
-  margin: 0 auto;
-  background-color: #f9f9f9;
+  text-align: center;
 }
 
 #featured-products h2 {
@@ -41,107 +115,53 @@
 
 .product-list {
   display: flex;
-  justify-content: center;
+
+  justify-content: space-around;
   flex-wrap: wrap;
-  align-items: center;
+  gap: 10px;
 }
 
 .product {
-  background-color: #ffffff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
-  width: 50%;
-  height: 80%;
+  padding: 20px;
+  margin: 10px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 200px;
+  height: 230px;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
 }
 
-.product:hover {
-  transform: translateY(-5px);
+.product h3 {
+  margin-top: 4px;
+  text-align: left;
 }
 
-.product::before {
-    content: "";
-    position: absolute;
-    top: -8px;
-    left: 50%;
-    width: 26px;
-    height: 26px;
-    background-image: url("../../../../public/redpin.png");
-    background-size: cover;
-    background-repeat: no-repeat;
-    transform: translateX(-50%);
-  }
-  
-  .product::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
-    border-radius: 0 0 10px 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
+.product p {
+  text-align: left;
+  margin-top: -20px;
+}
 
-.product-image {
-  width: 100%;
-  height: 250px;
-  object-fit: cover;
-  display: block;
-  margin: 0 auto;
+.product h4 {
+  text-align: left;
+  margin-top: -5px;
 }
 
 .product img {
-    padding-top: 0px;
-}
-
-.product img:hover {
-  transform: rotate(-5deg);
-}
-
-.product-info {
-  padding: 15px;
-}
-
-.product-info h3 {
-  margin: 0 0 10px;
-  font-size: 18px;
-  color: #333;
-}
-
-.description {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 10px;
-}
-
-.price {
-  font-weight: bold;
-  color: #007bff;
-  margin-bottom: 10px;
-}
-
-.condition,
-.status,
-.bundle,
-.flag,
-.created,
-.modified {
-  font-size: 13px;
-  color: #555;
-  margin: 5px 0;
-}
-
-.bundle {
-  color: #28a745;
-  font-weight: bold;
-}
-
-.flag {
-  color: #dc3545;
-  font-weight: bold;
+  width: 100%;
+  max-height: 150px;
+  /* Set the maximum height */
+  object-fit: scale-down;
+  /* Ensure the whole image is visible */
+  object-fit: cover;
+  border-radius: 5px;
+  border: 2px solid #cccccc5d;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  cursor: pointer;
 }
 
 /* ADD */
@@ -160,6 +180,10 @@
 
 .product .add:hover {
   background: #bbb;
+}
+
+.product img:hover {
+  transform: rotate(-5deg);
 }
 
 /* CHAT */
@@ -189,3 +213,43 @@
 .product .chat:hover {
   background: #0056b3;
 }
+
+.product::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  background-image: url("../../../../public/redpin.png");
+  /* Path to the pin image */
+  background-size: cover;
+  background-repeat: no-repeat;
+  transform: translateX(-50%);
+}
+
+.product::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
+  border-radius: 0 0 10px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.bundle-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+

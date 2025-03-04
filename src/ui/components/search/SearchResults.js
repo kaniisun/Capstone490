@@ -1,32 +1,50 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { supabase } from "../../../supabaseClient"; // Adjust the path based on your project structure
+import { supabase } from "../../../supabaseClient";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faThumbtack } from "@fortawesome/free-solid-svg-icons";
+import Filter from "../filter/Filter"; // Adjust the path to where Filter.js is located
 import "./SearchResults.css";
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const searchTerm = searchParams.get("term") || "";
+  const categoryFromUrl = searchParams.get("category") || "";
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch search results when the search term changes
+  // Move filters state initialization to useEffect
+  const [filters, setFilters] = useState({
+    categories: [],
+    minPrice: "",
+    maxPrice: "",
+    condition: "",
+    isBundle: false,
+  });
+
+  // Handle initial category from URL
+  useEffect(() => {
+    if (categoryFromUrl) {
+      setFilters((prev) => ({
+        ...prev,
+        categories: [categoryFromUrl],
+      }));
+    }
+  }, [categoryFromUrl]);
+
+  // Fetch search results based on search term and filters
   useEffect(() => {
     const fetchResults = async () => {
-      if (!searchTerm) {
-        setResults([]);
-        return;
-      }
-
       setLoading(true);
       setError(null);
 
       try {
-        // Query Supabase for products matching the search term
-        const { data, error } = await supabase
-          .from("products")
-          .select("*")
-          .or(
+        let query = supabase.from("products").select("*");
+
+        // If there's a search term, apply search filters
+        if (searchTerm) {
+          query = query.or(
             `name.ilike.%${searchTerm}%,` +
               `name.ilike.%${searchTerm}s%,` +
               `name.ilike.%${
@@ -37,13 +55,43 @@ const SearchResults = () => {
               `description.ilike.%${
                 searchTerm.endsWith("s") ? searchTerm.slice(0, -1) : searchTerm
               }%`
-          )
-          .order("created_at", { ascending: false });
+          );
+        }
+
+        // Apply filters
+        if (filters.categories.length > 0) {
+          query = query.in("category", filters.categories);
+        }
+
+        // Update price filter logic
+        if (filters.minPrice !== "") {
+          query = query.gte("price", Number(filters.minPrice));
+          console.log("Applying min price filter:", filters.minPrice);
+        }
+        if (filters.maxPrice !== "") {
+          query = query.lte("price", Number(filters.maxPrice));
+          console.log("Applying max price filter:", filters.maxPrice);
+        }
+
+        if (filters.condition) {
+          query = query.eq("condition", filters.condition);
+        }
+        if (filters.isBundle) {
+          query = query.eq("is_bundle", true);
+        }
+
+        query = query.order("created_at", { ascending: false });
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
+        console.log("Current filters:", filters);
+        console.log("Query results:", data);
+
         setResults(data);
       } catch (err) {
+        console.error("Error in fetch:", err);
         setError("Failed to fetch search results. Please try again.");
         setResults([]);
       } finally {
@@ -52,74 +100,61 @@ const SearchResults = () => {
     };
 
     fetchResults();
-  }, [searchTerm]);
+  }, [searchTerm, filters]);
 
   return (
     <div className="search-results-page">
       <h1>Search Results for "{searchTerm}"</h1>
-      {loading ? (
-        <p>Loading...</p>
-      ) : error ? (
-        <p className="error">{error}</p>
-      ) : results.length === 0 ? (
-        <p>No results found.</p>
-      ) : (
-        <div className="results-grid">
-          {results.map((product) => (
-            <ResultCard key={product.productID} product={product} />
-          ))}
-        </div>
-      )}
+      <div className="search-results-container">
+        <Filter filters={filters} setFilters={setFilters} />
+        <main className="search-results-content">
+          {loading ? (
+            <p>Loading...</p>
+          ) : error ? (
+            <p className="error">{error}</p>
+          ) : results.length === 0 ? (
+            <p>No results found.</p>
+          ) : (
+            <div className="product-list">
+              {results.map((product) => (
+                <ResultCard key={product.productID} product={product} />
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 };
 
-// Component to render individual product cards
 const ResultCard = ({ product }) => {
-  const [liked, setLiked] = useState(false);
   const navigate = useNavigate();
-  const imageUrl = product.image || "/default-image.jpg"; // Fallback image if none provided
+  const imageUrl = product.image || "/default-image.jpg";
+
+  // Add this console log to check the product data
+  console.log("Product data:", {
+    id: product.productID,
+    name: product.name,
+    isBundle: product.is_bundle,
+    category: product.category,
+  });
 
   const handleCardClick = () => {
     navigate(`/product/${product.productID}`);
   };
 
-  const handleLikeClick = (e) => {
-    e.stopPropagation(); // Prevent card click when clicking the like button
-    setLiked(!liked);
-  };
-
   return (
     <div
-      className="result-card"
+      className="product"
+      data-category={product.category}
       onClick={handleCardClick}
-      style={{ cursor: "pointer" }}
     >
-      <img src={imageUrl} alt={product.name} className="product-image" />
-      <div className="product-info">
-        <h3>{product.name}</h3>
-        <p className="description">{product.description}</p>
-        <p className="price">${product.price.toFixed(2)}</p>
-        <p className="condition">Condition: {product.condition}</p>
-        <p className="category">Category: {product.category}</p>
-        <p className="status">Status: {product.status}</p>
-        {product.is_bundle && <p className="bundle">Bundle Item</p>}
-        {product.flag && <p className="flag">Flagged</p>}
-        <p className="created">
-          Added: {new Date(product.created_at).toLocaleDateString()}
-        </p>
-        {product.modified_at && (
-          <p className="modified">
-            Last Updated: {new Date(product.modified_at).toLocaleDateString()}
-          </p>
-        )}
-        <button
-          className={`like-button ${liked ? "liked" : ""}`}
-          onClick={handleLikeClick}
-        >
-          ♥
-        </button>
-      </div>
+      <FontAwesomeIcon icon={faThumbtack} className="pin-icon" />
+      {/* Make sure the bundle tag appears before the image */}
+      {product.is_bundle && <span className="bundle-tag">Bundle</span>}
+      <img src={imageUrl} alt={product.name} />
+      <h3>{product.name}</h3>
+      <h4>${product.price.toFixed(2)}</h4>
     </div>
   );
 };

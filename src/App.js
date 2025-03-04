@@ -13,6 +13,7 @@ import SignUp from "./ui/components/registration/SignUp"; // Add this import at 
 import Account from "./ui/components/account/account";
 import UploadProduct from "./ui/components/uploadproduct/uploadProduct";
 import Chatroom from "./ui/components/chatroom/chatroom";
+import ProductList from "./ui/components/products/ProductList";
 
 function App() {
   return (
