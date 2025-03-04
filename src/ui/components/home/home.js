@@ -100,12 +100,12 @@ export const Home = () => {
                 className="product"
                 onClick={() => navigate(`/product/${product.productID}`)}
               >
-                <img
-                  src={product.image || "placeholder.jpg"}
-                  alt={product.name}
-                />
+                  <img
+                    src={product.image || "placeholder.jpg"}
+                    alt={product.name} className="product-image"
+                  />
                 <h3>{product.name}</h3>
-                <h4>${product.price}</h4>
+                <p className="price">${product.price.toFixed(2)}</p>
               </div>
             ))}
           </div>
