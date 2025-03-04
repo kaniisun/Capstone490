@@ -64,10 +64,10 @@
 }
 
 .prod-info .price {
-  font-weight: bold;
-  color: #007bff;
-  margin-bottom: 0px;
-  margin-top: 0px;
+    font-weight: bold;
+    color: #007bff;
+    margin-bottom: 0px;
+    margin-top: 0px;
 }
 
 .prod-info .condition {
