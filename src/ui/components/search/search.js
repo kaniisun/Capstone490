@@ -13,17 +13,33 @@ function Search() {
     setSearchTerm(event.target.value); // event.target.value is the text in the input
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  const handleSearch = () => {
     if (searchTerm.trim()) {
       navigate(`/search-results?term=${encodeURIComponent(searchTerm)}`);
     }
   };
 
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    handleSearch();
+  };
+
   return (
     <div className="search-container">
       <form className="search-form" onSubmit={handleSubmit}>
-        <div className="search-icon">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={handleInputChange}
+          placeholder="Search for products..."
+          className="search-input"
+        />
+        <div
+          className="search-icon"
+          onClick={handleSearch}
+          role="button"
+          tabIndex={0}
+        >
           <svg
             width="17"
             height="16"
@@ -41,13 +57,6 @@ function Search() {
             ></path>
           </svg>
         </div>
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={handleInputChange}
-          placeholder="Search for products..."
-          className="search-input"
-        />
       </form>
     </div>
   );

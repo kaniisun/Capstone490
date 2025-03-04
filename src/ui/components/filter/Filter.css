@@ -1,0 +1,246 @@
+.filter-sidebar {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  width: 250px;
+}
+
+.filter-section {
+  margin-bottom: 24px;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-section h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+/* Checkbox styles */
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkbox-group label,
+.radio-group label,
+.bundle-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  font-size: 16px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ccc;
+  border-radius: 3px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  position: relative;
+  background: white;
+}
+
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+  background: #1a73e8;
+  border-color: #1a73e8;
+}
+
+input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  color: white;
+  font-size: 12px;
+  left: 3px;
+  top: 0px;
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  left: 3px;
+  top: 3px;
+}
+
+/* Price range slider */
+.price-slider {
+  width: 100%;
+  margin: 16px 0;
+  -webkit-appearance: none;
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+  outline: none;
+}
+
+.price-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #1a73e8;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Price inputs */
+.price-inputs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.price-inputs input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 80px;
+}
+
+.price-inputs input::-webkit-inner-spin-button,
+.price-inputs input::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+/* Radio group */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Bundle checkbox */
+.bundle-checkbox {
+  margin-top: 8px;
+}
+
+/* Add hover effects */
+.checkbox-group label:hover,
+.radio-group label:hover {
+  color: #000;
+}
+
+input[type="checkbox"]:hover,
+input[type="radio"]:hover {
+  opacity: 0.8;
+}
+
+.price-filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.price-filter-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.apply-price-btn,
+.clear-price-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.apply-price-btn {
+  background-color: #1a73e8;
+  color: white;
+}
+
+.apply-price-btn:hover {
+  background-color: #1557b0;
+}
+
+.clear-price-btn {
+  background-color: #f1f3f4;
+  color: #3c4043;
+}
+
+.clear-price-btn:hover {
+  background-color: #e8eaed;
+}
+
+/* Price filter styles */
+.custom-price-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.custom-price-range input {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.custom-price-range input:focus {
+  border-color: #1a73e8;
+  outline: none;
+}
+
+.custom-price-range span {
+  color: #666;
+}
+
+.clear-price-btn {
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  color: #1a73e8;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.clear-price-btn:hover {
+  text-decoration: underline;
+}
+
+.price-ranges {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.price-range-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.price-range-option:hover {
+  color: #000;
+}
