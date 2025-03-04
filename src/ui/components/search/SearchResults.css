@@ -14,140 +14,245 @@
   color: #333;
 }
 
-.error {
-  color: red;
-  text-align: center;
-}
-
-.results-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.result-card {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
-  width: auto;
-  
-}
-
-.result-card img {
-  border-radius: 3px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  border-radius: 2px solid #ddd;
-}
-
-.result-card:hover {
-  transform: translateY(-5px);
-}
-
-.result-card::before {
-  content: "";
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  width: 26px;
-  height: 26px;
-  background-size: cover;
-  background-repeat: no-repeat;
-  transform: translateX(-50%);
-}
-
-.result-card::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 40px;
-  height: 40px;
-  background-image: url("../../../../public/redpin.png");
-  background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
-  border-radius: 0 0 10px 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.product-image {
-  width: 100%;
-  height: 250px;
-  object-fit: cover;
-  display: block;
-  margin: 0 auto;
+.search-results-container {
+  display: flex;
+  gap: 24px;
   margin-top: 20px;
 }
 
-.product-image:hover {
-  transform: rotate(-5deg);
+.search-results-content {
+  flex: 1;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 
-.product-info {
-  padding: 15px;
-}
 
-.product-info h3 {
-  margin: 0 0 10px;
-  font-size: 18px;
+.search-results-content h1 {
+  font-size: 24px;
+  margin-bottom: 20px;
   color: #333;
+
 }
 
-.description {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 10px;
+/* Product grid layout */
+.product-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
 }
 
-.price {
-  font-weight: bold;
-  color: #007bff;
-  margin-bottom: 10px;
-}
 
-.condition,
-.status,
-.bundle,
-.flag,
-.created,
-.modified {
-  font-size: 13px;
-  color: #555;
-  margin: 5px 0;
-}
-
-.bundle {
-  color: #28a745;
-  font-weight: bold;
-}
-
-.flag {
-  color: #dc3545;
-  font-weight: bold;
-}
-
-.like-button {
-  background: none;
-  border: none;
-  font-size: 20px;
+/* Base sticky note styling */
+.product {
+  background: #ffd700; /* Darker yellow color */
+  padding: 15px;
+  border-radius: 4px;
+  position: relative;
   cursor: pointer;
-  color: #ccc;
-  margin-top: 10px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  height: 250px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
 }
 
-.like-button.liked {
-  color: red;
+/* Category-based colors */
+.product[data-category="Textbooks"] {
+  background-color: #ffd700; /* Same darker yellow */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
 }
 
-.product-info .category {
-  font-size: 13px;
-  color: #555;
-  margin: 5px 0;
-  display: block;
-  border: none;
-  padding: 0;
-  width: auto;
-  text-align: left;
-  background: none;
+.product[data-category="Tech"] {
+  background-color: #b6e3ff; /* Blue for tech & electronics */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.product[data-category="Housing"] {
+  background-color: #98fb98; /* Green for housing & roommates */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.product[data-category="Jobs"] {
+  background-color: #ffb6b6; /* Red for jobs & services */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.product[data-category="Clothing"] {
+  background-color: #e6b6ff; /* Purple for clothing & accessories */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.product[data-category="Events"] {
+  background-color: #ffd1b6; /* Orange for events & tickets */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.product[data-category="Miscellaneous"] {
+  background-color: #d3d3d3; /* Light gray for miscellaneous items */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+/* Hover and drag effects */
+.product:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Pin styling */
+.product::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+/* Add this new class for the pin icon */
+.product .pin-icon {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #dc3545; /* Red color for the pin */
+  font-size: 20px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
+  z-index: 1;
+}
+
+/* Product image */
+.product img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+/* Product title - Handwritten style */
+.product h3 {
+  font-size: 16px;
+  color: #333;
+  margin: 8px 0 4px 0;
+  line-height: 1.2;
+}
+
+/* Price styling */
+.product h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+/* Bundle tag */
+.bundle-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 2; /* Make sure it's above the image */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading state */
+.loading {
+  text-align: center;
+  padding: 24px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Error state */
+.error {
+  color: #dc3545;
+  text-align: center;
+  margin: 20px 0;
+  padding: 16px;
+  background: #fff;
+  border-radius: 4px;
+  border: 1px solid rgba(220, 53, 69, 0.1);
+  font-size: 14px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .product-list {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .product {
+    width: 100%;
+    height: 200px;
+  }
+
+  .product img {
+    height: 120px;
+  }
+}
+
+/* Adjust the torn paper effect to work with all background colors */
+.product {
+  position: relative;
+}
+
+.product .torn-effect {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background-image: linear-gradient(
+      45deg,
+      transparent 33.333%,
+      rgba(255, 255, 255, 0.5) 33.333%,
+      rgba(255, 255, 255, 0.5) 66.667%,
+      transparent 66.667%
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 33.333%,
+      rgba(255, 255, 255, 0.5) 33.333%,
+      rgba(255, 255, 255, 0.5) 66.667%,
+      transparent 66.667%
+    );
+  background-size: 16px 32px;
+  opacity: 0.6;
+}
+
+/* Add category indicators to checkboxes */
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+/* Keep just the basic hover effect */
+.checkbox-group label:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.all-listings {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+  padding-left: 20px;
+}
+
+/* Remove any rotation or dragging styles */
+.product.dragging {
+  display: none;
 }
