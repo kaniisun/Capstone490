@@ -14,11 +14,10 @@ const UploadProduct = () => {
         condition: "",
         category: "furniture",
         price: "",
-        image: "", // Users will paste an image URL
+        imageFile: null, // Users will upload an image file
         is_bundle: false,
         status: "Available",
         flag: false,
-        // productID: 14,
     });
 
     const [loading, setLoading] = useState(false);
@@ -32,12 +31,47 @@ const UploadProduct = () => {
         setProduct({ ...product, is_bundle: e.target.checked });
     };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setProduct({ ...product, imageFile: file });
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
+        let imageUrl = null; // Store the public URL of the uploaded image
+
         try {
-            // ✅ Insert Product Data into Supabase Database
+            //  ** Upload Image to Supabase Storage**
+            if (product.imageFile) {
+                const fileExt = product.imageFile.name.split(".").pop();
+                const fileName = `product_${Date.now()}.${fileExt}`;
+                const filePath = `uploads/${fileName}`;
+
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from("product-images") // Make sure this bucket exists in Supabase
+                    .upload(filePath, product.imageFile, { upsert: false });
+
+                if (uploadError) {
+                    console.error("Image upload error:", uploadError);
+                    alert(`Failed to upload image: ${uploadError.message}`);
+                    setLoading(false);
+                    return;
+                }
+
+                //  Retrieve Public URL of uploaded image
+                const { data: publicUrlData } = supabase
+                    .storage
+                    .from("product-images")
+                    .getPublicUrl(filePath);
+
+                imageUrl = publicUrlData.publicUrl; // Store the image URL
+            }
+
+            //  **Step 2: Insert Product Data into Supabase Database**
             const { data, error: productError } = await supabase
                 .from("products")
                 .insert([
@@ -47,21 +81,20 @@ const UploadProduct = () => {
                         description: product.description,
                         condition: product.condition,
                         category: product.category,
-                        price: product.price, // Ensure price is a number
-                        image: product.image, // Use the pasted image URL
+                        price: parseFloat(product.price), // Ensure price is a number
+                        image: imageUrl, // Use the uploaded image URL
                         status: product.status,
                         is_bundle: product.is_bundle,
                         flag: product.flag,
-                        created_at: new Date().toISOString(), // ✅ Auto timestamp for creation
-                        modified_at: new Date().toISOString(), // ✅ Auto timestamp for last update
-                        // productID: product.productID,
+                        created_at: new Date().toISOString(), //  Auto timestamp for creation
+                        modified_at: new Date().toISOString(), //  Auto timestamp for last update
                     },
                 ])
                 .select();
 
             if (productError) {
                 console.error("Product upload error:", productError);
-                alert(`Failed to upload product: ${productError.message}`);
+                alert("Failed to upload product.");
                 setLoading(false);
                 return;
             }
@@ -69,7 +102,7 @@ const UploadProduct = () => {
             console.log("Product added successfully:", data);
             alert("Product uploaded successfully!");
 
-            // ✅ Redirect to Products Page
+            // Redirect to Products Page
             navigate("/products");
 
         } catch (error) {
@@ -136,7 +169,7 @@ const UploadProduct = () => {
                     required
                 />
 
-                {/* ✅ Bundle Option Checkbox */}
+                {/*  Bundle Option Checkbox */}
                 <div className="checkbox-container">
                     <label>
                         <input
@@ -149,15 +182,14 @@ const UploadProduct = () => {
                     </label>
                 </div>
 
-                {/* ✅ Image URL Input */}
+                {/*  Image Upload */}
                 <div className="file-upload">
-                    <label>Image URL (Paste a link):</label>
+                    <label>Upload Product Image:</label>
                     <input
-                        type="text"
-                        name="image"
-                        value={product.image}
-                        onChange={handleInputChange}
-                        placeholder="Paste image URL here"
+                        type="file"
+                        name="imageFile"
+                        onChange={handleFileChange}
+                        accept="image/*"
                     />
                 </div>
 
