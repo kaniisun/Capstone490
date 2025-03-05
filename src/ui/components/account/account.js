@@ -4,7 +4,12 @@ import { Link } from "react-router-dom";
 import "./account.css";
 
 const Account = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    userID: "",
+  });
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -57,6 +62,11 @@ const Account = () => {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    if (!user?.userID) {
+      setMessage({ text: "User ID not found", type: "error" });
+      return;
+    }
+
     setUpdating(true);
     try {
       const { error } = await supabase
@@ -171,9 +181,9 @@ const Account = () => {
               <label>First Name</label>
               <input
                 type="text"
-                value={user?.firstName || ""}
+                value={user?.firstName ?? ""}
                 onChange={(e) =>
-                  setUser({ ...user, firstName: e.target.value })
+                  setUser((prev) => ({ ...prev, firstName: e.target.value }))
                 }
                 required
               />
@@ -182,14 +192,16 @@ const Account = () => {
               <label>Last Name</label>
               <input
                 type="text"
-                value={user?.lastName || ""}
-                onChange={(e) => setUser({ ...user, lastName: e.target.value })}
+                value={user?.lastName ?? ""}
+                onChange={(e) =>
+                  setUser((prev) => ({ ...prev, lastName: e.target.value }))
+                }
                 required
               />
             </div>
             <div className="form-group">
               <label>Email</label>
-              <input type="email" value={user?.email || ""} disabled />
+              <input type="email" value={user?.email ?? ""} disabled />
             </div>
             <button type="submit" disabled={updating}>
               {updating ? "Updating..." : "Update Profile"}
@@ -255,21 +267,24 @@ const Account = () => {
           </div>
 
           <div className="products-grid">
-            {products.length === 0 ? (
+            {products?.length === 0 ? (
               <p className="no-products">
                 You haven't uploaded any products yet.
               </p>
             ) : (
+              Array.isArray(products) &&
               products.map((product) => {
-                console.log("Product in list:", product); // Debug log
+                if (!product?.productID) return null;
                 return (
                   <div key={product.productID} className="product-card">
                     <img
                       src={product.image || "https://via.placeholder.com/150"}
                       alt={product.name}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "https://via.placeholder.com/150";
+                      onError={function (e) {
+                        if (e.target instanceof HTMLImageElement) {
+                          e.target.onerror = null;
+                          e.target.src = "https://via.placeholder.com/150";
+                        }
                       }}
                     />
                     <div className="product-info">
