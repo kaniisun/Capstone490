@@ -7,7 +7,7 @@ import { Detail } from "./ui/components/detail/detail";
 import { Footer } from "./ui/components/footer/footer";
 import Products from "./ui/components/products/products";
 import { Cart } from "./ui/components/cart/cart";
-import  Search  from "./ui/components/search/search";
+import Search from "./ui/components/search/search";
 import SearchResults from "./ui/components/search/SearchResults";
 import SignUp from "./ui/components/registration/SignUp"; // Add this import at the top with other imports
 import Account from "./ui/components/account/account";
@@ -15,6 +15,7 @@ import UploadProduct from "./ui/components/uploadproduct/uploadProduct";
 import Chatroom from "./ui/components/chatroom/chatroom";
 import ProductList from "./ui/components/products/ProductList";
 import MessagePage from "./ui/components/messageArea/messagePage";
+import Editproduct from "./ui/components/editproduct/editproduct";
 
 function App() {
   return (
@@ -48,6 +49,10 @@ function App() {
           {/* Route for the search results page */}
           <Route path="/search-results" element={<SearchResults />} />
           {/*Route for Messaging*/}
+
+          <Route path="/editProduct/:index" element={<Editproduct />} />
+          {/*Route for editproduct*/}
+          
         </Routes>
         <Footer />
       </div>

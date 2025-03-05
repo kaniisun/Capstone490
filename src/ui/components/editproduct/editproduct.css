@@ -1,0 +1,88 @@
+.edit-product-container {
+    max-width: 600px;
+    margin: auto;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+input,
+textarea,
+select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+textarea {
+    resize: vertical;
+    height: 100px;
+}
+
+button {
+    padding: 10px;
+    border: none;
+    /* background-color: #0f45cf; */
+    color: white;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.dropdown-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.file-upload {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+input[type="file"] {
+    padding: 5px;
+}
+
+button[type="submit"] {
+    margin-top: 20px;
+    align-self: center;
+}
+
+/* Specific style for the product ID field */
+.product-id {
+    background-color: #e0e0e0;
+    cursor: not-allowed;
+}
+
+.product-id {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.product-id span {
+    font-weight: bold;
+    color: #0f45cf;
+}
