@@ -114,6 +114,7 @@
 
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import "./account.css";
 
 
@@ -143,6 +144,7 @@ const Account = () => {
         },
     ]);
 
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setUser({ ...user, [name]: value });
@@ -157,6 +159,16 @@ const Account = () => {
         const updatedProducts = products.filter((_, i) => i !== index);
         setProducts(updatedProducts);
     };
+
+    // const YourComponent = () => {
+        // const navigate = useNavigate();  // Correct use of useNavigate within a component
+    
+        // const handleEditProduct = (index) => {
+        //     // Navigate to the EditProduct page, passing the product index as a URL parameter
+        //     navigate(`/editProduct/${index}`);
+        // };
+
+
 
     const handleEditProduct = (index) => {
         // Handle product editing logic here (e.g., open a modal or update state)
@@ -192,10 +204,6 @@ const Account = () => {
                 <button type="submit">Update Account</button>
             </form>
 
-            {/* <div className="buttons-container">
-                <button className="add-more-button">Add More Item</button>
-            </div> */}
-
             <div className="buttons-container">
                 <Link to="/uploadProduct" className="add-more-button">
                     Add More Item
@@ -215,7 +223,10 @@ const Account = () => {
                             <p><strong>Category:</strong> {product.category}</p>
                             <p><strong>Price:</strong> ${product.price}</p>
                             <div className="product-actions">
-                                <button onClick={() => handleEditProduct(index)}>Edit</button>
+                                {/* <button onClick={() => handleEditProduct(index)}>Edit</button> */}
+                                <Link to={`/editProduct/${index}`} className="edit-button">
+                                    Edit
+                                </Link>
                                 <button onClick={() => handleDeleteProduct(index)}>Delete</button>
                             </div>
                         </div>
