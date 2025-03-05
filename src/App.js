@@ -14,8 +14,8 @@ import Account from "./ui/components/account/account";
 import UploadProduct from "./ui/components/uploadproduct/uploadProduct";
 import Chatroom from "./ui/components/chatroom/chatroom";
 import ProductList from "./ui/components/products/ProductList";
-import MessagePage from "./ui/components/messageArea/messagePage";
 import Editproduct from "./ui/components/editproduct/editproduct";
+import MessagingPage from "./ui/components/messageArea/messagePage";
 
 function App() {
   return (
@@ -49,7 +49,7 @@ function App() {
           {/* Route for the search results page */}
           <Route path="/search-results" element={<SearchResults />} />
           {/*Route for Messaging*/}
-
+          <Route path="/messaging" element={<MessagingPage />} />  
           <Route path="/editProduct/:index" element={<Editproduct />} />
           {/*Route for editproduct*/}
           

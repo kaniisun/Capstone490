@@ -25,7 +25,10 @@ const Header = () => {
           <ul>
             {/* NAVIGATION */}
             {/* icons link to according pages */}
-            <Link to="/chatroom" className="nav-icon" data-tooltip="Chatroom">
+            {/* <Link to="/chatroom" className="nav-icon" data-tooltip="Chatroom">
+              <img src="chats.png" alt="Chat" className="nav-icon-image" />
+            </Link> */}
+            <Link to="/messaging" className="nav-icon" data-tooltip="Chatroom">
               <img src="chats.png" alt="Chat" className="nav-icon-image" />
             </Link>
             <Link to="/" className="nav-icon" data-tooltip="Home">

@@ -51,6 +51,7 @@ function SignUp() {
         lastName,
         created_at: new Date().toISOString(), 
       });
+      
 
       if (insertError) {
         throw insertError;
@@ -67,6 +68,7 @@ function SignUp() {
       setError(err.message);
     }
   };
+  
 
   return (
     <form className="form" onSubmit={handleSubmit}>
