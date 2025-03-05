@@ -112,10 +112,11 @@
 }
 
 .product-list {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 300px);
   justify-content: center;
-  flex-wrap: wrap;
-  align-items: center;
+  gap: 60px;
+  padding: 40px;
 }
 
 .product {
@@ -124,8 +125,9 @@
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s;
-  width: 50%;
-  height: 80%;
+  width: 300px;
+  height: 400px;
+  position: relative;
 }
 
 .product:hover {
@@ -141,54 +143,65 @@
 }
 
 .product img:hover {
-    transform: rotate(-5deg);
-  }
+  transform: rotate(-5deg);
+}
 
-  .product-info h3 {
-    margin: 0 0 10px;
-    font-size: 18px;
-    color: #333;
-  }
+.product-info h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: #333;
+}
 
-  .description {
-    font-size: 14px;
-    color: #666;
-    margin-bottom: 10px;
-  }
+.description {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
+}
 
-  .price {
-    font-weight: bold;
-    color: #007bff;
-    margin-bottom: 10px;
-  }
+.price {
+  font-weight: bold;
+  color: #007bff;
+  margin-bottom: 10px;
+}
 
-  .product::before {
-    content: "";
-    position: absolute;
-    top: -8px;
-    left: 50%;
-    width: 26px;
-    height: 26px;
-    background-image: url("../../../../public/redpin.png");
-    /* Path to the pin image */
-    background-size: cover;
-    background-repeat: no-repeat;
-    transform: translateX(-50%);
-  }
-  
-  .product::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
-    border-radius: 0 0 10px 0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
+.product::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  background-image: url("../../../../public/redpin.png");
+  /* Path to the pin image */
+  background-size: cover;
+  background-repeat: no-repeat;
+  transform: translateX(-50%);
+}
 
+.product::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
+  border-radius: 0 0 10px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.bundle-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
 
 /* ADD */
 .product .add {
@@ -206,10 +219,6 @@
 
 .product .add:hover {
   background: #bbb;
-}
-
-.product img:hover {
-  transform: rotate(-5deg);
 }
 
 /* CHAT */
@@ -238,17 +247,4 @@
 
 .product .chat:hover {
   background: #0056b3;
-}
-
-.bundle-tag {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  z-index: 2;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
