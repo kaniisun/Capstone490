@@ -1,34 +1,35 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient"; 
-import Message from "./messages"; 
+import ChatList from "./chatList";
+import ChatBox from "./chatBox";
 
-const MessagePage = ({ recipientId }) => {
+const MessagingPage = () => {
   const [user, setUser] = useState(null);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [otherUserId, setOtherUserId] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (!error) setUser(data.user);
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
     };
 
     fetchUser();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
   }, []);
+
+  const openChat = (chatId, otherUser) => {
+    setSelectedChat(chatId);
+    setOtherUserId(otherUser);
+  };
 
   if (!user) return <p>Loading...</p>;
 
   return (
     <div>
-      <Message user={user} recipientId={recipientId} />
+      <ChatList userId={user.id} selectChat={openChat} />
+      {selectedChat && <ChatBox chatId={selectedChat} userId={user.id} otherUserId={otherUserId} />}
     </div>
   );
 };
 
-export default MessagePage;
+export default MessagingPage;
