@@ -1,35 +1,88 @@
 import React, { useState } from "react";
+import { supabase } from "../../../supabaseClient"; 
+import { useNavigate } from "react-router-dom";
 import "./uploadProduct.css";
 
 const UploadProduct = () => {
+    const navigate = useNavigate();
+    const testUserId = "58189ec7-fc7d-4ccc-b168-2cc641ea7896"; // Fixed test user ID
+
     const [product, setProduct] = useState({
+        userId: testUserId, // Assign test user ID
         name: "",
         description: "",
-        condition: "new", // default value
-        category: "furniture", // default category
+        condition: "",
+        category: "furniture",
         price: "",
-        image: null,
+        image: "", // Users will paste an image URL
+        is_bundle: false,
+        status: "Available",
+        flag: false,
+        // productID: 14,
     });
+
+    const [loading, setLoading] = useState(false);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setProduct({ ...product, [name]: value });
     };
 
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        setProduct({ ...product, image: file });
+    const handleCheckboxChange = (e) => {
+        setProduct({ ...product, is_bundle: e.target.checked });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        alert("Product uploaded successfully!");
-        console.log(product); // You can process the product data further here (e.g., save it to a database).
+        setLoading(true);
+
+        try {
+            // ✅ Insert Product Data into Supabase Database
+            const { data, error: productError } = await supabase
+                .from("products")
+                .insert([
+                    {
+                        userID: testUserId, // Assign test user ID
+                        name: product.name,
+                        description: product.description,
+                        condition: product.condition,
+                        category: product.category,
+                        price: product.price, // Ensure price is a number
+                        image: product.image, // Use the pasted image URL
+                        status: product.status,
+                        is_bundle: product.is_bundle,
+                        flag: product.flag,
+                        created_at: new Date().toISOString(), // ✅ Auto timestamp for creation
+                        modified_at: new Date().toISOString(), // ✅ Auto timestamp for last update
+                        // productID: product.productID,
+                    },
+                ])
+                .select();
+
+            if (productError) {
+                console.error("Product upload error:", productError);
+                alert(`Failed to upload product: ${productError.message}`);
+                setLoading(false);
+                return;
+            }
+
+            console.log("Product added successfully:", data);
+            alert("Product uploaded successfully!");
+
+            // ✅ Redirect to Products Page
+            navigate("/products");
+
+        } catch (error) {
+            console.error("Unexpected error:", error);
+            alert("Something went wrong.");
+        }
+
+        setLoading(false);
     };
 
     return (
         <div className="upload-product-container">
-            <h2>Upload Product</h2>
+            <h2>Upload New Product</h2>
             <form onSubmit={handleSubmit}>
                 <input
                     type="text"
@@ -82,17 +135,35 @@ const UploadProduct = () => {
                     placeholder="Price"
                     required
                 />
+
+                {/* ✅ Bundle Option Checkbox */}
+                <div className="checkbox-container">
+                    <label>
+                        <input
+                            type="checkbox"
+                            name="isbundle"
+                            checked={product.is_bundle}
+                            onChange={handleCheckboxChange}
+                        />
+                        Available for Bundling
+                    </label>
+                </div>
+
+                {/* ✅ Image URL Input */}
                 <div className="file-upload">
-                    <label>Upload Image:</label>
+                    <label>Image URL (Paste a link):</label>
                     <input
-                        type="file"
+                        type="text"
                         name="image"
-                        onChange={handleFileChange}
-                        accept="image/*"
-                        required
+                        value={product.image}
+                        onChange={handleInputChange}
+                        placeholder="Paste image URL here"
                     />
                 </div>
-                <button type="submit">Upload Product</button>
+
+                <button type="submit" disabled={loading}>
+                    {loading ? "Uploading..." : "Upload Product"}
+                </button>
             </form>
         </div>
     );
