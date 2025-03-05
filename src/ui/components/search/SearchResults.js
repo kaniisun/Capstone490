@@ -33,74 +33,39 @@ const SearchResults = () => {
     }
   }, [categoryFromUrl]);
 
+  const searchProducts = async (searchTerm) => {
+    try {
+      // Get all available products
+      const { data: products, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("status", "Available");
+
+      if (error) throw error;
+
+      // Filter products based on search term and filters
+      const filteredProducts = products.filter((product) => {
+        const searchableText = `
+          ${product.name?.toLowerCase() || ""} 
+          ${product.description?.toLowerCase() || ""} 
+          ${product.category?.toLowerCase() || ""}
+        `;
+
+        return searchableText.includes(searchTerm.toLowerCase());
+      });
+
+      setResults(filteredProducts);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error searching products:", error);
+      setLoading(false);
+    }
+  };
+
   // Fetch search results based on search term and filters
   useEffect(() => {
-    const fetchResults = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        let query = supabase.from("products").select("*");
-
-        // If there's a search term, apply search filters
-        if (searchTerm) {
-          query = query.or(
-            `name.ilike.%${searchTerm}%,` +
-              `name.ilike.%${searchTerm}s%,` +
-              `name.ilike.%${
-                searchTerm.endsWith("s") ? searchTerm.slice(0, -1) : searchTerm
-              }%,` +
-              `description.ilike.%${searchTerm}%,` +
-              `description.ilike.%${searchTerm}s%,` +
-              `description.ilike.%${
-                searchTerm.endsWith("s") ? searchTerm.slice(0, -1) : searchTerm
-              }%`
-          );
-        }
-
-        // Apply filters
-        if (filters.categories.length > 0) {
-          query = query.in("category", filters.categories);
-        }
-
-        // Update price filter logic
-        if (filters.minPrice !== "") {
-          query = query.gte("price", Number(filters.minPrice));
-          console.log("Applying min price filter:", filters.minPrice);
-        }
-        if (filters.maxPrice !== "") {
-          query = query.lte("price", Number(filters.maxPrice));
-          console.log("Applying max price filter:", filters.maxPrice);
-        }
-
-        if (filters.condition) {
-          query = query.eq("condition", filters.condition);
-        }
-        if (filters.isBundle) {
-          query = query.eq("is_bundle", true);
-        }
-
-        query = query.order("created_at", { ascending: false });
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        console.log("Current filters:", filters);
-        console.log("Query results:", data);
-
-        setResults(data);
-      } catch (err) {
-        console.error("Error in fetch:", err);
-        setError("Failed to fetch search results. Please try again.");
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchResults();
-  }, [searchTerm, filters]);
+    searchProducts(searchTerm);
+  }, [searchTerm]);
 
   return (
     <div className="search-results-page">
