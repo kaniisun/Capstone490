@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import { faCartShopping } from "@fortawesome/free-solid-svg-icons";
+import { faCartShopping, faComments } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from "../../../supabaseClient";
 import "./detail.css";
 
@@ -83,7 +83,6 @@ export const Detail = () => {
           {product.flag && <p className="flag">Flagged</p>}
           <p className="condition">Condition: {product.condition}</p>
           <p className="status">Status: {product.status}</p>
-          {/*<p className="category">Category: {product.category}</p>*/}
           <p className="created">
             Added: {new Date(product.created_at).toLocaleDateString()}
           </p>
@@ -92,29 +91,25 @@ export const Detail = () => {
               Last Updated: {new Date(product.modified_at).toLocaleDateString()}
             </p>
           )}
-          <div className="button-container">
+          <div className="admin-buttons">
             <div className="chat-container">
               <p>Chat with Seller</p>
               <Link to="/chatroom">
-                <button className="chat">Chat</button>
+                <button className="chat">
+                  <FontAwesomeIcon icon={faComments} /> Chat
+                </button>
               </Link>
             </div>
-            <button className="add">
-              <FontAwesomeIcon icon={faCartShopping} />
-            </button>
-          </div>
-
-          {/* Show Edit and Delete buttons if user is the creator */}
-          {/* {userId === product.user_id && ( */}
-          <div className="admin-buttons">
             <button className="edit" onClick={() => navigate(`/edit/${id}`)}>
               Edit
             </button>
             <button className="delete" onClick={() => setShowConfirm(true)}>
               Delete
             </button>
+            <button className="add">
+              <FontAwesomeIcon icon={faCartShopping} />
+            </button>
           </div>
-          {/* )} */}
         </div>
       </div>
 
