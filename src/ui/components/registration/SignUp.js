@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "../../../supabaseClient";
+import { Link } from "react-router-dom";
 import "./SignUp.css"; // We'll add the CSS here
 
 function SignUp() {
@@ -45,7 +46,7 @@ function SignUp() {
 
       // Insert user data into public.users table
       const { error: insertError } = await supabase.from("users").insert({
-        userID: user.id, // Link to auth.users.id (UUID)
+        userID: user.id, // This should match the auth.users.id
         email,
         firstName,
         lastName,
@@ -135,7 +136,7 @@ function SignUp() {
         Submit
       </button>
       <p className="signin">
-        Already have an account? <a href="#">Sign in</a>
+        Already have an account? <Link to="/login">Sign in</Link>
       </p>
       {error && <p style={{ color: "red" }}>{error}</p>}
       {success && <p style={{ color: "green" }}>Registration successful!</p>}

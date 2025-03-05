@@ -16,6 +16,7 @@ import Chatroom from "./ui/components/chatroom/chatroom";
 import ProductList from "./ui/components/products/ProductList";
 import Editproduct from "./ui/components/editproduct/editproduct";
 import MessagingPage from "./ui/components/messageArea/messagePage";
+import Login from "./ui/components/login/Login";
 
 function App() {
   return (
@@ -49,10 +50,10 @@ function App() {
           {/* Route for the search results page */}
           <Route path="/search-results" element={<SearchResults />} />
           {/*Route for Messaging*/}
-          <Route path="/messaging" element={<MessagingPage />} />  
-          <Route path="/editProduct/:index" element={<Editproduct />} />
+          <Route path="/messaging" element={<MessagingPage />} />            
           {/*Route for editproduct*/}
-          
+          <Route path="/editProduct/:productID" element={<Editproduct />} />
+          <Route path="/login" element={<Login />} />
         </Routes>
         <Footer />
       </div>

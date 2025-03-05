@@ -1,26 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient"; 
 import { useNavigate } from "react-router-dom";
 import "./uploadProduct.css";
 
 const UploadProduct = () => {
     const navigate = useNavigate();
-    const testUserId = "58189ec7-fc7d-4ccc-b168-2cc641ea7896"; // Fixed test user ID
-
+    const [userId, setUserId] = useState(null);
     const [product, setProduct] = useState({
-        userId: testUserId, // Assign test user ID
         name: "",
         description: "",
         condition: "",
         category: "furniture",
         price: "",
-        imageFile: null, // Users will upload an image file
+        imageFile: null,
         is_bundle: false,
         status: "Available",
         flag: false,
     });
 
     const [loading, setLoading] = useState(false);
+
+    // Get the current user's ID when component mounts
+    useEffect(() => {
+        const getCurrentUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                navigate('/login');
+                return;
+            }
+            setUserId(user.id);
+        };
+
+        getCurrentUser();
+    }, [navigate]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -42,75 +54,66 @@ const UploadProduct = () => {
         e.preventDefault();
         setLoading(true);
 
-        let imageUrl = null; // Store the public URL of the uploaded image
-
         try {
-            //  ** Upload Image to Supabase Storage**
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
+            let imageUrl = null;
+
             if (product.imageFile) {
                 const fileExt = product.imageFile.name.split(".").pop();
-                const fileName = `product_${Date.now()}.${fileExt}`;
+                const fileName = `${userId}_${Date.now()}.${fileExt}`;
                 const filePath = `uploads/${fileName}`;
 
                 const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from("product-images") // Make sure this bucket exists in Supabase
+                    .from("product-images")
                     .upload(filePath, product.imageFile, { upsert: false });
 
-                if (uploadError) {
-                    console.error("Image upload error:", uploadError);
-                    alert(`Failed to upload image: ${uploadError.message}`);
-                    setLoading(false);
-                    return;
-                }
+                if (uploadError) throw uploadError;
 
-                //  Retrieve Public URL of uploaded image
                 const { data: publicUrlData } = supabase
                     .storage
                     .from("product-images")
                     .getPublicUrl(filePath);
 
-                imageUrl = publicUrlData.publicUrl; // Store the image URL
+                imageUrl = publicUrlData.publicUrl;
             }
 
-            //  **Step 2: Insert Product Data into Supabase Database**
             const { data, error: productError } = await supabase
                 .from("products")
                 .insert([
                     {
-                        userID: testUserId, // Assign test user ID
+                        userID: userId,
                         name: product.name,
                         description: product.description,
                         condition: product.condition,
                         category: product.category,
-                        price: parseFloat(product.price), // Ensure price is a number
-                        image: imageUrl, // Use the uploaded image URL
+                        price: parseFloat(product.price),
+                        image: imageUrl,
                         status: product.status,
                         is_bundle: product.is_bundle,
                         flag: product.flag,
-                        created_at: new Date().toISOString(), //  Auto timestamp for creation
-                        modified_at: new Date().toISOString(), //  Auto timestamp for last update
+                        created_at: new Date().toISOString(),
+                        modified_at: new Date().toISOString(),
                     },
                 ])
                 .select();
 
-            if (productError) {
-                console.error("Product upload error:", productError);
-                alert("Failed to upload product.");
-                setLoading(false);
-                return;
-            }
+            if (productError) throw productError;
 
-            console.log("Product added successfully:", data);
-            alert("Product uploaded successfully!");
-
-            // Redirect to Products Page
-            navigate("/products");
-
+            // Show success message
+            alert('Product uploaded successfully!');
+            
+            // Navigate to account dashboard after successful upload
+            navigate('/account');
+            
         } catch (error) {
-            console.error("Unexpected error:", error);
-            alert("Something went wrong.");
+            console.error("Error uploading product:", error);
+            alert(error.message || "Failed to upload product");
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     };
 
     return (
@@ -158,6 +161,7 @@ const UploadProduct = () => {
                         <option value="books">Books</option>
                         <option value="electronics">Electronics</option>
                         <option value="clothing">Clothing</option>
+                        <option value="miscellaneous">Miscellaneous</option>
                     </select>
                 </div>
                 <input
