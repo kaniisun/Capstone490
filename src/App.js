@@ -1,6 +1,6 @@
 import React from "react";
 import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route  } from "react-router-dom";
 import Home from "./ui/components/home/home";
 import Header from "./ui/components/header/header";
 import { Detail } from "./ui/components/detail/detail";
@@ -17,6 +17,7 @@ import ProductList from "./ui/components/products/ProductList";
 import Editproduct from "./ui/components/editproduct/editproduct";
 import MessagingPage from "./ui/components/messageArea/messagePage";
 import Login from "./ui/components/login/Login";
+import MessageArea from "./ui/components/messageArea/messageArea";
 
 function App() {
   return (
@@ -50,7 +51,7 @@ function App() {
           {/* Route for the search results page */}
           <Route path="/search-results" element={<SearchResults />} />
           {/*Route for Messaging*/}
-          <Route path="/messaging" element={<MessagingPage />} />            
+          <Route path="/messaging" element={<MessageArea />} />            
           {/*Route for editproduct*/}
           <Route path="/editProduct/:productID" element={<Editproduct />} />
           <Route path="/login" element={<Login />} />
