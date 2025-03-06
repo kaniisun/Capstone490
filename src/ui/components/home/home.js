@@ -11,11 +11,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import "./home.css";
 import Search from "../search/search";
+
 export const Home = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // fetch products, limit to first 5 products in the database
   useEffect(() => {
     const fetchProducts = async () => {
       const { data, error } = await supabase
@@ -26,7 +28,7 @@ export const Home = () => {
       console.log("Fetched Products:", data);
 
       if (error) {
-        console.error("Error fetching products:", error);
+        console.error("Error fetching:", error);
       } else {
         setProducts(data);
       }
@@ -100,10 +102,11 @@ export const Home = () => {
                 className="product"
                 onClick={() => navigate(`/product/${product.productID}`)}
               >
-                  <img
-                    src={product.image || "placeholder.jpg"}
-                    alt={product.name} className="product-image"
-                  />
+                <img
+                  src={product.image || "placeholder.jpg"}
+                  alt={product.name}
+                  className="product-image"
+                />
                 <h3>{product.name}</h3>
                 <p className="price">${product.price.toFixed(2)}</p>
               </div>

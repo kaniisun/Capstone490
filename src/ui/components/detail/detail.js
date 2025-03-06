@@ -11,10 +11,10 @@ export const Detail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
-  const [showConfirm, setShowConfirm] = useState(false); // State for confirmation popup
+  const [showConfirm, setShowConfirm] = useState(false); 
   const navigate = useNavigate();
 
-  // Fetch current user ID
+  // fetch current user ID
   useEffect(() => {
     const fetchUser = async () => {
       const {
@@ -28,7 +28,7 @@ export const Detail = () => {
     fetchUser();
   }, []);
 
-  // Fetch product details by id
+  // fetch product details by id
   useEffect(() => {
     const fetchProduct = async () => {
       const { data, error } = await supabase
@@ -48,7 +48,7 @@ export const Detail = () => {
     fetchProduct();
   }, [id]);
 
-  // Delete product function
+  // delete product function
   const handleDelete = async () => {
     const { error } = await supabase
       .from("products")
@@ -58,7 +58,7 @@ export const Detail = () => {
       console.error("Error deleting product:", error);
     } else {
       setShowConfirm(false); // Close confirmation popup
-      navigate("/"); // Redirect to home after deletion
+      navigate("/"); // redirect to home after deletion
     }
   };
 
@@ -66,6 +66,7 @@ export const Detail = () => {
   if (!product) return <p>Product not found.</p>;
 
   return (
+    // display product details
     <div className="content-container">
       <div className="product">
         <div className="prod-image">

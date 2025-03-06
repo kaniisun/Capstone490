@@ -8,28 +8,6 @@ const MessageArea = ({  }) => {
   return (
 <div className="container">
   <div className="row">
-    {/* <nav className="menu">
-      <ul className="items">
-        <li className="item">
-          <i className="fa fa-home" aria-hidden="true" />
-        </li>
-        <li className="item">
-          <i className="fa fa-user" aria-hidden="true" />
-        </li>
-        <li className="item">
-          <i className="fa fa-pencil" aria-hidden="true" />
-        </li>
-        <li className="item item-active">
-          <i className="fa fa-commenting" aria-hidden="true" />
-        </li>
-        <li className="item">
-          <i className="fa fa-file" aria-hidden="true" />
-        </li>
-        <li className="item">
-          <i className="fa fa-cog" aria-hidden="true" />
-        </li>
-      </ul>
-    </nav> */}
     {/* DISCUSSIONS */}
     <section className="discussions">
       <div className="discussion search">
@@ -147,6 +125,8 @@ const MessageArea = ({  }) => {
         <div className="timer">1 week</div>
       </div>
     </section>
+    
+    {/* CHAT */}
     <section className="chat">
       <div className="header-chat">
         <i className="icon fa fa-user-o" aria-hidden="true" />
