@@ -19,7 +19,7 @@ import Chatroom from "./ui/components/chatroom/chatroom";
 import ProductList from "./ui/components/products/ProductList";
 import Editproduct from "./ui/components/editproduct/editproduct";
 import Login from "./ui/components/login/Login";
-import MessageArea from "./ui/components/messageArea/messageArea";
+import MessageHome from "./ui/components/messageArea/messageHome";
 
 function App() {
   return (
@@ -53,7 +53,7 @@ function App() {
           {/* Route for the search results page */}
           <Route path="/search-results" element={<SearchResults />} />
           {/*Route for Messaging*/}
-          <Route path="/messaging" element={<MessageArea />} />            
+          <Route path="/messaging" element={<MessageHome />} />            
           {/*Route for editproduct*/}
           <Route path="/editProduct/:productID" element={<Editproduct />} />
           <Route path="/login" element={<Login />} />
