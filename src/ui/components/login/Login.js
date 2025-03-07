@@ -1,8 +1,12 @@
+//login.js
+//This is the login component that allows the user to sign in to their account
+
 import React, { useState } from "react";
 import { supabase } from "../../../supabaseClient";
 import { useNavigate, Link } from "react-router-dom";
 import "./Login.css";
 
+//This is the login component that allows the user to sign in to their account
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,6 +61,7 @@ function Login() {
     }
   };
 
+  //Render the login form
   return (
     <form className="form" onSubmit={handleSubmit}>
       <p className="form-title">Sign in to your account</p>
