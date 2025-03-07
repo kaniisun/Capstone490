@@ -1,3 +1,6 @@
+//App.js
+//This is the main component that renders the app
+
 import React from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route  } from "react-router-dom";
@@ -15,7 +18,6 @@ import UploadProduct from "./ui/components/uploadproduct/uploadProduct";
 import Chatroom from "./ui/components/chatroom/chatroom";
 import ProductList from "./ui/components/products/ProductList";
 import Editproduct from "./ui/components/editproduct/editproduct";
-import MessagingPage from "./ui/components/messageArea/messagePage";
 import Login from "./ui/components/login/Login";
 import MessageArea from "./ui/components/messageArea/messageArea";
 

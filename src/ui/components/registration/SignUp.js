@@ -1,8 +1,12 @@
+//signup.js
+//This is the signup component that allows the user to sign up for an account
+
 import React, { useState } from "react";
 import { supabase } from "../../../supabaseClient";
 import { Link } from "react-router-dom";
 import "./SignUp.css"; // We'll add the CSS here
 
+//This is the signup component that allows the user to sign up for an account
 function SignUp() {
   // State for form fields
   const [firstName, setFirstName] = useState("");
@@ -70,7 +74,7 @@ function SignUp() {
     }
   };
   
-
+  
   return (
     <form className="form" onSubmit={handleSubmit}>
       <p className="title">Register</p>

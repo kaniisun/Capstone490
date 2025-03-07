@@ -1,3 +1,6 @@
+/* filter.css */
+/* This is the CSS file for the filter component */
+
 .filter-sidebar {
   background: white;
   padding: 20px;
@@ -86,6 +89,7 @@ input[type="radio"]:checked::after {
   width: 100%;
   margin: 16px 0;
   -webkit-appearance: none;
+  appearance: none;
   height: 4px;
   background: #ddd;
   border-radius: 2px;
