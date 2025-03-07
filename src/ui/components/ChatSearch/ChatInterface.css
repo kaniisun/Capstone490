@@ -1,0 +1,361 @@
+/* ChatInterface.css */
+/* This is the CSS for the chat interface. */
+
+.chat-interface {
+  max-width: 800px;
+  margin: 2rem auto;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.chat-header {
+  padding: 16px 20px;
+  background: #0f2044;
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-title h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.status-indicator {
+  font-size: 0.8rem;
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-indicator::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(74, 222, 128, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f8f9fa;
+  scroll-behavior: smooth;
+}
+
+.message {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.message.animate-in {
+  animation: messageIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes messageIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ai-avatar {
+  width: 32px;
+  height: 32px;
+  background: #0f2044;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.message-content {
+  flex: 1;
+  max-width: 80%;
+}
+
+.message.user {
+  flex-direction: row-reverse;
+}
+
+.message.user .message-content p {
+  background: #0f2044;
+  color: white;
+  border-radius: 16px 16px 0 16px;
+  padding: 12px 20px;
+  margin: 0;
+}
+
+.message.ai .message-content p {
+  background: white;
+  color: #1c1c1c;
+  border-radius: 16px 16px 16px 0;
+  padding: 12px 20px;
+  margin: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.typing-indicator {
+  background: white;
+  padding: 12px 20px;
+  border-radius: 16px 16px 16px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  animation: fadeIn 0.3s ease;
+}
+
+.typing-indicator span {
+  width: 6px;
+  height: 6px;
+  background: #0f2044;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+  opacity: 0.6;
+}
+
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.chat-input-form {
+  display: flex;
+  padding: 20px;
+  background: white;
+  border-top: 1px solid #eee;
+  gap: 12px;
+}
+
+.chat-input-form input {
+  flex: 1;
+  padding: 12px 20px;
+  border: 2px solid #eee;
+  border-radius: 25px;
+  font-size: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #f8f9fa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.chat-input-form input:focus {
+  outline: none;
+  border-color: #0f2044;
+  background: white;
+  box-shadow: 0 4px 12px rgba(15, 32, 68, 0.1);
+  transform: translateY(-1px);
+}
+
+.chat-input-form button {
+  background: #0f2044;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 46px;
+  height: 46px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.chat-input-form button:hover {
+  background: #1a3366;
+  transform: scale(1.05) rotate(5deg);
+}
+
+.chat-input-form button:active {
+  transform: scale(0.95);
+}
+
+.chat-input-form button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.result-card {
+  display: flex;
+  gap: 12px;
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: cardIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes cardIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.result-card img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.result-info {
+  flex: 1;
+}
+
+.result-info h4 {
+  margin: 0 0 8px 0;
+  color: #1c1c1c;
+}
+
+.result-info p {
+  margin: 4px 0;
+  color: #666;
+}
+
+.result-info .price {
+  font-weight: bold;
+  color: #0f2044;
+  font-size: 1.1em;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 4px;
+  display: block;
+}
+
+.model-loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.model-loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #0f2044;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.test-panel {
+  padding: 10px;
+  background: #f0f0f0;
+  border-bottom: 1px solid #ddd;
+}
+
+.test-button {
+  margin: 5px;
+  padding: 8px 16px;
+  background: #0f2044;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.test-button:hover {
+  background: #1a3366;
+}
+
+.test-toggle {
+  margin-left: auto;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.test-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

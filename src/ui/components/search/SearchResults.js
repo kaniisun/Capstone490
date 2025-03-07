@@ -1,3 +1,6 @@
+//SearchResults.js
+//This component renders the search results
+
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../../supabaseClient";

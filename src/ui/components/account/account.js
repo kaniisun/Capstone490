@@ -1,7 +1,11 @@
+//account.js
+//This is the account page that allows the user to update their profile information and delete their products
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
 import { Link } from "react-router-dom";
 import "./account.css";
+
 
 const Account = () => {
   const [user, setUser] = useState({
@@ -60,6 +64,7 @@ const Account = () => {
     fetchUserData();
   }, []);
 
+  //This function updates the user's profile information
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     if (!user?.userID) {
@@ -112,6 +117,7 @@ const Account = () => {
     }
   };
 
+  //This function deletes a product from the database
   const handleDeleteProduct = async (productId) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       try {
@@ -163,6 +169,7 @@ const Account = () => {
     return <div className="account-loading">Loading...</div>;
   }
 
+  // Display the account dashboard
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
