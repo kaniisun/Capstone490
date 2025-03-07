@@ -1,3 +1,7 @@
+/* ****** OLD CSS ***** */
+/* ****** OLD CSS ***** */
+/* ****** OLD CSS ***** */
+/* ****** OLD CSS ***** */
 body {
   background-color: #f5f5f5;
 }
@@ -206,7 +210,7 @@ body {
 
 .chat .messages-chat .text {
   margin: 0 35px;
-  background-color: #f6f6f6;
+  background-color: #0b0b0b !important;
   padding: 15px;
   border-radius: 12px;
 }
@@ -230,11 +234,12 @@ body {
 .response {
   float: right;
   margin-right: 0px !important;
-  margin-left: auto; /* flexbox alignment rule */
+  margin-left: auto; 
 }
 
 .response .text {
   background-color: #e3effd !important;
+
 }
 
 .footer-chat {
