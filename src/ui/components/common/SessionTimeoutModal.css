@@ -1,0 +1,92 @@
+.session-timeout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.session-timeout-modal {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.session-timeout-modal h2 {
+  color: #d32f2f;
+  font-size: 1.5rem;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.timeout-message {
+  margin-bottom: 24px;
+}
+
+.countdown-timer {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #d32f2f;
+  margin: 16px 0;
+  font-family: monospace;
+}
+
+.timeout-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.continue-btn,
+.logout-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.continue-btn {
+  background-color: #0066cc;
+  color: white;
+}
+
+.continue-btn:hover {
+  background-color: #004d99;
+}
+
+.logout-btn {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.logout-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.continue-btn:active,
+.logout-btn:active {
+  transform: scale(0.98);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

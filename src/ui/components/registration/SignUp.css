@@ -13,6 +13,7 @@
   position: relative;
   margin: 0 auto;
   width: 50%;
+  box-sizing: border-box;
 }
 
 .title {
@@ -69,11 +70,20 @@
 .flex {
   display: flex;
   width: 100%;
-  gap: 30px;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.flex label {
+  flex: 1;
+  min-width: 0; /* Prevents flex items from overflowing */
 }
 
 .form label {
   position: relative;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form label .input {
@@ -82,6 +92,12 @@
   outline: 0;
   border: 1px solid rgba(105, 105, 105, 0.397);
   border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.form label .input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
 }
 
 .form label .input + span {
@@ -119,10 +135,66 @@
   color: #fff;
   font-size: 16px;
   transform: 0.3s ease;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 
 .submit:hover {
   background-color: rgb(56, 90, 194);
+}
+
+.submit:disabled {
+  background-color: #b1c3ef;
+  cursor: not-allowed;
+}
+
+/* Connection error styles */
+.connection-error {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  font-size: 13px;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Error message styles */
+.error-message {
+  color: #d32f2f;
+  background-color: #ffebee;
+  padding: 8px;
+  border-radius: 5px;
+  border-left: 4px solid #d32f2f;
+  margin: 10px 0;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* Verification message styles */
+.verification-message {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #e8f5e9;
+  border-radius: 10px;
+  border-left: 4px solid #2e7d32;
+  text-align: center;
+  box-sizing: border-box;
+  width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.verification-message p {
+  margin: 5px 0;
 }
 
 @keyframes pulse {
@@ -133,5 +205,18 @@
   to {
     transform: scale(1.8);
     opacity: 0;
+  }
+}
+
+/* Add responsive adjustments for very small screens */
+@media (max-width: 400px) {
+  .flex {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .form {
+    width: 90%;
+    padding: 15px;
   }
 }
