@@ -27,6 +27,7 @@ import UploadProduct from "./ui/components/uploadproduct/uploadProduct";
 import Chatroom from "./ui/components/chatroom/chatroom";
 import Editproduct from "./ui/components/editproduct/editproduct";
 import Login from "./ui/components/login/Login";
+
 import MessageArea from "./ui/components/messageArea/messageArea";
 import VerifySuccess from "./ui/components/registration/VerifySuccess";
 import ConnectionTester from "./ui/components/common/ConnectionTester";
@@ -159,10 +160,13 @@ function AppContent() {
   );
 }
 
+
 function App() {
   return (
     <BrowserRouter>
+
       <AppContent />
+
     </BrowserRouter>
   );
 }
