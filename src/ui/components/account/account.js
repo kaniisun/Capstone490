@@ -2,342 +2,1135 @@
 //This is the account page that allows the user to update their profile information and delete their products
 
 import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../../supabaseClient";
-import { Link } from "react-router-dom";
+import { useAuth } from "../../../contexts/AuthContext";
 import "./account.css";
-
+// Material-UI imports
+import {
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Container,
+  Divider,
+  Grid,
+  Paper,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+  Alert,
+  Snackbar,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  useTheme,
+  useMediaQuery,
+  CircularProgress,
+  Tooltip,
+  Chip,
+  Zoom,
+  Fade,
+} from "@mui/material";
+import {
+  AccountCircle as AccountCircleIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Save as SaveIcon,
+  Lock as LockIcon,
+  LockReset as LockResetIcon,
+  Store as StoreIcon,
+  LocalOffer as LocalOfferIcon,
+  Category as CategoryIcon,
+  Star as StarIcon,
+} from "@mui/icons-material";
+import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 const Account = () => {
-  const [user, setUser] = useState({
-    firstName: "",
-    lastName: "",
+  const { user, logout } = useAuth();
+  const [profile, setProfile] = useState({
     email: "",
-    userID: "",
+    fullName: "",
   });
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [message, setMessage] = useState({ text: "", type: "" });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwords, setPasswords] = useState({
     current: "",
     new: "",
     confirm: "",
   });
+  const [tabValue, setTabValue] = useState(0);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
-  // Fetch user data and their products
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const navigate = useNavigate();
+
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
-
-        if (authUser) {
-          const { data: userData, error: userError } = await supabase
-            .from("users")
-            .select("*")
-            .eq("userID", authUser.id)
-            .single();
-
-          if (userError) throw userError;
-
-          const { data: userProducts, error: productsError } = await supabase
-            .from("products")
-            .select("*")
-            .eq("userID", authUser.id)
-            .order("created_at", { ascending: false });
-
-          if (productsError) throw productsError;
-
-          setUser(userData);
-          setProducts(userProducts || []);
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        setMessage({ text: "Error loading profile data", type: "error" });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, []);
-
-  //This function updates the user's profile information
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
-    if (!user?.userID) {
-      setMessage({ text: "User ID not found", type: "error" });
-      return;
+    if (user) {
+      fetchUserProfile();
+      fetchUserProducts();
+    } else {
+      setLoading(false);
     }
+  }, [user]);
 
-    setUpdating(true);
+  // Fetch user profile data
+  const fetchUserProfile = async () => {
     try {
-      const { error } = await supabase
-        .from("users")
-        .update({
-          firstName: user.firstName,
-          lastName: user.lastName,
-        })
-        .eq("userID", user.userID);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
 
       if (error) throw error;
-      setMessage({ text: "Profile updated successfully!", type: "success" });
+
+      if (data) {
+        setProfile({
+          email: user.email || "",
+          fullName: data.full_name || "",
+        });
+      }
     } catch (error) {
-      console.error("Error updating profile:", error);
-      setMessage({ text: "Error updating profile", type: "error" });
+      console.error("Error fetching user profile:", error.message);
+    }
+  };
+
+  // Fetch user products
+  const fetchUserProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("userID", user.id);
+
+      if (error) throw error;
+
+      setProducts(data || []);
+    } catch (error) {
+      console.error("Error fetching user products:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update profile
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setUpdating(true);
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: profile.fullName,
+          updated_at: new Date(),
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      setSnackbar({
+        open: true,
+        message: "Profile updated successfully!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error updating profile: ${error.message}`,
+        severity: "error",
+      });
     } finally {
       setUpdating(false);
     }
   };
 
-  const handlePasswordUpdate = async (e) => {
+  // Update password
+  const handleUpdatePassword = async (e) => {
     e.preventDefault();
+    setUpdating(true);
+
     if (passwords.new !== passwords.confirm) {
-      setMessage({ text: "New passwords do not match", type: "error" });
+      setSnackbar({
+        open: true,
+        message: "New passwords don't match",
+        severity: "error",
+      });
+      setUpdating(false);
       return;
     }
 
-    setUpdating(true);
     try {
       const { error } = await supabase.auth.updateUser({
         password: passwords.new,
       });
 
       if (error) throw error;
-      setMessage({ text: "Password updated successfully!", type: "success" });
-      setShowPasswordForm(false);
+
       setPasswords({ current: "", new: "", confirm: "" });
+      setShowPasswordForm(false);
+      setSnackbar({
+        open: true,
+        message: "Password updated successfully!",
+        severity: "success",
+      });
     } catch (error) {
-      console.error("Error updating password:", error);
-      setMessage({ text: "Error updating password", type: "error" });
+      console.error("Error updating password:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error updating password: ${error.message}`,
+        severity: "error",
+      });
     } finally {
       setUpdating(false);
     }
   };
 
-  //This function deletes a product from the database
-  const handleDeleteProduct = async (productId) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      try {
-        // First, get the product to get its image URL
-        const { data: product, error: fetchError } = await supabase
-          .from("products")
-          .select("*")
-          .eq("productID", productId)
-          .single();
+  // Delete product
+  const handleDeleteProduct = (productId) => {
+    setProductToDelete(productId);
+    setOpenDeleteDialog(true);
+  };
 
-        if (fetchError) throw fetchError;
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
 
-        // Delete the product from the database
-        const { error: deleteError } = await supabase
-          .from("products")
-          .delete()
-          .eq("productID", productId);
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("productID", productToDelete);
 
-        if (deleteError) throw deleteError;
+      if (error) throw error;
 
-        // If product had an image, try to delete it from storage
-        if (product?.image) {
-          try {
-            const urlParts = product.image.split("/uploads/");
-            if (urlParts.length > 1) {
-              const filePath = `uploads/${urlParts[1]}`;
-              await supabase.storage.from("product-images").remove([filePath]);
-            }
-          } catch (storageError) {
-            console.error("Error deleting image from storage:", storageError);
-            // Continue execution even if image deletion fails
-          }
-        }
+      setProducts(
+        products.filter((product) => product.productID !== productToDelete)
+      );
+      setSnackbar({
+        open: true,
+        message: "Product deleted successfully!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error deleting product:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error deleting product: ${error.message}`,
+        severity: "error",
+      });
+    } finally {
+      setOpenDeleteDialog(false);
+      setProductToDelete(null);
+    }
+  };
 
-        // Update local state to remove the product
-        setProducts(products.filter((p) => p.productID !== productId));
-        setMessage({ text: "Product deleted successfully!", type: "success" });
-      } catch (error) {
-        console.error("Error deleting product:", error.message);
-        setMessage({
-          text: `Error deleting product: ${error.message}`,
-          type: "error",
-        });
-      }
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  // Get background color for product status
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case "available":
+        return "success";
+      case "sold":
+        return "error";
+      case "pending":
+        return "warning";
+      default:
+        return "info";
+    }
+  };
+
+  // Get product condition stars
+  const getConditionStars = (condition) => {
+    switch (condition?.toLowerCase()) {
+      case "new":
+        return 5;
+      case "like new":
+        return 4;
+      case "good":
+        return 3;
+      case "fair":
+        return 2;
+      case "poor":
+        return 1;
+      default:
+        return 3;
     }
   };
 
   if (loading) {
-    return <div className="account-loading">Loading...</div>;
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "50vh",
+        }}
+      >
+        <CircularProgress size={40} sx={{ color: "#0f2044" }} />
+      </Box>
+    );
   }
 
-  // Display the account dashboard
+  if (!user) {
+    navigate("/login");
+    return null;
+  }
+
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1>Account Dashboard</h1>
-        {message.text && (
-          <div className={`alert alert-${message.type}`}>{message.text}</div>
-        )}
-      </div>
-
-      <div className="dashboard-grid">
-        {/* Profile Section */}
-        <section className="profile-section dashboard-card">
-          <h2>Profile Information</h2>
-          <form onSubmit={handleUpdateProfile}>
-            <div className="form-group">
-              <label>First Name</label>
-              <input
-                type="text"
-                value={user?.firstName ?? ""}
-                onChange={(e) =>
-                  setUser((prev) => ({ ...prev, firstName: e.target.value }))
-                }
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Last Name</label>
-              <input
-                type="text"
-                value={user?.lastName ?? ""}
-                onChange={(e) =>
-                  setUser((prev) => ({ ...prev, lastName: e.target.value }))
-                }
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Email</label>
-              <input type="email" value={user?.email ?? ""} disabled />
-            </div>
-            <button type="submit" disabled={updating}>
-              {updating ? "Updating..." : "Update Profile"}
-            </button>
-          </form>
-
-          <button
-            className="change-password-btn"
-            onClick={() => setShowPasswordForm(!showPasswordForm)}
+    <Fade in={!loading} timeout={500}>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
+        <Paper
+          elevation={3}
+          sx={{
+            borderRadius: 2,
+            overflow: "hidden",
+          }}
+        >
+          {/* Simple header with avatar */}
+          <Box
+            sx={{
+              p: 3,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              borderBottom: 1,
+              borderColor: "divider",
+            }}
           >
-            Change Password
-          </button>
+            <Avatar
+              sx={{
+                width: 56,
+                height: 56,
+                bgcolor: "#0f2044", // UNCG Blue
+                fontWeight: "bold",
+              }}
+            >
+              {profile.fullName
+                ? profile.fullName.charAt(0).toUpperCase()
+                : user?.email?.charAt(0).toUpperCase() || "U"}
+            </Avatar>
+            <Box>
+              <Typography variant="h5" component="h1" fontWeight="500">
+                {profile.fullName || user?.email?.split("@")[0] || "User"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {profile.email}
+              </Typography>
+            </Box>
+          </Box>
 
-          {showPasswordForm && (
-            <form onSubmit={handlePasswordUpdate} className="password-form">
-              <div className="form-group">
-                <label>Current Password</label>
-                <input
-                  type="password"
-                  value={passwords.current}
-                  onChange={(e) =>
-                    setPasswords({ ...passwords, current: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>New Password</label>
-                <input
-                  type="password"
-                  value={passwords.new}
-                  onChange={(e) =>
-                    setPasswords({ ...passwords, new: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Confirm New Password</label>
-                <input
-                  type="password"
-                  value={passwords.confirm}
-                  onChange={(e) =>
-                    setPasswords({ ...passwords, confirm: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <button type="submit" disabled={updating}>
-                {updating ? "Updating Password..." : "Update Password"}
-              </button>
-            </form>
-          )}
-        </section>
+          {/* Tabs navigation */}
+          <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+            <Tabs
+              value={tabValue}
+              onChange={handleTabChange}
+              aria-label="account tabs"
+              sx={{
+                "& .MuiTab-root": {
+                  fontSize: "0.95rem",
+                  textTransform: "none",
+                  fontWeight: 500,
+                  minHeight: "48px",
+                },
+                "& .Mui-selected": {
+                  color: "#0f2044", // UNCG Blue
+                },
+                "& .MuiTabs-indicator": {
+                  backgroundColor: "#ffc72c", // UNCG Gold
+                },
+              }}
+            >
+              <Tab
+                label="Profile"
+                icon={<AccountCircleIcon />}
+                iconPosition="start"
+              />
+              <Tab label="Products" icon={<StoreIcon />} iconPosition="start" />
+            </Tabs>
+          </Box>
 
-        {/* Products Section */}
-        <section className="products-section dashboard-card">
-          <div className="products-header">
-            <h2>Your Products</h2>
-            <Link to="/uploadProduct" className="add-product-btn">
-              Add New Product
-            </Link>
-          </div>
+          {/* Profile Tab */}
+          <Box sx={{ p: 3 }} hidden={tabValue !== 0}>
+            {tabValue === 0 && (
+              <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="h6" gutterBottom fontWeight="500">
+                    Profile Information
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 3 }}
+                  >
+                    Update your personal information
+                  </Typography>
 
-          <div className="products-grid">
-            {products?.length === 0 ? (
-              <p className="no-products">
-                You haven't uploaded any products yet.
-              </p>
-            ) : (
-              Array.isArray(products) &&
-              products.map((product) => {
-                if (!product?.productID) return null;
-                return (
-                  <div key={product.productID} className="product-card">
-                    <img
-                      src={product.image || "https://via.placeholder.com/150"}
-                      alt={product.name}
-                      onError={function (e) {
-                        if (e.target instanceof HTMLImageElement) {
-                          e.target.onerror = null;
-                          e.target.src = "https://via.placeholder.com/150";
-                        }
-                      }}
-                    />
-                    <div className="product-info">
-                      <h3>{product.name}</h3>
-                      <p className="price">
-                        ${parseFloat(product.price).toFixed(2)}
-                      </p>
-                      <p className="category">Category: {product.category}</p>
-                      <p className="condition">
-                        Condition: {product.condition}
-                      </p>
-                      <p className="status">Status: {product.status}</p>
-                      <div className="product-actions">
-                        <Link
-                          to={`/editProduct/${product.productID}`}
-                          className="edit-btn"
-                          onClick={() =>
-                            console.log(
-                              "Editing product with ID:",
-                              product.productID
-                            )
+                  <Box
+                    component="form"
+                    onSubmit={handleUpdateProfile}
+                    noValidate
+                  >
+                    <Grid container spacing={3}>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Email Address"
+                          variant="outlined"
+                          value={profile.email}
+                          disabled
+                          InputProps={{
+                            readOnly: true,
+                          }}
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: 1,
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Full Name"
+                          variant="outlined"
+                          value={profile.fullName}
+                          onChange={(e) =>
+                            setProfile({ ...profile, fullName: e.target.value })
                           }
-                        >
-                          Edit
-                          <svg className="svg" viewBox="0 0 512 512">
-                            <path d="M410.3 231l11.3-11.3-33.9-33.9-62.1-62.1L291.7 89.8l-11.3 11.3-22.6 22.6L58.6 322.9c-10.4 10.4-18 23.3-22.2 37.4L1 480.7c-2.5 8.4-.2 17.5 6.1 23.7s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L387.7 253.7 410.3 231zM160 399.4l-9.1 22.7c-4 3.1-8.5 5.4-13.3 6.9L59.4 452l23-78.1c1.4-4.9 3.8-9.4 6.9-13.3l22.7-9.1v32c0 8.8 7.2 16 16 16h32zM362.7 18.7L348.3 33.2 325.7 55.8 314.3 67.1l33.9 33.9 62.1 62.1 33.9 33.9 11.3-11.3 22.6-22.6 14.5-14.5c25-25 25-65.5 0-90.5L453.3 18.7c-25-25-65.5-25-90.5 0zm-47.4 168l-144 144c-6.2 6.2-16.4 6.2-22.6 0s-6.2-16.4 0-22.6l144-144c6.2-6.2 16.4-6.2 22.6 0s6.2 16.4 0 22.6z"></path>
-                          </svg>
-                        </Link>
-                        <button
-                          onClick={() => handleDeleteProduct(product.productID)}
-                          className="button"
-                        >
-                          <svg viewBox="0 0 448 512" className="svgIcon">
-                            <path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
+                          sx={{
+                            "& .MuiOutlinedInput-root": {
+                              borderRadius: 1,
+                            },
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<SaveIcon />}
+                            type="submit"
+                            disabled={updating}
+                            sx={{
+                              borderRadius: 1,
+                              textTransform: "none",
+                              py: 1,
+                              bgcolor: "#0f2044", // UNCG Blue
+                              "&:hover": {
+                                bgcolor: "#1a365d", // Slightly lighter UNCG Blue
+                              },
+                            }}
+                          >
+                            {updating ? (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
+                                <CircularProgress size={16} color="inherit" />
+                                <span>Saving...</span>
+                              </Box>
+                            ) : (
+                              "Save Changes"
+                            )}
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            sx={{
+                              borderRadius: 1,
+                              textTransform: "none",
+                              py: 1,
+                              borderColor: "#0f2044",
+                              color: "#0f2044",
+                              "&:hover": {
+                                borderColor: "#ffc72c",
+                                bgcolor: "rgba(255, 199, 44, 0.04)", // Very light UNCG Gold background
+                              },
+                            }}
+                            startIcon={<LockResetIcon />}
+                            onClick={() =>
+                              setShowPasswordForm(!showPasswordForm)
+                            }
+                          >
+                            {showPasswordForm ? "Cancel" : "Change Password"}
+                          </Button>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+
+                  {/* Password form */}
+                  {showPasswordForm && (
+                    <Box
+                      component="form"
+                      onSubmit={handleUpdatePassword}
+                      sx={{
+                        mt: 4,
+                        pt: 3,
+                        borderTop: 1,
+                        borderColor: "divider",
+                      }}
+                      noValidate
+                    >
+                      <Typography variant="h6" gutterBottom fontWeight="500">
+                        Change Password
+                      </Typography>
+                      <Grid container spacing={3}>
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            label="Current Password"
+                            type="password"
+                            variant="outlined"
+                            value={passwords.current}
+                            onChange={(e) =>
+                              setPasswords({
+                                ...passwords,
+                                current: e.target.value,
+                              })
+                            }
+                            required
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                borderRadius: 1,
+                              },
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="New Password"
+                            type="password"
+                            variant="outlined"
+                            value={passwords.new}
+                            onChange={(e) =>
+                              setPasswords({
+                                ...passwords,
+                                new: e.target.value,
+                              })
+                            }
+                            required
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                borderRadius: 1,
+                              },
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                          <TextField
+                            fullWidth
+                            label="Confirm New Password"
+                            type="password"
+                            variant="outlined"
+                            value={passwords.confirm}
+                            onChange={(e) =>
+                              setPasswords({
+                                ...passwords,
+                                confirm: e.target.value,
+                              })
+                            }
+                            required
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                borderRadius: 1,
+                              },
+                            }}
+                          />
+                        </Grid>
+                        <Grid item xs={12}>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<LockIcon />}
+                            type="submit"
+                            disabled={updating}
+                            sx={{
+                              borderRadius: 1,
+                              textTransform: "none",
+                              py: 1,
+                            }}
+                          >
+                            {updating ? (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
+                                <CircularProgress size={16} color="inherit" />
+                                <span>Updating...</span>
+                              </Box>
+                            ) : (
+                              "Update Password"
+                            )}
+                          </Button>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
             )}
-          </div>
-        </section>
-      </div>
-    </div>
+          </Box>
+
+          {/* Products Tab */}
+          <Box sx={{ p: 3 }} hidden={tabValue !== 1}>
+            {tabValue === 1 && (
+              <Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 3,
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    fontWeight="500"
+                    sx={{ color: "#0f2044" }}
+                  >
+                    Your Products
+                  </Typography>
+                  <Button
+                    component={Link}
+                    to="/uploadProduct"
+                    variant="contained"
+                    sx={{
+                      borderRadius: 1,
+                      textTransform: "none",
+                      py: 1,
+                      bgcolor: "#0f2044", // UNCG Blue
+                      "&:hover": {
+                        bgcolor: "#1a365d", // Slightly lighter UNCG Blue
+                      },
+                    }}
+                    startIcon={<AddIcon />}
+                  >
+                    Add Product
+                  </Button>
+                </Box>
+
+                {products?.length > 0 && (
+                  <Box sx={{ mb: 4 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 2,
+                        pb: 1,
+                        borderBottom: `2px solid #ffc72c`, // UNCG Gold
+                        display: "inline-block",
+                        color: "#0f2044", // UNCG Blue
+                      }}
+                    >
+                      Featured Listings
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {Array.isArray(products) &&
+                        products
+                          .filter((product) => product.status === "Available")
+                          .slice(0, 3)
+                          .map((product) => {
+                            if (!product?.productID) return null;
+                            return (
+                              <Grid
+                                item
+                                xs={12}
+                                sm={4}
+                                key={`featured-${product.productID}`}
+                              >
+                                <Card
+                                  sx={{
+                                    display: "flex",
+                                    height: "100%",
+                                    border: "1px solid #e0e0e0",
+                                    boxShadow: "none",
+                                    transition: "transform 0.2s",
+                                    "&:hover": {
+                                      transform: "translateY(-4px)",
+                                      boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                                    },
+                                  }}
+                                >
+                                  <CardContent
+                                    sx={{
+                                      p: 2,
+                                      display: "flex",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <Box
+                                      sx={{
+                                        width: 80,
+                                        height: 80,
+                                        backgroundColor: "#f5f5f5",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        borderRadius: 1,
+                                        overflow: "hidden",
+                                        flexShrink: 0,
+                                        mr: 2,
+                                      }}
+                                    >
+                                      <img
+                                        src={
+                                          product.image ||
+                                          "https://via.placeholder.com/150"
+                                        }
+                                        alt={product.name}
+                                        style={{
+                                          maxWidth: "100%",
+                                          maxHeight: "100%",
+                                          objectFit: "contain",
+                                        }}
+                                        onError={(e) => {
+                                          if (
+                                            e.target instanceof HTMLImageElement
+                                          ) {
+                                            e.target.onerror = null;
+                                            e.target.src =
+                                              "https://via.placeholder.com/150";
+                                          }
+                                        }}
+                                      />
+                                    </Box>
+                                    <Box sx={{ flexGrow: 1 }}>
+                                      <Typography variant="subtitle2" noWrap>
+                                        {product.name}
+                                      </Typography>
+                                      <Typography
+                                        variant="subtitle1"
+                                        fontWeight="bold"
+                                        sx={{ color: "#0f2044" }}
+                                      >
+                                        ${parseFloat(product.price).toFixed(2)}
+                                      </Typography>
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          mt: 1,
+                                        }}
+                                      >
+                                        <Button
+                                          component={Link}
+                                          to={`/editProduct/${product.productID}`}
+                                          size="small"
+                                          sx={{
+                                            mr: 1,
+                                            fontSize: "0.75rem",
+                                            color: "#0f2044",
+                                            borderColor: "#0f2044",
+                                            borderRadius: 0.5,
+                                            py: 0.25,
+                                            minWidth: 0,
+                                            "&:hover": {
+                                              borderColor: "#ffc72c", // UNCG Gold
+                                              bgcolor:
+                                                "rgba(255, 199, 44, 0.04)",
+                                            },
+                                          }}
+                                          variant="outlined"
+                                        >
+                                          Edit
+                                        </Button>
+                                        <Chip
+                                          label={product.condition}
+                                          size="small"
+                                          sx={{
+                                            height: 20,
+                                            fontSize: "0.7rem",
+                                            bgcolor: "rgba(15, 32, 68, 0.08)", // Light UNCG Blue
+                                          }}
+                                        />
+                                      </Box>
+                                    </Box>
+                                  </CardContent>
+                                </Card>
+                              </Grid>
+                            );
+                          })}
+                    </Grid>
+                  </Box>
+                )}
+
+                {products?.length === 0 ? (
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 4,
+                      textAlign: "center",
+                      borderRadius: 2,
+                      borderStyle: "dashed",
+                    }}
+                  >
+                    <StoreIcon
+                      sx={{ fontSize: 40, color: "text.disabled", mb: 1 }}
+                    />
+                    <Typography variant="body1" color="text.secondary">
+                      You haven't uploaded any products yet
+                    </Typography>
+                    <Button
+                      component={Link}
+                      to="/uploadProduct"
+                      variant="outlined"
+                      color="primary"
+                      sx={{
+                        mt: 2,
+                        borderRadius: 1,
+                        textTransform: "none",
+                        borderColor: "#0f2044",
+                        color: "#0f2044",
+                        "&:hover": {
+                          borderColor: "#ffc72c", // UNCG Gold
+                          bgcolor: "rgba(255, 199, 44, 0.04)",
+                        },
+                      }}
+                    >
+                      Upload Your First Product
+                    </Button>
+                  </Paper>
+                ) : (
+                  <Grid container spacing={3}>
+                    {Array.isArray(products) &&
+                      products.map((product) => {
+                        if (!product?.productID) return null;
+                        return (
+                          <Grid
+                            item
+                            xs={12}
+                            sm={6}
+                            md={4}
+                            key={product.productID}
+                          >
+                            <Zoom in={true} timeout={500}>
+                              <Card
+                                variant="outlined"
+                                sx={{
+                                  height: "100%",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  borderRadius: 2,
+                                  transition: "all 0.2s",
+                                  border: "1px solid #e0e0e0",
+                                  "&:hover": {
+                                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                                  },
+                                }}
+                              >
+                                {/* Status chip */}
+                                <Box
+                                  sx={{
+                                    position: "absolute",
+                                    top: 12,
+                                    right: 12,
+                                    zIndex: 1,
+                                  }}
+                                >
+                                  <Chip
+                                    label={product.status || "Available"}
+                                    color={getStatusColor(product.status)}
+                                    size="small"
+                                    sx={{ fontSize: "0.75rem" }}
+                                  />
+                                </Box>
+
+                                {/* Product image */}
+                                <Box
+                                  sx={{
+                                    height: 180,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    p: 2,
+                                    bgcolor: "grey.50",
+                                  }}
+                                >
+                                  <img
+                                    src={
+                                      product.image ||
+                                      "https://via.placeholder.com/150"
+                                    }
+                                    alt={product.name}
+                                    style={{
+                                      maxWidth: "100%",
+                                      maxHeight: "100%",
+                                      objectFit: "contain",
+                                    }}
+                                    onError={(e) => {
+                                      if (
+                                        e.target instanceof HTMLImageElement
+                                      ) {
+                                        e.target.onerror = null;
+                                        e.target.src =
+                                          "https://via.placeholder.com/150";
+                                      }
+                                    }}
+                                  />
+                                </Box>
+
+                                {/* Product details */}
+                                <CardContent sx={{ flexGrow: 1, p: 2 }}>
+                                  <Typography
+                                    variant="subtitle1"
+                                    fontWeight="500"
+                                    gutterBottom
+                                    title={product.name}
+                                  >
+                                    {product.name?.length > 24
+                                      ? `${product.name.substring(0, 24)}...`
+                                      : product.name}
+                                  </Typography>
+
+                                  <Typography
+                                    variant="h6"
+                                    sx={{
+                                      fontWeight: 500,
+                                      my: 1,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                      color: "#0f2044", // UNCG Blue
+                                    }}
+                                  >
+                                    <LocalOfferIcon fontSize="small" />$
+                                    {parseFloat(product.price).toFixed(2)}
+                                  </Typography>
+
+                                  <Stack spacing={1} sx={{ mb: 1 }}>
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                      }}
+                                    >
+                                      <CategoryIcon
+                                        fontSize="small"
+                                        color="action"
+                                        sx={{ fontSize: 18 }}
+                                      />
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        {product.category}
+                                      </Typography>
+                                    </Box>
+
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                      }}
+                                    >
+                                      <Box sx={{ display: "flex" }}>
+                                        {[...Array(5)].map((_, i) => (
+                                          <StarIcon
+                                            key={i}
+                                            sx={{
+                                              color:
+                                                i <
+                                                getConditionStars(
+                                                  product.condition
+                                                )
+                                                  ? "warning.main"
+                                                  : "text.disabled",
+                                              fontSize: "0.8rem",
+                                            }}
+                                          />
+                                        ))}
+                                      </Box>
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        {product.condition}
+                                      </Typography>
+                                    </Box>
+                                  </Stack>
+                                </CardContent>
+
+                                {/* Action buttons */}
+                                <Divider />
+                                <Box
+                                  sx={{
+                                    p: 2,
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    gap: 1,
+                                  }}
+                                >
+                                  <Tooltip title="Edit product">
+                                    <Button
+                                      component={Link}
+                                      to={`/editProduct/${product.productID}`}
+                                      variant="outlined"
+                                      startIcon={<EditIcon />}
+                                      size="small"
+                                      sx={{
+                                        flex: 1,
+                                        borderRadius: 1,
+                                        textTransform: "none",
+                                        borderColor: "#0f2044",
+                                        color: "#0f2044",
+                                        "&:hover": {
+                                          borderColor: "#ffc72c", // UNCG Gold
+                                          bgcolor: "rgba(255, 199, 44, 0.04)",
+                                        },
+                                      }}
+                                    >
+                                      Edit
+                                    </Button>
+                                  </Tooltip>
+                                  <Tooltip title="Delete product">
+                                    <Button
+                                      variant="outlined"
+                                      startIcon={<DeleteIcon />}
+                                      onClick={() =>
+                                        handleDeleteProduct(product.productID)
+                                      }
+                                      size="small"
+                                      sx={{
+                                        flex: 1,
+                                        borderRadius: 1,
+                                        textTransform: "none",
+                                        color: "#d32f2f",
+                                        borderColor: "#d32f2f",
+                                        "&:hover": {
+                                          borderColor: "#d32f2f",
+                                          bgcolor: "rgba(211, 47, 47, 0.04)",
+                                        },
+                                      }}
+                                    >
+                                      Delete
+                                    </Button>
+                                  </Tooltip>
+                                </Box>
+                              </Card>
+                            </Zoom>
+                          </Grid>
+                        );
+                      })}
+                  </Grid>
+                )}
+              </Box>
+            )}
+          </Box>
+        </Paper>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={openDeleteDialog}
+          onClose={() => setOpenDeleteDialog(false)}
+          PaperProps={{
+            style: {
+              borderRadius: "8px",
+            },
+          }}
+        >
+          <DialogTitle
+            sx={{
+              bgcolor: "#0f2044", // UNCG Blue
+              color: "white",
+            }}
+          >
+            Delete Product
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ mt: 2 }}>
+              Are you sure you want to delete this product? This action cannot
+              be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button
+              onClick={() => setOpenDeleteDialog(false)}
+              sx={{
+                textTransform: "none",
+                color: "#0f2044",
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDeleteProduct}
+              sx={{
+                borderRadius: 1,
+                textTransform: "none",
+                bgcolor: "#d32f2f",
+                color: "white",
+                "&:hover": {
+                  bgcolor: "#b71c1c",
+                },
+              }}
+              variant="contained"
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Snackbar for notifications */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={5000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={handleCloseSnackbar}
+            severity={snackbar.severity === "error" ? "error" : "success"}
+            variant="filled"
+            sx={{
+              width: "100%",
+              borderRadius: 1,
+              ...(snackbar.severity !== "error" && {
+                bgcolor: "#0f2044", // UNCG Blue for success alerts
+              }),
+            }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Container>
+    </Fade>
   );
 };
 

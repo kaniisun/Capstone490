@@ -1,208 +1,467 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../../../supabaseClient"; 
+import { supabase } from "../../../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import "./uploadProduct.css";
 
+// Material-UI imports
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Checkbox,
+  Container,
+  Divider,
+  FormControl,
+  FormControlLabel,
+  FormHelperText,
+  Grid,
+  InputAdornment,
+  MenuItem,
+  Paper,
+  Select,
+  TextField,
+  Typography,
+  Alert,
+  Snackbar,
+  IconButton,
+  CircularProgress,
+  useTheme,
+} from "@mui/material";
+import {
+  CloudUpload as CloudUploadIcon,
+  AddPhotoAlternate as AddPhotoIcon,
+  Save as SaveIcon,
+  ArrowBack as ArrowBackIcon,
+} from "@mui/icons-material";
+
 const UploadProduct = () => {
-    const navigate = useNavigate();
-    const [userId, setUserId] = useState(null);
-    const [product, setProduct] = useState({
-        name: "",
-        description: "",
-        condition: "",
-        category: "furniture",
-        price: "",
-        imageFile: null,
-        is_bundle: false,
-        status: "Available",
-        flag: false,
-    });
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const [userId, setUserId] = useState(null);
+  const [product, setProduct] = useState({
+    name: "",
+    description: "",
+    condition: "new",
+    category: "furniture",
+    price: "",
+    imageFile: null,
+    is_bundle: false,
+    status: "Available",
+    flag: false,
+  });
+  const [loading, setLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
-    const [loading, setLoading] = useState(false);
-
-    // Get the current user's ID when component mounts
-    useEffect(() => {
-        const getCurrentUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                navigate('/login');
-                return;
-            }
-            setUserId(user.id);
-        };
-
-        getCurrentUser();
-    }, [navigate]);
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setProduct({ ...product, [name]: value });
+  // Get the current user's ID when component mounts
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/login");
+        return;
+      }
+      setUserId(user.id);
     };
 
-    const handleCheckboxChange = (e) => {
-        setProduct({ ...product, is_bundle: e.target.checked });
-    };
+    getCurrentUser();
+  }, [navigate]);
 
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setProduct({ ...product, imageFile: file });
-        }
-    };
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setProduct({ ...product, [name]: value });
+  };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
+  const handleCheckboxChange = (e) => {
+    setProduct({ ...product, is_bundle: e.target.checked });
+  };
 
-        try {
-            if (!userId) {
-                throw new Error('User not authenticated');
-            }
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProduct({ ...product, imageFile: file });
 
-            let imageUrl = null;
+      // Create a preview URL for the selected image
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-            if (product.imageFile) {
-                const fileExt = product.imageFile.name.split(".").pop();
-                const fileName = `${userId}_${Date.now()}.${fileExt}`;
-                const filePath = `uploads/${fileName}`;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from("product-images")
-                    .upload(filePath, product.imageFile, { upsert: false });
+    try {
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
 
-                if (uploadError) throw uploadError;
+      let imageUrl = null;
 
-                const { data: publicUrlData } = supabase
-                    .storage
-                    .from("product-images")
-                    .getPublicUrl(filePath);
+      if (product.imageFile) {
+        const fileExt = product.imageFile.name.split(".").pop();
+        const fileName = `${userId}_${Date.now()}.${fileExt}`;
+        const filePath = `uploads/${fileName}`;
 
-                imageUrl = publicUrlData.publicUrl;
-            }
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("product-images")
+          .upload(filePath, product.imageFile, { upsert: false });
 
-            const { data, error: productError } = await supabase
-                .from("products")
-                .insert([
-                    {
-                        userID: userId,
-                        name: product.name,
-                        description: product.description,
-                        condition: product.condition,
-                        category: product.category,
-                        price: parseFloat(product.price),
-                        image: imageUrl,
-                        status: product.status,
-                        is_bundle: product.is_bundle,
-                        flag: product.flag,
-                        created_at: new Date().toISOString(),
-                        modified_at: new Date().toISOString(),
-                    },
-                ])
-                .select();
+        if (uploadError) throw uploadError;
 
-            if (productError) throw productError;
+        const { data: publicUrlData } = supabase.storage
+          .from("product-images")
+          .getPublicUrl(filePath);
 
-            // Show success message
-            alert('Product uploaded successfully!');
-            
-            // Navigate to account dashboard after successful upload
-            navigate('/account');
-            
-        } catch (error) {
-            console.error("Error uploading product:", error);
-            alert(error.message || "Failed to upload product");
-        } finally {
-            setLoading(false);
-        }
-    };
+        imageUrl = publicUrlData.publicUrl;
+      }
 
-    return (
-        <div className="upload-product-container">
-            <h2>Upload New Product</h2>
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
-                    name="name"
-                    value={product.name}
-                    onChange={handleInputChange}
-                    placeholder="Product Name"
-                    required
-                />
-                <textarea
-                    name="description"
-                    value={product.description}
-                    onChange={handleInputChange}
-                    placeholder="Product Description"
-                    required
-                />
-                <div className="dropdown-container">
-                    <label>Condition:</label>
-                    <select
+      const { data, error: productError } = await supabase
+        .from("products")
+        .insert([
+          {
+            userID: userId,
+            name: product.name,
+            description: product.description,
+            condition: product.condition,
+            category: product.category,
+            price: parseFloat(product.price),
+            image: imageUrl,
+            status: product.status,
+            is_bundle: product.is_bundle,
+            flag: product.flag,
+            created_at: new Date().toISOString(),
+            modified_at: new Date().toISOString(),
+          },
+        ])
+        .select();
+
+      if (productError) throw productError;
+
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: "Product uploaded successfully!",
+        severity: "success",
+      });
+
+      // Navigate to account dashboard after successful upload
+      setTimeout(() => navigate("/account"), 1500);
+    } catch (error) {
+      console.error("Error uploading product:", error);
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to upload product",
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  return (
+    <Container maxWidth="md" sx={{ mt: 4, mb: 6 }}>
+      <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+        <Box
+          sx={{
+            mb: 3,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Typography variant="h5" component="h1" fontWeight="500">
+            Upload New Product
+          </Typography>
+          <IconButton
+            color="primary"
+            onClick={() => navigate("/account")}
+            sx={{ borderRadius: 1 }}
+          >
+            <ArrowBackIcon />
+            <Typography variant="body2" sx={{ ml: 0.5 }}>
+              Back
+            </Typography>
+          </IconButton>
+        </Box>
+        <Divider sx={{ mb: 4 }} />
+
+        <Box component="form" onSubmit={handleSubmit} noValidate>
+          <Grid container spacing={3}>
+            {/* Product info section */}
+            <Grid item xs={12} md={7}>
+              <Card variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+                <Typography variant="subtitle1" fontWeight="500" gutterBottom>
+                  Product Information
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Product Name"
+                      name="name"
+                      value={product.name}
+                      onChange={handleInputChange}
+                      required
+                      variant="outlined"
+                      sx={{
+                        mb: 2,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1,
+                        },
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Description"
+                      name="description"
+                      value={product.description}
+                      onChange={handleInputChange}
+                      required
+                      multiline
+                      rows={4}
+                      variant="outlined"
+                      sx={{
+                        mb: 2,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1,
+                        },
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                      <TextField
+                        select
+                        label="Condition"
                         name="condition"
                         value={product.condition}
                         onChange={handleInputChange}
                         required
-                    >
-                        <option value="new">New</option>
-                        <option value="like-new">Like New</option>
-                        <option value="used">Used</option>
-                    </select>
-                </div>
-                <div className="dropdown-container">
-                    <label>Category:</label>
-                    <select
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: 1,
+                          },
+                        }}
+                      >
+                        <MenuItem value="new">New</MenuItem>
+                        <MenuItem value="like new">Like New</MenuItem>
+                        <MenuItem value="good">Good</MenuItem>
+                        <MenuItem value="fair">Fair</MenuItem>
+                        <MenuItem value="poor">Poor</MenuItem>
+                      </TextField>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                      <TextField
+                        select
+                        label="Category"
                         name="category"
                         value={product.category}
                         onChange={handleInputChange}
                         required
-                    >
-                        <option value="furniture">Furniture</option>
-                        <option value="personal">Personal</option>
-                        <option value="books">Books</option>
-                        <option value="electronics">Electronics</option>
-                        <option value="clothing">Clothing</option>
-                        <option value="miscellaneous">Miscellaneous</option>
-                    </select>
-                </div>
-                <input
-                    type="number"
-                    name="price"
-                    value={product.price}
-                    onChange={handleInputChange}
-                    placeholder="Price"
-                    required
-                />
-
-                {/*  Bundle Option Checkbox */}
-                <div className="checkbox-container">
-                    <label>
-                        <input
-                            type="checkbox"
-                            name="isbundle"
-                            checked={product.is_bundle}
-                            onChange={handleCheckboxChange}
-                        />
-                        Available for Bundling
-                    </label>
-                </div>
-
-                {/*  Image Upload */}
-                <div className="file-upload">
-                    <label>Upload Product Image:</label>
-                    <input
-                        type="file"
-                        name="imageFile"
-                        onChange={handleFileChange}
-                        accept="image/*"
+                        variant="outlined"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: 1,
+                          },
+                        }}
+                      >
+                        <MenuItem value="furniture">Furniture</MenuItem>
+                        <MenuItem value="personal">Personal</MenuItem>
+                        <MenuItem value="books">Books</MenuItem>
+                        <MenuItem value="electronics">Electronics</MenuItem>
+                        <MenuItem value="clothing">Clothing</MenuItem>
+                        <MenuItem value="miscellaneous">Miscellaneous</MenuItem>
+                      </TextField>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Price"
+                      name="price"
+                      type="number"
+                      value={product.price}
+                      onChange={handleInputChange}
+                      required
+                      variant="outlined"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">$</InputAdornment>
+                        ),
+                      }}
+                      sx={{
+                        mb: 2,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1,
+                        },
+                      }}
                     />
-                </div>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={product.is_bundle}
+                          onChange={handleCheckboxChange}
+                          color="primary"
+                        />
+                      }
+                      label="Available for Bundling"
+                    />
+                  </Grid>
+                </Grid>
+              </Card>
+            </Grid>
 
-                <button type="submit" disabled={loading}>
-                    {loading ? "Uploading..." : "Upload Product"}
-                </button>
-            </form>
-        </div>
-    );
+            {/* Image upload section */}
+            <Grid item xs={12} md={5}>
+              <Card
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  mb: 3,
+                  borderRadius: 2,
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Typography variant="subtitle1" fontWeight="500" gutterBottom>
+                  Product Image
+                </Typography>
+                <Box
+                  sx={{
+                    border: "1px dashed",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    p: 2,
+                    mb: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexGrow: 1,
+                    bgcolor: "grey.50",
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
+                >
+                  {imagePreview ? (
+                    <Box
+                      component="img"
+                      src={imagePreview}
+                      alt="Product preview"
+                      sx={{
+                        maxWidth: "100%",
+                        maxHeight: "200px",
+                        objectFit: "contain",
+                      }}
+                    />
+                  ) : (
+                    <Box sx={{ textAlign: "center", color: "text.secondary" }}>
+                      <AddPhotoIcon
+                        sx={{ fontSize: 60, mb: 1, color: "text.disabled" }}
+                      />
+                      <Typography variant="body2">No image selected</Typography>
+                    </Box>
+                  )}
+                </Box>
+
+                <Button
+                  component="label"
+                  variant="outlined"
+                  startIcon={<CloudUploadIcon />}
+                  sx={{
+                    borderRadius: 1,
+                    textTransform: "none",
+                  }}
+                >
+                  Upload Image
+                  <input
+                    type="file"
+                    hidden
+                    name="imageFile"
+                    onChange={handleFileChange}
+                    accept="image/*"
+                  />
+                </Button>
+                <FormHelperText>
+                  Recommended size: 600x600 pixels
+                </FormHelperText>
+              </Card>
+            </Grid>
+
+            {/* Submit button */}
+            <Grid item xs={12}>
+              <Divider sx={{ mb: 3 }} />
+              <Box sx={{ display: "flex", justifyContent: "center" }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={loading}
+                  startIcon={
+                    loading ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <SaveIcon />
+                    )
+                  }
+                  sx={{
+                    borderRadius: 1,
+                    py: 1.2,
+                    px: 4,
+                    textTransform: "none",
+                  }}
+                >
+                  {loading ? "Uploading..." : "Upload Product"}
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity === "error" ? "error" : "success"}
+          variant="filled"
+          sx={{ width: "100%", borderRadius: 1 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
+  );
 };
 
 export default UploadProduct;

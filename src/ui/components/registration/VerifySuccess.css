@@ -1,100 +1,114 @@
 .verification-success-container {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   min-height: 80vh;
-  padding: 2rem;
-  text-align: center;
-  max-width: 600px;
-  margin: 0 auto;
+  padding: 20px;
 }
 
 .success-message {
-  background-color: #f8f9fa;
-  border-radius: 10px;
-  padding: 3rem;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  text-align: center;
+  max-width: 500px;
   width: 100%;
 }
 
 .success-message h1 {
-  color: #2e7d32;
-  margin-bottom: 1.5rem;
-  font-size: 2.5rem;
+  color: #38a169;
+  margin-bottom: 20px;
 }
 
 .success-message p {
-  color: #424242;
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
+  margin-bottom: 15px;
+  line-height: 1.6;
+  color: #4a5568;
+}
+
+.redirect-message {
+  font-style: italic;
+  color: #718096;
+  font-size: 0.9rem;
+  margin-top: 15px;
+  padding: 8px;
+  background-color: #f7fafc;
+  border-radius: 4px;
 }
 
 .start-exploring-btn {
-  background-color: #0066cc;
+  margin-top: 20px;
+  background-color: #3182ce;
   color: white;
   border: none;
-  border-radius: 5px;
-  padding: 1rem 2rem;
-  font-size: 1.2rem;
+  border-radius: 4px;
+  padding: 12px 24px;
+  font-size: 1rem;
   cursor: pointer;
-  margin-top: 2rem;
-  transition: all 0.3s ease;
+  transition: background-color 0.2s ease;
 }
 
 .start-exploring-btn:hover {
-  background-color: #004d99;
-  transform: translateY(-2px);
-}
-
-.loading {
-  text-align: center;
-  padding: 2rem;
-}
-
-.spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border-left-color: #0066cc;
-  animation: spin 1s linear infinite;
-  margin: 20px auto;
+  background-color: #2c5282;
 }
 
 .error-message {
-  background-color: #ffebee;
-  border-radius: 10px;
-  padding: 2rem;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  background-color: #fff5f5;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  text-align: center;
+  max-width: 500px;
   width: 100%;
 }
 
 .error-message h2 {
-  color: #c62828;
-  margin-bottom: 1rem;
+  color: #e53e3e;
+  margin-bottom: 20px;
+}
+
+.error-message p {
+  margin-bottom: 20px;
+  line-height: 1.6;
+  color: #4a5568;
 }
 
 .error-message button {
-  background-color: #c62828;
+  background-color: #e53e3e;
   color: white;
   border: none;
-  border-radius: 5px;
-  padding: 0.75rem 1.5rem;
-  margin-top: 1.5rem;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-size: 1rem;
   cursor: pointer;
-  transition: background-color 0.3s ease;
 }
 
 .error-message button:hover {
-  background-color: #b71c1c;
+  background-color: #c53030;
+}
+
+.loading {
+  text-align: center;
+}
+
+.loading h2 {
+  color: #4a5568;
+  margin-bottom: 20px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #3182ce;
+  animation: spin 1s ease-in-out infinite;
 }
 
 @keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
+  to {
     transform: rotate(360deg);
   }
 }
