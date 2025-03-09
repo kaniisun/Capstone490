@@ -178,22 +178,39 @@ const Header = () => {
   };
 
   return (
-    <AppBar position="sticky" sx={{ bgcolor: "#0f2044" }}>
-      <Container maxWidth="xl">
+    <AppBar position="sticky" sx={{ bgcolor: "#0f2044", width: "100%" }}>
+      <Box sx={{ width: "100%", px: { xs: 2, sm: 3, md: 4 } }}>
         <Toolbar
           disableGutters
-          sx={{ display: "flex", justifyContent: "space-between" }}
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            minHeight: { xs: "56px", sm: "64px" },
+            width: "100%",
+          }}
         >
-          {/* Left side - Logo */}
-          <Box sx={{ display: { xs: "none", md: "flex" } }}>
+          {/* Left side - Logo - Always at left edge */}
+          <Box
+            sx={{
+              display: { xs: "none", md: "flex" },
+              ml: { xs: 0, md: 0, lg: 0 }, // No margin to stay at edge
+            }}
+          >
             <TempLogo
               isAuthenticated={isAuthenticated}
               isEmailVerified={isEmailVerified}
             />
           </Box>
 
-          {/* Right side - Profile Icon */}
-          <Box sx={{ display: "flex", alignItems: "center", ml: "auto" }}>
+          {/* Right side - Profile Icon - Always at right edge */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              ml: "auto",
+              mr: { xs: 0, md: 0, lg: 0 }, // No margin to stay at edge
+            }}
+          >
             <Tooltip
               title={userInfo ? `Hi, ${userInfo.firstName}!` : "Account"}
             >
@@ -356,7 +373,7 @@ const Header = () => {
             </Menu>
           </Box>
         </Toolbar>
-      </Container>
+      </Box>
     </AppBar>
   );
 };
