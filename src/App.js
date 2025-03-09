@@ -129,7 +129,11 @@ function AppContent() {
                 path="/messaging"
                 element={
                   <ProtectedRoute>
-                    <MessageArea />
+                    <MessageArea
+                      user={{}} // temporary dummy user object
+                      receiver={{}} // temporary dummy receiver object
+                      onCloseChat={() => {}} // temporary empty function
+                    />
                   </ProtectedRoute>
                 }
               />
@@ -160,13 +164,10 @@ function AppContent() {
   );
 }
 
-
 function App() {
   return (
     <BrowserRouter>
-
       <AppContent />
-
     </BrowserRouter>
   );
 }
