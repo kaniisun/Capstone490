@@ -3,23 +3,48 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
-import "./Login.css";
+import {
+  Alert,
+  Box,
+  Button,
+  CardContent,
+  CircularProgress,
+  Container,
+  Divider,
+  Grid,
+  IconButton,
+  InputAdornment,
+  Link,
+  Paper,
+  TextField,
+  Typography,
+  useTheme,
+} from "@mui/material";
+import {
+  Login as LoginIcon,
+  Email,
+  Lock,
+  Visibility,
+  VisibilityOff,
+} from "@mui/icons-material";
 
 //This is the login component that allows the user to sign in to their account
 function Login() {
+  const theme = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { isAuthenticated, refreshSession } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/");
+      navigate("/home");
     }
   }, [isAuthenticated, navigate]);
 
@@ -30,6 +55,11 @@ function Login() {
     localStorage.removeItem("userId");
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("sessionExpiration");
+  };
+
+  // Toggle password visibility
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
   };
 
   const handleSubmit = async (e) => {
@@ -83,6 +113,42 @@ function Login() {
         throw new Error("Failed to authenticate. Please try again later.");
       }
 
+      // Check if the user's account is active in the database
+      const { data: userRecord, error: userRecordError } = await supabase
+        .from("users")
+        .select("accountStatus")
+        .eq("userID", authData.user.id)
+        .single();
+
+      if (userRecordError) {
+        setError("Error fetching user account status. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // If account is not active, check if email is verified
+      if (userRecord.accountStatus !== "active") {
+        // Check if email is verified in Supabase Auth
+        if (!authData.user.email_confirmed_at) {
+          // Store email in session storage for verification page
+          sessionStorage.setItem("verificationEmail", email);
+          // Redirect to verify email page
+          navigate("/verify-email");
+          setLoading(false);
+          return;
+        } else {
+          // Email is verified but account status wasn't updated, update it now
+          const { error: updateError } = await supabase
+            .from("users")
+            .update({ accountStatus: "active" })
+            .eq("userID", authData.user.id);
+
+          if (updateError) {
+            console.error("Error updating account status:", updateError);
+          }
+        }
+      }
+
       // Get user profile
       const { data: profile, error: profileError } = await supabase
         .from("users")
@@ -105,8 +171,15 @@ function Login() {
       // Initialize the session timeout
       refreshSession();
 
-      // Navigate to home page
-      navigate("/");
+      // Wait a short moment to ensure auth state is fully updated
+      setTimeout(() => {
+        // Check if there's a stored redirect path
+        const redirectPath = sessionStorage.getItem("redirectAfterAuth");
+        // Clear the stored path
+        sessionStorage.removeItem("redirectAfterAuth");
+        // Navigate to the stored path or home
+        navigate(redirectPath || "/home", { replace: true });
+      }, 300);
     } catch (err) {
       console.error("Login error:", err);
       setError(
@@ -118,38 +191,168 @@ function Login() {
 
   //Render the login form
   return (
-    <form className="form" onSubmit={handleSubmit}>
-      <p className="form-title">Sign in to your account</p>
-      <div className="input-container">
-        <input
-          type="email"
-          placeholder="Enter your UNCG email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </div>
-      <div className="input-container">
-        <input
-          type="password"
-          placeholder="Enter password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          disabled={loading}
-          minLength={6}
-        />
-      </div>
-      {error && <p className="error-message">{error}</p>}
-      <button type="submit" className="submit" disabled={loading}>
-        {loading ? "Signing in..." : "Sign in"}
-      </button>
-      <p className="signup-link">
-        No account?
-        <Link to="/register"> Sign up</Link>
-      </p>
-    </form>
+    <Container maxWidth="sm" sx={{ py: 8 }}>
+      <Paper
+        elevation={6}
+        sx={{
+          borderRadius: 2,
+          overflow: "hidden",
+        }}
+      >
+        {/* Header */}
+        <Box
+          sx={{
+            backgroundColor: theme.palette.primary.main,
+            color: "white",
+            p: 3,
+            textAlign: "center",
+          }}
+        >
+          <LoginIcon fontSize="large" sx={{ mb: 1 }} />
+          <Typography variant="h4" component="h1" fontWeight="bold">
+            Welcome Back
+          </Typography>
+          <Typography variant="body1" sx={{ mt: 1, opacity: 0.9 }}>
+            Sign in to your Spartan Marketplace account
+          </Typography>
+        </Box>
+
+        {/* Form */}
+        <CardContent sx={{ p: 4 }}>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            <Grid container spacing={2}>
+              {/* Email Field */}
+              <Grid item xs={12}>
+                <TextField
+                  required
+                  fullWidth
+                  id="email"
+                  label="UNCG Email"
+                  name="email"
+                  autoComplete="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Email color="primary" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+
+              {/* Password Field */}
+              <Grid item xs={12}>
+                <TextField
+                  required
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Lock color="primary" />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          aria-label="toggle password visibility"
+                          onClick={handleClickShowPassword}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+            </Grid>
+
+            {/* Forgot Password Link */}
+            <Box sx={{ textAlign: "right", mt: 1 }}>
+              <Link
+                component={RouterLink}
+                to="/reset-password"
+                variant="body2"
+                color="primary"
+              >
+                Forgot password?
+              </Link>
+            </Box>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={loading}
+              size="large"
+              sx={{
+                mt: 3,
+                mb: 2,
+                py: 1.5,
+                position: "relative",
+              }}
+            >
+              {loading ? (
+                <>
+                  <CircularProgress
+                    size={24}
+                    sx={{
+                      position: "absolute",
+                      color: theme.palette.secondary.main,
+                    }}
+                  />
+                  <span style={{ visibility: "hidden" }}>Sign In</span>
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
+
+            {/* Divider */}
+            <Divider sx={{ my: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                OR
+              </Typography>
+            </Divider>
+
+            {/* Registration Link */}
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="body2">
+                Don't have an account?{" "}
+                <Link
+                  component={RouterLink}
+                  to="/register"
+                  variant="body2"
+                  color="primary"
+                  sx={{ fontWeight: "medium" }}
+                >
+                  Sign up now
+                </Link>
+              </Typography>
+            </Box>
+          </Box>
+        </CardContent>
+      </Paper>
+    </Container>
   );
 }
 

@@ -1,38 +1,154 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import "@fortawesome/fontawesome-free/css/all.min.css";
 import {
-  faHome,
-  faBell,
-  faTruck,
-  faShoppingCart,
-  faUser,
-} from "@fortawesome/free-solid-svg-icons";
-import "./header.css";
+  AppBar,
+  Avatar,
+  Badge,
+  Box,
+  Container,
+  Divider,
+  IconButton,
+  ListItemIcon,
+  Menu,
+  MenuItem,
+  Toolbar,
+  Tooltip,
+  Typography,
+  useTheme,
+  useMediaQuery,
+} from "@mui/material";
+import {
+  Home as HomeIcon,
+  ShoppingCart as ShoppingCartIcon,
+  Person as PersonIcon,
+  Notifications as NotificationsIcon,
+  ChatBubble as ChatIcon,
+  LocalShipping as ShippingIcon,
+  Settings as SettingsIcon,
+  Logout as LogoutIcon,
+  Login as LoginIcon,
+  PersonAdd as PersonAddIcon,
+  School as SchoolIcon,
+} from "@mui/icons-material";
+
+// Temporary logo component
+const TempLogo = ({ isAuthenticated, isEmailVerified }) => {
+  const theme = useTheme();
+  const navigate = useNavigate();
+
+  const handleLogoClick = () => {
+    if (isAuthenticated && isEmailVerified) {
+      navigate("/home");
+    } else {
+      navigate("/");
+    }
+  };
+
+  return (
+    <Box
+      onClick={handleLogoClick}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        cursor: "pointer",
+        "&:hover": {
+          "& .logo-icon": {
+            transform: "rotate(10deg)",
+          },
+        },
+      }}
+    >
+      <SchoolIcon
+        className="logo-icon"
+        sx={{
+          fontSize: 32,
+          mr: 1.5,
+          color: theme.palette.secondary.main,
+          transition: "transform 0.3s ease",
+        }}
+      />
+      <Typography
+        variant="h6"
+        component="span"
+        sx={{
+          fontWeight: 700,
+          letterSpacing: "0.5px",
+          background: `linear-gradient(45deg, ${theme.palette.secondary.main} 30%, #ffffff 90%)`,
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+        }}
+      >
+        SPARTAN
+      </Typography>
+      <Typography
+        variant="h6"
+        component="span"
+        sx={{
+          fontWeight: 500,
+          ml: 0.5,
+          color: "white",
+        }}
+      >
+        Marketplace
+      </Typography>
+    </Box>
+  );
+};
 
 const Header = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [userInfo, setUserInfo] = useState(null);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
-  const { isAuthenticated, logout, user } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, isEmailVerified, user, logout } = useAuth();
+
+  const open = Boolean(anchorEl);
 
   useEffect(() => {
-    // Check if user is logged in using both AuthContext and localStorage
-    if (isAuthenticated && user) {
-      const userName = localStorage.getItem("userName");
-      setUserInfo({ firstName: userName || "User" });
-    } else {
-      setUserInfo(null);
-    }
-  }, [isAuthenticated, user]);
+    const updateUserInfo = () => {
+      if (isAuthenticated) {
+        const userName = localStorage.getItem("userName");
+
+        console.log(
+          "Auth state changed, userName from localStorage:",
+          userName
+        );
+
+        if (userName) {
+          setUserInfo({ firstName: userName });
+        } else if (user?.user_metadata?.firstName) {
+          const firstName = user.user_metadata.firstName;
+          setUserInfo({ firstName });
+          localStorage.setItem("userName", firstName);
+        } else {
+          setUserInfo({ firstName: "User" });
+        }
+      } else {
+        setUserInfo(null);
+      }
+    };
+
+    updateUserInfo();
+
+    const timeoutId = setTimeout(updateUserInfo, 50);
+    return () => clearTimeout(timeoutId);
+  }, [isAuthenticated, user, location]);
+
+  const handleProfileMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
 
   const handleLogout = async () => {
     try {
-      // Use the logout function from AuthContext instead
       await logout();
-      setShowDropdown(false);
+      handleMenuClose();
     } catch (error) {
       console.error("Error logging out:", error);
     }
@@ -40,91 +156,208 @@ const Header = () => {
 
   const handleLogin = () => {
     navigate("/login");
-    setShowDropdown(false);
+    handleMenuClose();
   };
 
   const handleSignUp = () => {
     navigate("/register");
-    setShowDropdown(false);
+    handleMenuClose();
+  };
+
+  const handleNavigate = (path) => {
+    navigate(path);
+    handleMenuClose();
+  };
+
+  const handleHomeClick = () => {
+    if (isAuthenticated && isEmailVerified) {
+      navigate("/home");
+    } else {
+      navigate("/");
+    }
   };
 
   return (
-    <div>
-      <header>
-        {/* LOGO */}
-        {/* clicking on logo leads to homepage */}
-        <Link to="/" className="logo">
-          Student Marketplace
-        </Link>
+    <AppBar position="sticky" sx={{ bgcolor: "#0f2044" }}>
+      <Container maxWidth="xl">
+        <Toolbar
+          disableGutters
+          sx={{ display: "flex", justifyContent: "space-between" }}
+        >
+          {/* Left side - Logo */}
+          <Box sx={{ display: { xs: "none", md: "flex" } }}>
+            <TempLogo
+              isAuthenticated={isAuthenticated}
+              isEmailVerified={isEmailVerified}
+            />
+          </Box>
 
-        <nav>
-          <ul>
-            {/* NAVIGATION */}
-            {/* icons link to according pages */}
-            {/* <Link to="/chatroom" className="nav-icon" data-tooltip="Chatroom">
-              <img src="chats.png" alt="Chat" className="nav-icon-image" />
-            </Link> */}
-            <Link to="/messaging" className="nav-icon" data-tooltip="Chatroom">
-              <img src="chats.png" alt="Chat" className="nav-icon-image" />
-            </Link>
-            <Link to="/" className="nav-icon" data-tooltip="Home">
-              <FontAwesomeIcon icon={faHome} />
-            </Link>
-            <a href="/#" className="nav-icon" data-tooltip="Notifications">
-              <FontAwesomeIcon icon={faBell} />
-            </a>
-            <a href="/#" className="nav-icon" data-tooltip="Order History">
-              <FontAwesomeIcon icon={faTruck} />
-            </a>
-            <a href="/cart" className="nav-icon" data-tooltip="Cart">
-              <FontAwesomeIcon icon={faShoppingCart} />
-            </a>
-
-            <div className="user-icon-container">
-              <div
-                className="nav-icon"
-                data-tooltip={
-                  userInfo ? `Hi, ${userInfo.firstName}!` : "Profile"
-                }
-                onClick={() => setShowDropdown(!showDropdown)}
+          {/* Right side - Profile Icon */}
+          <Box sx={{ display: "flex", alignItems: "center", ml: "auto" }}>
+            <Tooltip
+              title={userInfo ? `Hi, ${userInfo.firstName}!` : "Account"}
+            >
+              <IconButton
+                onClick={handleProfileMenuOpen}
+                size="small"
+                sx={{
+                  bgcolor: theme.palette.primary.light,
+                  "&:hover": {
+                    bgcolor: theme.palette.primary.dark,
+                  },
+                }}
+                aria-controls={open ? "account-menu" : undefined}
+                aria-haspopup="true"
+                aria-expanded={open ? "true" : undefined}
               >
-                <FontAwesomeIcon icon={faUser} />
-              </div>
-
-              {showDropdown && (
-                <div className="dropdown-menu">
-                  {userInfo ? (
-                    <>
-                      <div className="dropdown-header">
-                        Hi, {userInfo.firstName}!
-                      </div>
-                      <Link to="/account" className="dropdown-item">
-                        Edit Profile
-                      </Link>
-                      <button
-                        className="dropdown-item logout"
-                        onClick={handleLogout}
-                      >
-                        Logout
-                      </button>
-                    </>
+                <Avatar
+                  sx={{
+                    width: isMobile ? 28 : 32,
+                    height: isMobile ? 28 : 32,
+                    bgcolor: theme.palette.secondary.main,
+                    color: theme.palette.secondary.contrastText,
+                  }}
+                >
+                  {userInfo && userInfo.firstName ? (
+                    userInfo.firstName.charAt(0).toUpperCase()
                   ) : (
-                    <>
-                      <button className="dropdown-item" onClick={handleLogin}>
-                        Login
-                      </button>
-                      <button className="dropdown-item" onClick={handleSignUp}>
-                        Sign Up
-                      </button>
-                    </>
+                    <PersonIcon />
                   )}
-                </div>
+                </Avatar>
+              </IconButton>
+            </Tooltip>
+
+            {/* Profile Menu */}
+            <Menu
+              anchorEl={anchorEl}
+              id="account-menu"
+              open={open}
+              onClose={handleMenuClose}
+              onClick={handleMenuClose}
+              PaperProps={{
+                elevation: 3,
+                sx: {
+                  overflow: "visible",
+                  filter: "drop-shadow(0px 2px 8px rgba(0,0,0,0.2))",
+                  mt: 1.5,
+                  minWidth: 230,
+                  "& .MuiAvatar-root": {
+                    width: 32,
+                    height: 32,
+                    ml: -0.5,
+                    mr: 1,
+                  },
+                },
+              }}
+              transformOrigin={{ horizontal: "right", vertical: "top" }}
+              anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+            >
+              {userInfo ? (
+                <>
+                  <Box sx={{ px: 2, py: 1 }}>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight="medium"
+                      color="primary"
+                    >
+                      Hi, {userInfo.firstName}!
+                    </Typography>
+                  </Box>
+                  <Divider />
+
+                  <MenuItem onClick={handleHomeClick}>
+                    <ListItemIcon>
+                      <HomeIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    Home
+                  </MenuItem>
+
+                  <MenuItem onClick={() => handleNavigate("/messaging")}>
+                    <ListItemIcon>
+                      <ChatIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    Messages
+                  </MenuItem>
+
+                  <MenuItem onClick={() => handleNavigate("/notifications")}>
+                    <ListItemIcon>
+                      <Badge
+                        badgeContent={3}
+                        color="secondary"
+                        sx={{ "& .MuiBadge-badge": { fontSize: "9px" } }}
+                      >
+                        <NotificationsIcon fontSize="small" color="primary" />
+                      </Badge>
+                    </ListItemIcon>
+                    Notifications
+                  </MenuItem>
+
+                  <MenuItem onClick={() => handleNavigate("/orders")}>
+                    <ListItemIcon>
+                      <ShippingIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    Orders
+                  </MenuItem>
+
+                  <MenuItem onClick={() => handleNavigate("/cart")}>
+                    <ListItemIcon>
+                      <ShoppingCartIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    Cart
+                  </MenuItem>
+
+                  <Divider />
+
+                  <MenuItem onClick={() => handleNavigate("/account")}>
+                    <ListItemIcon>
+                      <PersonIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    My Profile
+                  </MenuItem>
+
+                  <MenuItem onClick={() => handleNavigate("/uploadProduct")}>
+                    <ListItemIcon>
+                      <ShoppingCartIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    Sell an Item
+                  </MenuItem>
+
+                  <MenuItem onClick={() => handleNavigate("/account")}>
+                    <ListItemIcon>
+                      <SettingsIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    Settings
+                  </MenuItem>
+
+                  <Divider />
+                  <MenuItem onClick={handleLogout} sx={{ color: "error.main" }}>
+                    <ListItemIcon>
+                      <LogoutIcon fontSize="small" color="error" />
+                    </ListItemIcon>
+                    Logout
+                  </MenuItem>
+                </>
+              ) : (
+                <>
+                  <MenuItem onClick={handleLogin}>
+                    <ListItemIcon>
+                      <LoginIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    Login
+                  </MenuItem>
+                  <MenuItem onClick={handleSignUp}>
+                    <ListItemIcon>
+                      <PersonAddIcon fontSize="small" color="primary" />
+                    </ListItemIcon>
+                    Sign Up
+                  </MenuItem>
+                </>
               )}
-            </div>
-          </ul>
-        </nav>
-      </header>
-    </div>
+            </Menu>
+          </Box>
+        </Toolbar>
+      </Container>
+    </AppBar>
   );
 };
 
