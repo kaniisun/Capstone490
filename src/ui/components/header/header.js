@@ -270,7 +270,7 @@ const Header = () => {
               anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
             >
               {userInfo ? (
-                <>
+                <div>
                   <Box sx={{ px: 2, py: 1 }}>
                     <Typography
                       variant="subtitle1"
@@ -353,9 +353,9 @@ const Header = () => {
                     </ListItemIcon>
                     Logout
                   </MenuItem>
-                </>
+                </div>
               ) : (
-                <>
+                <div>
                   <MenuItem onClick={handleLogin}>
                     <ListItemIcon>
                       <LoginIcon fontSize="small" color="primary" />
@@ -368,7 +368,7 @@ const Header = () => {
                     </ListItemIcon>
                     Sign Up
                   </MenuItem>
-                </>
+                </div>
               )}
             </Menu>
           </Box>
