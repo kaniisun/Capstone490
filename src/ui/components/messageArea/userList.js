@@ -11,15 +11,18 @@ const UserList = ({ setReceiver }) => {
       const { data, error } = await supabase
         .from("users")
         .select("userID, firstName")
-        .neq("userID", loggedInUserId); 
+        .neq("userID", loggedInUserId);
 
+        console.log("Logged in User ID:", loggedInUserId);
+  
       if (!error) {
         setUsers(data);
+        console.log("Fetched users:", data); 
       }
     };
     fetchUsers();
-    console.log("Fetched users:", fetchUsers());
-  }, []);
+  }, [loggedInUserId]);
+  
 
   
   return (

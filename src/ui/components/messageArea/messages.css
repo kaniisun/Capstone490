@@ -1,14 +1,15 @@
 .chat-container {
-    display: flex;
-    flex-direction: column;
-    height: 85vh;
-    max-width: 600px;
-    margin: auto;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    overflow: hidden;
-    background-color: #f9f9f9;
-  }
+  display: flex;
+  flex-direction: column;
+  height: 85vh;
+  max-width: 600px;
+  margin: auto;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: #f9f9f9;
+  align-items: right;
+}
 
   .chat-header {
     padding: 20px;
@@ -20,6 +21,8 @@
     padding: 15px;
     display: flex;
     flex-direction: column;
+    height: 100%; /* Make sure this covers the space properly */
+    background-color: #0057b300;
   }
   
   .message {
@@ -29,19 +32,21 @@
     border-radius: 10px;
     font-size: 14px;
     word-wrap: break-word;
+    color: rgba(0, 0, 0, 0) !important; 
   }
   
   .sent {
     align-self: flex-end;
     background-color: #4caf50;
-    color: white;
+    color: rgb(0, 0, 0) !important;
   }
   
   .received {
     align-self: flex-start;
     background-color: #e0e0e0;
-    color: black;
+    color: black !important;
   }
+  
   
   .message-input {
     display: flex;
