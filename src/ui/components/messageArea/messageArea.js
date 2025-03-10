@@ -19,8 +19,9 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
       .from("messages")
       .select("*")
       .or(
-        `sender_id.eq.${userID},receiver_id.eq.${receiver.userID},sender_id.eq.${receiver.userID},receiver_id.eq.${userID}`
+        `and(sender_id.eq.${userID},receiver_id.eq.${receiver.userID}),and(sender_id.eq.${receiver.userID},receiver_id.eq.${userID})`
       )
+      
       .order("created_at", { ascending: true });
 
     console.log("Fetched Messages:", data);  
@@ -38,21 +39,20 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
     fetchMessages();  // get existing messages
 
     const messageChannel = supabase
-      .channel("chat")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
-        (payload) => {
-          console.log("New Message:", payload);  
-          if (
-            (payload.new.sender_id === userID && payload.new.receiver_id === receiver.userID) ||
-            (payload.new.sender_id === receiver.userID && payload.new.receiver_id === userID)
-          ) {
-            setMessages((prevMessages) => [...prevMessages, payload.new]);
-          }
-        }
-      )
-      .subscribe();
+    .channel("chat")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+
+      console.log("New message received via realtime:", payload.new);
+
+      if (
+        (payload.new.sender_id === userID && payload.new.receiver_id === receiver.userID) ||
+        (payload.new.sender_id === receiver.userID && payload.new.receiver_id === userID)
+      ) {
+        setMessages((prevMessages) => [...prevMessages, payload.new]);
+      }
+    })
+    .subscribe();
+  
 
     return () => {
       supabase.removeChannel(messageChannel);
@@ -72,8 +72,12 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
     ]);
 
     if (!error) {
-      setNewMessage("");
+      if (!error) {
+        setNewMessage("");
+      }
+      
     }
+    
   };
 
   return (

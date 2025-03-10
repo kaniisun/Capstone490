@@ -87,7 +87,7 @@ body {
   border-bottom: solid 1px #e0e0e0;
 }
 
-.discussions .discussion .photo {
+/* .discussions .discussion .photo {
   margin-left: 20px;
   display: block;
   width: 45px;
@@ -98,7 +98,7 @@ body {
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-}
+} */
 
 .online {
   position: relative;
@@ -196,7 +196,7 @@ body {
   margin-bottom: 8px;
 }
 
-.chat .messages-chat .message .photo {
+/* .chat .messages-chat .message .photo {
   display: block;
   width: 45px;
   height: 45px;
@@ -206,7 +206,7 @@ body {
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-}
+} */
 
 .chat .messages-chat .text {
   margin: 0 35px;

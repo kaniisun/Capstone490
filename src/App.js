@@ -28,7 +28,7 @@ import Chatroom from "./ui/components/chatroom/chatroom";
 import Editproduct from "./ui/components/editproduct/editproduct";
 import Login from "./ui/components/login/Login";
 
-import MessageArea from "./ui/components/messageArea/messageArea";
+import MessageHome from "./ui/components/messageArea/messageHome";
 import VerifySuccess from "./ui/components/registration/VerifySuccess";
 import ConnectionTester from "./ui/components/common/ConnectionTester";
 import ResetPassword from "./ui/components/password/ResetPassword";
@@ -129,10 +129,10 @@ function AppContent() {
                 path="/messaging"
                 element={
                   <ProtectedRoute>
-                    <MessageArea
-                      user={{}} // temporary dummy user object
-                      receiver={{}} // temporary dummy receiver object
-                      onCloseChat={() => {}} // temporary empty function
+                    <MessageHome
+                      // user={{}} // temporary dummy user object
+                      // receiver={{}} // temporary dummy receiver object
+                      // onCloseChat={() => {}} // temporary empty function
                     />
                   </ProtectedRoute>
                 }
