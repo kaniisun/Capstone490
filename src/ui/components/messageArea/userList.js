@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../../supabaseClient";
+import "./messages.css";
 
 const UserList = ({ setReceiver }) => {
   const [users, setUsers] = useState([]);

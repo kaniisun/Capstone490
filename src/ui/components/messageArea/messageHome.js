@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
 import MessageArea from "./messageArea";
 import UserList from "./userList";
+import "./messages.css";
 
 const MessageHome = () => {
   const [user, setUser] = useState(null);

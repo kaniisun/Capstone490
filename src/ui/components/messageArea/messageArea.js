@@ -82,26 +82,26 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
 
   return (
     // display chatroom and messages
-    <div className="chat-container">
+    <div className="message-area-chat">
       {receiver ? (
         <>
-          <div className="chat-header">
+          <div className="message-area-header">
             <h3>Chatting with {receiver.firstName}</h3>
             <button className="close-chat-btn" onClick={onCloseChat}>
               ❌ Close Chat
             </button>
           </div>
-          <div className="messages">
+          <div className="message-area-messages">
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`message ${msg.sender_id === userID ? "sent" : "received"}`}
+                className={`message-area-message ${msg.sender_id === userID ? "sent" : "received"}`}
               >
                 <p>{msg.content}</p>
               </div>
             ))}
           </div>
-          <div className="message-input">
+          <div className="message-area-message-input">
             <input
               type="text"
               placeholder="Type your message..."
