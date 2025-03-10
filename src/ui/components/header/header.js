@@ -356,13 +356,13 @@ const Header = () => {
                 </div>
               ) : (
                 <div>
-                  <MenuItem onClick={() => navigate("/login")}>
+                  <MenuItem onClick={handleLogin}>
                     <ListItemIcon>
                       <LoginIcon fontSize="small" color="primary" />
                     </ListItemIcon>
                     Login
                   </MenuItem>
-                  <MenuItem onClick={() => navigate("/register")}>
+                  <MenuItem onClick={handleSignUp}>
                     <ListItemIcon>
                       <PersonAddIcon fontSize="small" color="primary" />
                     </ListItemIcon>
