@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import './cart.css';
 
 export const Cart = () => {
+  const navigate = useNavigate();
   // Sample cart items, could be fetched from an API or passed as props
   const [cartItems, setCartItems] = useState([
     { id: 1, name: 'Product 1', price: 15.00, condition: 'New', image: 'physics.jpg' },
@@ -58,8 +59,8 @@ export const Cart = () => {
           </span>
 
           <Link to="/home" className="shopping-cart-continue-btn">
-              <button className="cart-continue-btn">Continue Shopping</button>
-            </Link>
+            <button className="cart-continue-btn">Continue Shopping</button>
+          </Link>
         </div>
 
         <div className="shopping-cart-content">
@@ -116,14 +117,40 @@ export const Cart = () => {
                 <span>${total}</span>
               </div>
             </div>
-            <div className="shopping-cart-summary-actions">
+            {/* <div className="shopping-cart-summary-actions">
               <button
                 className="shopping-cart-checkout-btn"
                 disabled={totalItems === 0}
               >
                 Proceed to Checkout
               </button>
+            </div> */}
+
+            <div className="shopping-cart-summary-actions">
+              <button
+                className="shopping-cart-checkout-btn"
+                disabled={totalItems === 0}
+                onClick={() => {
+                  const cartData = {
+                    items: cartItems.map(item => ({
+                      name: item.name,
+                      price: item.price,
+                      quantity: 1 // You might want to add quantity management to cart items
+                    })),
+                    summary: {
+                      subtotal: subtotal,
+                      tax: tax,
+                      shipping: shipping,
+                      total: parseFloat(total)
+                    }
+                  };
+                  navigate('/checkout', { state: { cartData } });
+                }}
+              >
+                Proceed to Checkout
+              </button>
             </div>
+
           </div>
         </div>
       </div>
