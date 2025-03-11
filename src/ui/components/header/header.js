@@ -309,7 +309,7 @@ const Header = () => {
                     Notifications
                   </MenuItem>
 
-                  <MenuItem onClick={() => handleNavigate("/orders")}>
+                  <MenuItem onClick={() => handleNavigate("/orderhistory")}>
                     <ListItemIcon>
                       <ShippingIcon fontSize="small" color="primary" />
                     </ListItemIcon>
