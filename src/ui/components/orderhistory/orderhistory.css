@@ -1,0 +1,148 @@
+.order-history-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.order-history-container h2 {
+  color: #2c3e50;
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Toggle Buttons */
+.view-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.view-toggle button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: 2px solid #2b3287;
+  background: transparent;
+  color: #312b50;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.view-toggle button:hover {
+  background: #312b50;
+  color: white;
+}
+
+.view-toggle button.active {
+  background: #312b50;
+  color: white;
+}
+
+/* Content Section */
+.content-section {
+  position: relative;
+  min-height: 400px;
+}
+
+.order-section {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+}
+
+.order-section h3 {
+  color: #34495e;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #eee;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+
+th, td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background-color: #f8f9fa;
+  color: #306faf;
+  font-weight: 600;
+}
+
+tr:hover {
+  background-color: #f8f9fa;
+}
+
+.item-image {
+  width: 50px;
+  height: 50px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.total-spent, .total-earned {
+  text-align: right;
+  font-size: 1.2rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+.total-spent {
+  color: #e74c3c;
+}
+
+.total-earned {
+  color: #27ae60;
+}
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .order-history-container {
+    margin: 1rem auto;
+  }
+
+  .view-toggle {
+    flex-direction: column;
+    padding: 0 2rem;
+  }
+
+  .view-toggle button {
+    width: 100%;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  th, td {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .item-image {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.order-section:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+  
