@@ -80,6 +80,79 @@
   background-color: #ffd06b;
 }
 
+.message-area-delete-msg-btn {
+  background-color: red;
+}
+
+.message-area-delete-msg-btn:hover {
+  background-color: rgb(250, 137, 137);
+}
+
+.message-area-report-msg-btn {
+  background-color: #ccc;
+}
+
+.message-area-report-msg-btn:hover {
+  background-color: #e4e2e2;
+}
+
+/* REPORT */
+.report-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.report-popup {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  width: 300px;
+  text-align: center;
+}
+
+.report-reasons {
+  text-align: left;
+  margin-top: 10px;
+}
+
+.report-reasons label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.report-popup-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+.confirm-report {
+  background: red;
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.cancel-report {
+  background: gray;
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+
 /* MESSAGE HOME */
 .message-home-chat-container {
   display: flex;
