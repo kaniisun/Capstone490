@@ -79,34 +79,59 @@ const Checkout = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        
+        // Validate form
+        const newErrors = {};
+        if (!formData.fullName) newErrors.fullName = 'Full name is required';
+        if (!formData.address) newErrors.address = 'Address is required';
+        if (!formData.city) newErrors.city = 'City is required';
+        if (!formData.state) newErrors.state = 'State is required';
+        if (!formData.zipCode) newErrors.zipCode = 'ZIP code is required';
+        if (!formData.phone) newErrors.phone = 'Phone number is required';
+        if (!showZelleInfo && !showCashInfo) newErrors.payment = 'Payment method is required';
+        
+        setFormErrors(newErrors);
+        
+        if (Object.keys(newErrors).length === 0) {
+            const completeOrderData = {
+                orderId: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                orderDate: new Date().toLocaleDateString(),
+                seller: cartData?.seller || {
+                    name: 'Default Seller',
+                    email: 'seller@example.com',
+                    phone: '(555) 123-4567'
+                },
+                shipping: formData,
+                payment: {
+                    method: showZelleInfo ? 'Zelle' : 'Cash',
+                    status: 'Pending',
+                    zellePhone: showZelleInfo ? '+1 (555) 123-4567' : undefined
+                },
+                items: orderSummary.items,
+                summary: {
+                    subtotal: orderSummary.summary.subtotal,
+                    shipping: orderSummary.summary.shipping,
+                    tax: orderSummary.summary.tax,
+                    total: orderSummary.summary.total
+                }
+            };
 
-        if (!validateForm()) {
-            // If validation fails, scroll to the first error
-            const firstError = document.querySelector('.error-message');
-            if (firstError) {
-                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Save to localStorage
+            const savedPurchases = localStorage.getItem('purchaseConfirmations');
+            const purchases = savedPurchases ? JSON.parse(savedPurchases) : [];
+            purchases.unshift(completeOrderData); // Add new order at the beginning
+            localStorage.setItem('purchaseConfirmations', JSON.stringify(purchases));
+
+            // If this is a sale, also save to sale confirmations
+            if (cartData?.isSeller) {
+                const savedSales = localStorage.getItem('saleConfirmations');
+                const sales = savedSales ? JSON.parse(savedSales) : [];
+                sales.unshift(completeOrderData);
+                localStorage.setItem('saleConfirmations', JSON.stringify(sales));
             }
-            return;
+
+            navigate('/orderconfirmation', { state: { orderData: completeOrderData } });
         }
-
-        // Create the complete order data
-        const completeOrderData = {
-            orderId: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-            orderDate: new Date().toLocaleDateString(),
-            shipping: {
-                ...formData
-            },
-            payment: {
-                method: showZelleInfo ? 'Zelle' : 'Cash',
-                status: 'Pending',
-                zellePhone: showZelleInfo ? '+1 (555) 123-4567' : undefined
-            },
-            items: orderSummary.items,
-            summary: orderSummary.summary
-        };
-
-        // Navigate to order confirmation with the order data
-        navigate('/orderconfirmation', { state: { orderData: completeOrderData } });
     };
 
     const handlePaymentMethodClick = (method) => {
