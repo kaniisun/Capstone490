@@ -10,6 +10,11 @@ const OrderConfirmation = () => {
     const defaultOrderData = {
         orderId: 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
         orderDate: new Date().toLocaleDateString(),
+        seller: {
+            name: 'Jane Smith',
+            email: 'jane.smith@example.com',
+            phone: '(555) 987-6543'
+        },
         shipping: {
             fullName: 'John Doe',
             address: '123 Main St',
@@ -46,6 +51,17 @@ const OrderConfirmation = () => {
             </div>
 
             <div className="order-confirmation-content">
+                {data.seller && (
+                    <div className="confirmation-section seller-details">
+                        <h2>Seller Information</h2>
+                        <div className="details-content">
+                            <p className="name">{data.seller.name}</p>
+                            <p className="email">Email: {data.seller.email}</p>
+                            <p className="phone">Phone: {data.seller.phone}</p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="confirmation-section shipping-details">
                     <h2>Shipping Details</h2>
                     <div className="details-content">
