@@ -136,11 +136,7 @@ function AppContent() {
                 path="/messaging"
                 element={
                   <ProtectedRoute>
-                    <MessageHome
-                      // user={{}} // temporary dummy user object
-                      // receiver={{}} // temporary dummy receiver object
-                      // onCloseChat={() => {}} // temporary empty function
-                    />
+                    <MessageHome/>
                   </ProtectedRoute>
                 }
               />

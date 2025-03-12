@@ -1,13 +1,9 @@
+/* MESSAGE AREA */
 .message-area-chat {
+  flex: 1;  
   display: flex;
   flex-direction: column;
-  height: 85vh;
-  max-width: 600px;
-  margin: auto;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  overflow: hidden;
-  background-color: #f9f9f9;
+  background-color: white;
 }
 
 .message-area-header {
@@ -17,6 +13,10 @@
 
 .message-area-header .close-chat-btn {
   background-color: #0f2044;
+}
+
+.message-area-header .close-chat-btn:hover {
+  background-color: #3a4b6f;
 }
 
 .message-area-messages {
@@ -77,13 +77,39 @@
 }
 
 .message-area-message-input button:hover {
-  background-color: #0056b3;
+  background-color: #ffd06b;
 }
 
-.user-list {
-  max-width: 600px;
+/* MESSAGE HOME */
+.message-home-chat-container {
+  display: flex;
+  flex-direction: row;  
+  height: 85vh;
+  max-width: 900px; 
   margin: auto;
-  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  overflow: hidden;
+  background-color: #f9f9f9;
+}
+
+.message-home-empty-chat {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: gray;
+}
+
+/* USER LIST */
+.user-list {
+  width: 30%;  
+  min-width: 200px;
+  background-color: #f1f1f1;
+  border-right: 1px solid #ccc;
+  padding: 15px;
+  overflow-y: auto;
 }
 
 .user-item {

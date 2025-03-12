@@ -11,7 +11,7 @@ export const Detail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
-  const [showConfirm, setShowConfirm] = useState(false); 
+  const [showConfirm, setShowConfirm] = useState(false);
   const navigate = useNavigate();
 
   // fetch current user ID
@@ -95,11 +95,14 @@ export const Detail = () => {
           <div className="admin-buttons">
             <div className="chat-container">
               <p>Chat with Seller</p>
-              <Link to="/chatroom">
-                <button className="chat">
-                  <FontAwesomeIcon icon={faComments} /> Chat
-                </button>
-              </Link>
+              <button
+                className="chat-button"
+                onClick={() =>
+                  navigate(`/messages?receiverId=${product.userID}`)
+                }
+              >
+                Chat with Seller
+              </button>
             </div>
             <button className="edit" onClick={() => navigate(`/edit/${id}`)}>
               Edit
