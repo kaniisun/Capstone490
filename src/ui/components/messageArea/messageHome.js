@@ -29,7 +29,7 @@ const MessageHome = () => {
 
     getUser();
   }, []);
-
+  
   // close chat
   const handleCloseChat = () => {
     setReceiver(null); 
@@ -37,19 +37,22 @@ const MessageHome = () => {
 
   return (
     // display
-    <div>
+    <div className="message-home">
       {user ? (
-        <>
+        <div className="message-home-chat-container">
           <UserList setReceiver={setReceiver} />
-          {receiver && (
+          {receiver ? (
             <MessageArea user={user} receiver={receiver} onCloseChat={handleCloseChat} />
+          ) : (
+            <div className="message-home-empty-chat">Select a user to start chatting</div>
           )}
-        </>
+        </div>
       ) : (
         <p>Loading...</p>
       )}
     </div>
   );
+  
 };
 
 export default MessageHome;
