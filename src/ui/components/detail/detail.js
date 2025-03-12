@@ -98,7 +98,7 @@ export const Detail = () => {
               <button
                 className="chat-button"
                 onClick={() =>
-                  navigate(`/messages?receiverId=${product.userID}`)
+                  navigate(`/messaging?receiverId=${product.userID}`)
                 }
               >
                 Chat with Seller

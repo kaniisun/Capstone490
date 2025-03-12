@@ -8,6 +8,19 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
   const [userID, setUserID] = useState(localStorage.getItem("userId"));
   const messagesEndRef = useRef(null);
 
+  const [showReportPopup, setShowReportPopup] = useState(false);
+  const [selectedReasons, setSelectedReasons] = useState([]);
+  const [messageToReport, setMessageToReport] = useState(null);
+
+  const reportReasons = [
+    "Spam",
+    "Harassment",
+    "Hate Speech",
+    "Scam or Fraud",
+    "Explicit Content",
+    "Other",
+  ];
+
   useEffect(() => {
     setUserID(localStorage.getItem("userId"));
   }, []);
@@ -83,6 +96,59 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
     }
   };
 
+  // delete message
+  const deleteMessage = async (messageId) => {
+    const { error } = await supabase
+      .from("messages")
+      .delete()
+      .eq("id", messageId);
+
+    if (!error) {
+      setMessages((prevMessages) =>
+        prevMessages.filter((msg) => msg.id !== messageId)
+      );
+    }
+  };
+
+  // open report
+  const openReportPopup = (message) => {
+    setMessageToReport(message);
+    setShowReportPopup(true);
+    setSelectedReasons([]);
+  };
+
+  // handle reasons
+  const toggleReason = (reason) => {
+    setSelectedReasons((prev) =>
+      prev.includes(reason)
+        ? prev.filter((r) => r !== reason)
+        : [...prev, reason]
+    );
+  };
+
+  // report message stored in Supabase
+  const reportMessage = async () => {
+    if (!messageToReport || selectedReasons.length === 0) {
+      alert("Please select at least one reason before reporting.");
+      return;
+    }
+
+    const { error } = await supabase.from("reported_messages").insert([
+      {
+        message_id: messageToReport.id,
+        reported_by: userID,
+        content: selectedReasons.join(", "),
+      },
+    ]);
+
+    if (error) {
+      console.error("Error reporting message:", error.message);
+    } else {
+      alert("Message reported successfully!");
+      setShowReportPopup(false);
+    }
+  };
+
   // auto-scroll function
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -113,6 +179,24 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
                 }`}
               >
                 <p>{msg.content}</p>
+                <div className="message-buttons">
+                {msg.sender_id === userID && (
+                  <button
+                    className="message-area-delete-msg-btn"
+                    onClick={() => deleteMessage(msg.id)}
+                  >
+                    🗑️ Delete
+                  </button>
+                )}
+                  {msg.sender_id !== userID && (
+                    <button
+                      className="message-area-report-msg-btn"
+                      onClick={() => openReportPopup(msg)}
+                    >
+                      🚨 Report
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
             <div ref={messagesEndRef} />
@@ -129,6 +213,42 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
         </>
       ) : (
         <p>Select a user to start chatting.</p>
+      )}
+
+      {/* Report Message  */}
+      {showReportPopup && (
+        <div className="report-popup-overlay">
+          <div className="report-popup">
+            <h3>Are you sure you want to report this message?</h3>
+            <p>{messageToReport?.content}</p>
+
+            <div className="report-reasons">
+              {reportReasons.map((reason) => (
+                <label key={reason}>
+                  <input
+                    type="checkbox"
+                    value={reason}
+                    checked={selectedReasons.includes(reason)}
+                    onChange={() => toggleReason(reason)}
+                  />
+                  {reason}
+                </label>
+              ))}
+            </div>
+
+            <div className="report-popup-buttons">
+              <button className="confirm-report" onClick={reportMessage}>
+                Report
+              </button>
+              <button
+                className="cancel-report"
+                onClick={() => setShowReportPopup(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
