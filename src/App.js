@@ -39,6 +39,9 @@ import SessionTimeoutModal from "./ui/components/common/SessionTimeoutModal";
 import ProtectedRoute from "./ui/components/auth/ProtectedRoute";
 import FixVerification from "./ui/components/auth/FixVerification";
 import EmailVerificationCheck from "./ui/components/auth/EmailVerificationCheck";
+import OrderHistory from "./ui/components/orderhistory/orderhistory";
+import Checkout from "./ui/components/checkout/checkout";
+import OrderConfirmation from "./ui/components/orderconfirmation/orderconfirmation";
 
 function AppContent() {
   const location = useLocation();
@@ -91,6 +94,10 @@ function AppContent() {
               <Route path="/products" element={<Products />} />
               <Route path="/product/:id" element={<Detail />} />
               <Route path="/search-results" element={<SearchResults />} />
+              <Route path="/orderhistory" element={<OrderHistory />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/orderconfirmation" element={<OrderConfirmation />} />
+
 
               {/* Protected routes */}
               <Route

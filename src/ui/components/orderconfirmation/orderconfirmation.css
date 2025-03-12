@@ -1,0 +1,223 @@
+.order-confirmation-container {
+    max-width: 550px;
+    margin: 1rem auto;
+    padding: 1rem;
+    background: #ffffff;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.order-confirmation-header {
+    text-align: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e6e9f0;
+}
+
+.success-checkmark {
+    width: 35px;
+    height: 35px;
+    background: #1a237e;
+    border-radius: 50%;
+    color: white;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.75rem;
+    box-shadow: 0 1px 3px rgba(26, 35, 126, 0.2);
+}
+
+.order-confirmation-header h1 {
+    color: #1a237e;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.order-id, .order-date {
+    color: #5c6b89;
+    margin: 0.15rem 0;
+    font-size: 0.8rem;
+}
+
+.order-confirmation-content {
+    display: grid;
+    gap: 1rem;
+}
+
+.confirmation-section {
+    padding: 0.75rem;
+    background: #f8f9fc;
+    border-radius: 4px;
+    border: 1px solid #e6e9f0;
+    border-left: 2px solid #1a237e;
+}
+
+.confirmation-section h2 {
+    color: #1a237e;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid #e6e9f0;
+    font-weight: 600;
+}
+
+.details-content {
+    color: #3a4257;
+    line-height: 1.3;
+    font-size: 0.8rem;
+}
+
+.shipping-details {
+    border-left-color: #1a237e;
+}
+
+.payment-details {
+    border-left-color: #1a237e;
+}
+
+.order-details {
+    border-left-color: #1a237e;
+}
+
+.name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1a237e;
+}
+
+.highlight {
+    color: #1a237e;
+    font-weight: 600;
+}
+
+.status-pending {
+    color: #f9a825;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.status-paid {
+    color: #2e7d32;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.zelle-details, .cash-details {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: white;
+    border-radius: 3px;
+    text-align: center;
+    border: 1px solid #e6e9f0;
+}
+
+.zelle-phone {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a237e;
+    margin: 0.35rem 0;
+}
+
+.payment-note {
+    font-size: 0.75rem;
+    color: #5c6b89;
+    margin-top: 0.35rem;
+}
+
+.order-items {
+    margin-bottom: 0.75rem;
+}
+
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #e6e9f0;
+    font-size: 0.8rem;
+}
+
+.item-info {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.item-name {
+    font-weight: 500;
+    color: #1a237e;
+}
+
+.item-quantity {
+    color: #5c6b89;
+    font-size: 0.75rem;
+}
+
+.item-price {
+    font-weight: 500;
+    color: #1a237e;
+}
+
+.order-totals {
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e6e9f0;
+    font-size: 0.8rem;
+}
+
+.order-totals > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.15rem 0;
+    color: #3a4257;
+}
+
+.total {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a237e;
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid #e6e9f0;
+}
+
+.order-confirmation-footer {
+    text-align: center;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e6e9f0;
+}
+
+.order-confirmation-footer p {
+    color: #1a237e;
+    font-size: 0.9rem;
+    margin-bottom: 0.15rem;
+}
+
+.contact-support {
+    color: #5c6b89;
+    font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .order-confirmation-container {
+        margin: 0.5rem;
+        padding: 0.75rem;
+    }
+
+    .confirmation-section {
+        padding: 0.5rem;
+    }
+
+    .order-confirmation-header h1 {
+        font-size: 1.1rem;
+    }
+
+    .success-checkmark {
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
+    }
+}
