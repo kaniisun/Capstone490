@@ -194,3 +194,92 @@
 .user-item:hover {
   background-color: #f1f1f1;
 }
+
+.message-content {
+  position: relative;
+}
+
+.message-timestamp {
+  font-size: 11px;
+  color: #666;
+  display: block;
+  margin-top: 4px;
+}
+
+.sent .message-timestamp {
+  color: #ccc;
+}
+
+.message-buttons {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.message-area-reply-btn {
+  background-color: #0f2044;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.message-area-reply-btn:hover {
+  background-color: #3a4b6f;
+}
+
+.reply-reference {
+  font-size: 12px;
+  color: #666;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.sent .reply-reference {
+  color: #ccc;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.reply-indicator {
+  display: flex;
+  align-items: center;
+  background-color: #f0f0f0;
+  padding: 8px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.reply-indicator span {
+  flex: 1;
+  font-size: 13px;
+  color: #666;
+}
+
+.reply-indicator button {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0 5px;
+}
+
+.reply-indicator button:hover {
+  color: #333;
+}
+
+.message-sender {
+  font-size: 11px;
+  color: #666;
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.sent .message-sender {
+  color: #ccc;
+}
