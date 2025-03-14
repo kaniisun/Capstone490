@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import { faCartShopping, faComments } from "@fortawesome/free-solid-svg-icons";
+import { faCartShopping, faComments, faCheck, faTag, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from "../../../supabaseClient";
 import "./detail.css";
 
@@ -12,6 +12,7 @@ export const Detail = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const navigate = useNavigate();
 
   // fetch current user ID
@@ -48,6 +49,56 @@ export const Detail = () => {
     fetchProduct();
   }, [id]);
 
+  const handleAddToCart = async () => {
+    if (!userId) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      // First check if the item is already in the cart
+      const { data: existingCartItem } = await supabase
+        .from('cart')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('product_id', id)
+        .single();
+
+      if (existingCartItem) {
+        // Update quantity if item exists
+        const { error: updateError } = await supabase
+          .from('cart')
+          .update({ quantity: existingCartItem.quantity + 1 })
+          .eq('user_id', userId)
+          .eq('product_id', id);
+
+        if (updateError) throw updateError;
+      } else {
+        // Add new item if it doesn't exist
+        const { error: insertError } = await supabase
+          .from('cart')
+          .insert([
+            {
+              user_id: userId,
+              product_id: id,
+              quantity: 1,
+              product_name: product.name,
+              product_price: product.price,
+              product_image: product.image
+            }
+          ]);
+
+        if (insertError) throw insertError;
+      }
+
+      // Show success message
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+    }
+  };
+
   // delete product function
   const handleDelete = async () => {
     const { error } = await supabase
@@ -62,62 +113,81 @@ export const Detail = () => {
     }
   };
 
-  if (loading) return <p>Loading product details...</p>;
-  if (!product) return <p>Product not found.</p>;
+  if (loading) {
+    return (
+      <div className="detail-container">
+        <div className="detail-loading">Loading product details...</div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="detail-container">
+        <div className="detail-error">Product not found.</div>
+      </div>
+    );
+  }
 
   return (
-    // display product details
-    <div className="content-container">
-      <div className="product">
-        <div className="prod-image">
-          <img
-            id="prod-image"
-            src={product.image || "placeholder.jpg"}
-            alt={product.name}
-          />
-        </div>
-        <div className="prod-info">
-          <h2>{product.name}</h2>
-          <p className="price">${product.price.toFixed(2)}</p>
-          <p className="description">{product.description}</p>
-          {product.is_bundle && <p className="bundle">Bundle Item</p>}
-          {product.flag && <p className="flag">Flagged</p>}
-          <p className="condition">Condition: {product.condition}</p>
-          <p className="status">Status: {product.status}</p>
-          <p className="created">
-            Added: {new Date(product.created_at).toLocaleDateString()}
-          </p>
-          {product.modified_at && (
-            <p className="modified">
-              Last Updated: {new Date(product.modified_at).toLocaleDateString()}
-            </p>
-          )}
-          <div className="admin-buttons">
-            <div className="chat-container">
-              <p>Chat with Seller</p>
-              <button
-                className="chat-button"
-                onClick={() =>
-                  navigate(`/messaging?receiverId=${product.userID}`)
-                }
-              >
-                Chat with Seller
+    <div className="detail-container">
+      <div className="detail-product-card">
+        <div className="detail-product-main">
+          <div className="detail-image-container">
+            <div className="detail-product-image-wrapper">
+              <img
+                className="detail-product-image"
+                src={product.image || "placeholder.jpg"}
+                alt={product.name}
+              />
+            </div>
+            <button
+              className="detail-chat-button"
+              onClick={() => navigate(`/messaging?receiverId=${product.userID}`)}
+            >
+              <FontAwesomeIcon icon={faComments} />
+              Chat with Seller
+            </button>
+          </div>
+          
+          <div className="detail-info-container">
+            <div className="detail-header">
+              <h1 className="detail-product-title">{product.name}</h1>
+              <div className="detail-price-tag">
+                <FontAwesomeIcon icon={faTag} />
+                <span className="detail-price">${product.price.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="detail-content">
+              <div className="detail-metadata">
+                <p className="detail-condition">Condition: {product.condition}</p>
+                <p className="detail-status">Status: {product.status}</p>
+              </div>
+
+              <div className="detail-description-section">
+                <h3 className="detail-section-title">Description</h3>
+                <p className="detail-description">{product.description}</p>
+              </div>
+            </div>
+
+            <div className="detail-actions">
+              <button className="detail-cart-button" onClick={handleAddToCart}>
+                <FontAwesomeIcon icon={faCartShopping} />
+                Add to Cart
               </button>
             </div>
-            <button className="edit" onClick={() => navigate(`/edit/${id}`)}>
-              Edit
-            </button>
-            <button className="delete" onClick={() => setShowConfirm(true)}>
-              Delete
-            </button>
-            <button className="add">
-              <FontAwesomeIcon icon={faCartShopping} />
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Confirmation Popup */}
+      {showSuccess && (
+        <div className="detail-success-message">
+          <FontAwesomeIcon icon={faCheck} />
+          Added to cart successfully!
+        </div>
+      )}
+
       {showConfirm && (
         <div className="popup-overlay">
           <div className="popup">
