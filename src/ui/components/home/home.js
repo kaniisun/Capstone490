@@ -212,17 +212,17 @@ export const Home = () => {
         {loading ? (
           <p>Loading products...</p>
         ) : (
-          <div className="product-list">
+          <div className="home-product-list">
             {products.map((product) => (
               <div
                 key={product.productID}
-                className="product"
+                className="home-product-card"
                 onClick={() => navigate(`/product/${product.productID}`)}
               >
                 <img
                   src={product.image || "/placeholder.jpg"}
                   alt={product.name}
-                  className="product-image"
+                  className="home-product-image"
                   onError={(e) => {
                     if (e.target instanceof HTMLImageElement) {
                       e.target.onerror = null;
@@ -231,7 +231,7 @@ export const Home = () => {
                   }}
                 />
                 <h3>{product.name}</h3>
-                <p className="price">
+                <p className="home-product-price">
                   $
                   {(product.price && !isNaN(product.price)
                     ? parseFloat(product.price)
