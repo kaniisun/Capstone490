@@ -189,5 +189,125 @@ nav a {
     transform: translateX(-50%) scale(1);
 }
 
+.header-logo {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.header-logo:hover .logo-icon {
+  transform: rotate(10deg);
+}
+
+.logo-icon {
+  font-size: 32px !important;
+  margin-right: 12px;
+  color: #FFB71B !important;
+  transition: transform 0.3s ease;
+}
+
+.logo-text-gradient {
+  font-weight: 700 !important;
+  letter-spacing: 0.5px;
+  background: linear-gradient(45deg, #FFB71B 30%, #ffffff 90%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.logo-text-plain {
+  font-weight: 500 !important;
+  margin-left: 4px;
+  color: white;
+}
+
+/* Profile Menu Styles */
+.profile-menu-paper {
+  overflow: visible;
+  filter: drop-shadow(0px 2px 8px rgba(0, 0, 0, 0.2));
+  margin-top: 12px;
+  min-width: 230px;
+}
+
+.profile-menu-paper .MuiAvatar-root {
+  width: 32px;
+  height: 32px;
+  margin-left: -4px;
+  margin-right: 8px;
+}
+
+.profile-greeting {
+  padding: 16px;
+}
+
+.menu-item {
+  padding: 8px 16px;
+}
+
+.menu-item-icon {
+  color: #0F2044 !important;
+}
+
+.menu-divider {
+  margin: 8px 0;
+}
+
+.logout-item {
+  color: #dc2626 !important;
+}
+
+.notification-badge {
+  font-size: 9px;
+}
+
+/* Header Container */
+.header-container {
+  background-color: #0f2044;
+  width: 100%;
+}
+
+.header-toolbar {
+  display: flex;
+  justify-content: space-between;
+  min-height: 56px;
+  width: 100%;
+  padding: 0 16px 0 16px;
+}
+
+/* Profile Button */
+.profile-button {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.profile-button:hover {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.profile-avatar {
+  background-color: #FFB71B !important;
+  color: #0F2044 !important;
+  width: 32px;
+  height: 32px;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 600px) {
+  .profile-avatar {
+    width: 28px !important;
+    height: 28px !important;
+  }
+}
+
+@media (min-width: 601px) {
+  .profile-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .header-toolbar {
+    min-height: 64px;
+    padding: 0 24px;
+  }
+}
+
 
 
