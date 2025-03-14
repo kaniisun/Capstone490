@@ -179,7 +179,7 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
                 }`}
               >
                 <p>{msg.content}</p>
-                <div className="message-buttons">
+                <div className="message-area-message-buttons">
                 {msg.sender_id === userID && (
                   <button
                     className="message-area-delete-msg-btn"
