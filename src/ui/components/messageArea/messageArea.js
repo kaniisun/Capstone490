@@ -6,6 +6,7 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [userID, setUserID] = useState(localStorage.getItem("userId"));
+  const [replyingTo, setReplyingTo] = useState(null);
   const messagesEndRef = useRef(null);
 
   const [showReportPopup, setShowReportPopup] = useState(false);
@@ -66,7 +67,14 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
             (payload.new.sender_id === receiver.userID &&
               payload.new.receiver_id === userID)
           ) {
-            setMessages((prevMessages) => [...prevMessages, payload.new]);
+            // Check if message already exists to prevent duplicates
+            setMessages((prevMessages) => {
+              const messageExists = prevMessages.some(msg => msg.id === payload.new.id);
+              if (messageExists) {
+                return prevMessages;
+              }
+              return [...prevMessages, payload.new];
+            });
           }
         }
       )
@@ -77,22 +85,73 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
     };
   }, [receiver, userID, fetchMessages]);
 
-  // send message
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !receiver || !userID) return;
+  // Format date and time
+  const formatDateTime = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+  };
 
-    const { error } = await supabase.from("messages").insert([
-      {
+  // Handle reply
+  const handleReply = (message) => {
+    setReplyingTo(message);
+    // Don't add @ mention, just set empty input
+    setNewMessage('');
+  };
+
+  // Cancel reply
+  const cancelReply = () => {
+    setReplyingTo(null);
+    setNewMessage("");
+  };
+
+  // Modified sendMessage function to prevent double sending
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !receiver || !userID) {
+      console.log("Validation failed:", {
+        newMessage: newMessage.trim(),
+        receiver: receiver,
+        userID: userID
+      });
+      return;
+    }
+
+    try {
+      const messageData = {
         sender_id: userID,
         receiver_id: receiver.userID,
-        content: newMessage,
-      },
-    ]);
+        content: newMessage.trim(),
+      };
 
-    if (!error) {
-      if (!error) {
-        setNewMessage("");
+      // Only add reply_to if we're replying to a message
+      if (replyingTo) {
+        messageData.reply_to = replyingTo.id;
       }
+
+      const { error } = await supabase
+        .from('messages')
+        .insert([messageData]);
+
+      if (error) {
+        console.error("Supabase error:", error);
+        alert(`Failed to send message: ${error.message}`);
+        return;
+      }
+
+      // Clear input and reply state immediately
+      setNewMessage("");
+      setReplyingTo(null);
+      
+    } catch (err) {
+      console.error("Exception in sendMessage:", err);
+      alert(`Error sending message: ${err.message}`);
+    }
+  };
+
+  // Modify the handleKeyPress function to prevent double sending
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && newMessage.trim()) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
@@ -178,16 +237,33 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
                   msg.sender_id === userID ? "sent" : "received"
                 }`}
               >
-                <p>{msg.content}</p>
-                <div className="message-area-message-buttons">
-                {msg.sender_id === userID && (
+                <div className="message-content">
+                  <span className="message-sender">
+                    {msg.sender_id === userID ? 'you' : receiver.firstName.toLowerCase()}
+                  </span>
+                  {msg.reply_to && (
+                    <div className="reply-reference">
+                      replying to: {messages.find(m => m.id === msg.reply_to)?.content.substring(0, 50)}...
+                    </div>
+                  )}
+                  <p>{msg.content}</p>
+                  <span className="message-timestamp">{formatDateTime(msg.created_at)}</span>
+                </div>
+                <div className="message-buttons">
                   <button
-                    className="message-area-delete-msg-btn"
-                    onClick={() => deleteMessage(msg.id)}
+                    className="message-area-reply-btn"
+                    onClick={() => handleReply(msg)}
                   >
-                    🗑️ Delete
+                    ↩️ Reply
                   </button>
-                )}
+                  {msg.sender_id === userID && (
+                    <button
+                      className="message-area-delete-msg-btn"
+                      onClick={() => deleteMessage(msg.id)}
+                    >
+                      🗑️ Delete
+                    </button>
+                  )}
                   {msg.sender_id !== userID && (
                     <button
                       className="message-area-report-msg-btn"
@@ -202,13 +278,25 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
             <div ref={messagesEndRef} />
           </div>
           <div className="message-area-message-input">
+            {replyingTo && (
+              <div className="reply-indicator">
+                <span>Replying to: {replyingTo.content.substring(0, 30)}...</span>
+                <button onClick={cancelReply}>✕</button>
+              </div>
+            )}
             <input
               type="text"
               placeholder="Type your message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
             />
-            <button onClick={sendMessage}>Send</button>
+            <button 
+              onClick={sendMessage}
+              disabled={!newMessage.trim()}
+            >
+              Send
+            </button>
           </div>
         </>
       ) : (
