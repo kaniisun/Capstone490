@@ -67,7 +67,14 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
             (payload.new.sender_id === receiver.userID &&
               payload.new.receiver_id === userID)
           ) {
-            setMessages((prevMessages) => [...prevMessages, payload.new]);
+            // Check if message already exists to prevent duplicates
+            setMessages((prevMessages) => {
+              const messageExists = prevMessages.some(msg => msg.id === payload.new.id);
+              if (messageExists) {
+                return prevMessages;
+              }
+              return [...prevMessages, payload.new];
+            });
           }
         }
       )
@@ -120,10 +127,9 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
         messageData.reply_to = replyingTo.id;
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('messages')
-        .insert([messageData])
-        .select();
+        .insert([messageData]);
 
       if (error) {
         console.error("Supabase error:", error);
@@ -131,17 +137,10 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
         return;
       }
 
-      if (data && data[0]) {
-        // Clear input and reply state immediately
-        setNewMessage("");
-        setReplyingTo(null);
-        
-        // Update messages state after clearing input
-        setMessages(prevMessages => [...prevMessages, data[0]]);
-      } else {
-        console.error("No data returned from insert");
-        alert("Message sent but no confirmation received");
-      }
+      // Clear input and reply state immediately
+      setNewMessage("");
+      setReplyingTo(null);
+      
     } catch (err) {
       console.error("Exception in sendMessage:", err);
       alert(`Error sending message: ${err.message}`);
