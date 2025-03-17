@@ -28,6 +28,7 @@ import {
   Login as LoginIcon,
   PersonAdd as PersonAddIcon,
   School as SchoolIcon,
+  Favorite as FavoriteIcon,
 } from "@mui/icons-material";
 import "./header.css";
 
@@ -161,6 +162,7 @@ const Header = () => {
             </IconButton>
           </Tooltip>
 
+
           {/* Profile Menu */}
           <Menu
             anchorEl={anchorEl}
@@ -181,6 +183,7 @@ const Header = () => {
                   <Typography variant="subtitle1" color="primary" fontWeight="medium">
                     Hi, {userInfo.firstName}!
                   </Typography>
+
                 </div>
                 <Divider className="menu-divider" />
 

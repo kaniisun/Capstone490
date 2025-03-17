@@ -46,6 +46,24 @@ export function AuthProvider({ children }) {
   // Function to check if the user's email is verified and set up their session
   const checkEmailVerification = async () => {
     try {
+      // Add rate limiting for verification checks - only check once per minute
+      const lastVerificationCheck = localStorage.getItem(
+        "lastVerificationCheck"
+      );
+      const now = new Date().getTime();
+
+      if (
+        lastVerificationCheck &&
+        now - parseInt(lastVerificationCheck, 10) < 60000
+      ) {
+        console.log("Skipping verification check - checked recently");
+        // Return the cached verification status instead of making API calls
+        return localStorage.getItem("isEmailVerified") === "true";
+      }
+
+      // Update last check timestamp
+      localStorage.setItem("lastVerificationCheck", now.toString());
+
       // First get the current session
       const {
         data: { session },
@@ -91,25 +109,37 @@ export function AuthProvider({ children }) {
         // Store verification status in localStorage for quick access
         localStorage.setItem("isEmailVerified", "true");
 
-        // Explicitly update Supabase's internal status if it isn't already
-        try {
-          // Call the updateUser method to ensure Supabase knows this user is verified
-          // This helps sync the dashboard status
-          const { error: updateError } = await supabase.auth.updateUser({
-            data: {
-              email_verified: true,
-              email_confirmed_at: new Date().toISOString(),
-            },
-          });
+        // Only update Supabase's internal status if it hasn't been updated recently
+        const lastVerificationUpdate = localStorage.getItem(
+          "lastVerificationUpdate"
+        );
+        const shouldUpdateVerification =
+          !lastVerificationUpdate ||
+          now - parseInt(lastVerificationUpdate, 10) > 3600000; // 1 hour
 
-          if (updateError) {
-            console.error(
-              "Error updating user verification status:",
-              updateError
-            );
+        if (shouldUpdateVerification) {
+          try {
+            // Call the updateUser method to ensure Supabase knows this user is verified
+            // This helps sync the dashboard status
+            const { error: updateError } = await supabase.auth.updateUser({
+              data: {
+                email_verified: true,
+                email_confirmed_at: new Date().toISOString(),
+              },
+            });
+
+            if (updateError) {
+              console.error(
+                "Error updating user verification status:",
+                updateError
+              );
+            } else {
+              // Only update timestamp if successful
+              localStorage.setItem("lastVerificationUpdate", now.toString());
+            }
+          } catch (err) {
+            console.error("Error in verification status update:", err);
           }
-        } catch (err) {
-          console.error("Error in verification status update:", err);
         }
 
         // Ensure user info is in localStorage
@@ -362,9 +392,21 @@ export function AuthProvider({ children }) {
       // List of events to listen for
       const events = ["mousedown", "keydown", "touchstart", "scroll"];
 
-      // Handler function to refresh the session timeout
+      // Add debounce to prevent too many calls
+      let debounceTimer = null;
+      const DEBOUNCE_DELAY = 2000; // 2 seconds
+
+      // Handler function to refresh the session timeout with debounce
       const activityHandler = () => {
-        refreshSessionTimeout();
+        // Clear any existing timer
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
+
+        // Set a new timer to call refreshSessionTimeout after delay
+        debounceTimer = setTimeout(() => {
+          refreshSessionTimeout();
+        }, DEBOUNCE_DELAY);
       };
 
       // Add event listeners
@@ -377,6 +419,11 @@ export function AuthProvider({ children }) {
         events.forEach((event) => {
           window.removeEventListener(event, activityHandler);
         });
+
+        // Clear any pending timers
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
       };
     }
   }, [user, sessionTimeout]);

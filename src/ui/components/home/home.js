@@ -13,6 +13,7 @@ import "./home.css";
 import Search from "../search/search";
 import NotificationBanner from "../common/NotificationBanner";
 import { useAuth } from "../../../contexts/AuthContext";
+import placeholderImage from "../../../assets/placeholder.js";
 
 export const Home = () => {
   const [products, setProducts] = useState([]);
@@ -162,6 +163,7 @@ export const Home = () => {
         <h1>Your Campus Marketplace</h1>
         <p>Buy, sell, and connect with fellow students</p>
         <Search />
+        
       </section>
 
       {/* Category Section - Unique to homepage */}
@@ -220,13 +222,13 @@ export const Home = () => {
                 onClick={() => navigate(`/product/${product.productID}`)}
               >
                 <img
-                  src={product.image || "/placeholder.jpg"}
+                  src={product.image || placeholderImage}
                   alt={product.name}
                   className="home-product-image"
                   onError={(e) => {
                     if (e.target instanceof HTMLImageElement) {
                       e.target.onerror = null;
-                      e.target.src = "/placeholder.jpg";
+                      e.target.src = placeholderImage;
                     }
                   }}
                 />
