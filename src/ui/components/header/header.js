@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import {
   AppBar,
   Avatar,
   Badge,
   Box,
-  Container,
   Divider,
   IconButton,
   ListItemIcon,
   Menu,
   MenuItem,
-  Toolbar,
   Tooltip,
   Typography,
   useTheme,
@@ -30,11 +28,11 @@ import {
   Login as LoginIcon,
   PersonAdd as PersonAddIcon,
   School as SchoolIcon,
+  Favorite as FavoriteIcon,
 } from "@mui/icons-material";
+import "./header.css";
 
-// Temporary logo component
 const TempLogo = ({ isAuthenticated, isEmailVerified }) => {
-  const theme = useTheme();
   const navigate = useNavigate();
 
   const handleLogoClick = () => {
@@ -46,53 +44,15 @@ const TempLogo = ({ isAuthenticated, isEmailVerified }) => {
   };
 
   return (
-    <Box
-      onClick={handleLogoClick}
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        cursor: "pointer",
-        "&:hover": {
-          "& .logo-icon": {
-            transform: "rotate(10deg)",
-          },
-        },
-      }}
-    >
-      <SchoolIcon
-        className="logo-icon"
-        sx={{
-          fontSize: 32,
-          mr: 1.5,
-          color: theme.palette.secondary.main,
-          transition: "transform 0.3s ease",
-        }}
-      />
-      <Typography
-        variant="h6"
-        component="span"
-        sx={{
-          fontWeight: 700,
-          letterSpacing: "0.5px",
-          background: `linear-gradient(45deg, ${theme.palette.secondary.main} 30%, #ffffff 90%)`,
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-        }}
-      >
+    <div className="header-logo" onClick={handleLogoClick}>
+      <SchoolIcon className="logo-icon" />
+      <Typography variant="h6" component="span" className="logo-text-gradient">
         SPARTAN
       </Typography>
-      <Typography
-        variant="h6"
-        component="span"
-        sx={{
-          fontWeight: 500,
-          ml: 0.5,
-          color: "white",
-        }}
-      >
+      <Typography variant="h6" component="span" className="logo-text-plain">
         Marketplace
       </Typography>
-    </Box>
+    </div>
   );
 };
 
@@ -111,12 +71,6 @@ const Header = () => {
     const updateUserInfo = () => {
       if (isAuthenticated) {
         const userName = localStorage.getItem("userName");
-
-        console.log(
-          "Auth state changed, userName from localStorage:",
-          userName
-        );
-
         if (userName) {
           setUserInfo({ firstName: userName });
         } else if (user?.user_metadata?.firstName) {
@@ -132,7 +86,6 @@ const Header = () => {
     };
 
     updateUserInfo();
-
     const timeoutId = setTimeout(updateUserInfo, 50);
     return () => clearTimeout(timeoutId);
   }, [isAuthenticated, user, location]);
@@ -178,202 +131,149 @@ const Header = () => {
   };
 
   return (
-    <AppBar position="sticky" sx={{ bgcolor: "#0f2044", width: "100%" }}>
-      <Box sx={{ width: "100%", px: { xs: 2, sm: 3, md: 4 } }}>
-        <Toolbar
-          disableGutters
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            minHeight: { xs: "56px", sm: "64px" },
-            width: "100%",
-          }}
-        >
-          {/* Left side - Logo - Always at left edge */}
-          <Box
-            sx={{
-              display: { xs: "none", md: "flex" },
-              ml: { xs: 0, md: 0, lg: 0 }, // No margin to stay at edge
-            }}
-          >
-            <TempLogo
-              isAuthenticated={isAuthenticated}
-              isEmailVerified={isEmailVerified}
-            />
-          </Box>
+    <AppBar position="sticky" className="header-container">
+      <div className="header-toolbar">
+        {/* Left side - Logo */}
+        <Box sx={{ display: { xs: "none", md: "flex" } }}>
+          <TempLogo
+            isAuthenticated={isAuthenticated}
+            isEmailVerified={isEmailVerified}
+          />
+        </Box>
 
-          {/* Right side - Profile Icon - Always at right edge */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              ml: "auto",
-              mr: { xs: 0, md: 0, lg: 0 }, // No margin to stay at edge
-            }}
-          >
-            <Tooltip
-              title={userInfo ? `Hi, ${userInfo.firstName}!` : "Account"}
+        {/* Right side - Profile Icon */}
+        <Box sx={{ display: "flex", alignItems: "center", ml: "auto" }}>
+          <Tooltip title={userInfo ? `Hi, ${userInfo.firstName}!` : "Account"}>
+            <IconButton
+              onClick={handleProfileMenuOpen}
+              className="profile-button"
+              size="small"
+              aria-controls={open ? "account-menu" : undefined}
+              aria-haspopup="true"
+              aria-expanded={open ? "true" : undefined}
             >
-              <IconButton
-                onClick={handleProfileMenuOpen}
-                size="small"
-                sx={{
-                  bgcolor: theme.palette.primary.light,
-                  "&:hover": {
-                    bgcolor: theme.palette.primary.dark,
-                  },
-                }}
-                aria-controls={open ? "account-menu" : undefined}
-                aria-haspopup="true"
-                aria-expanded={open ? "true" : undefined}
-              >
-                <Avatar
-                  sx={{
-                    width: isMobile ? 28 : 32,
-                    height: isMobile ? 28 : 32,
-                    bgcolor: theme.palette.secondary.main,
-                    color: theme.palette.secondary.contrastText,
-                  }}
-                >
-                  {userInfo && userInfo.firstName ? (
-                    userInfo.firstName.charAt(0).toUpperCase()
-                  ) : (
-                    <PersonIcon />
-                  )}
-                </Avatar>
-              </IconButton>
-            </Tooltip>
+              <Avatar className="profile-avatar">
+                {userInfo && userInfo.firstName ? (
+                  userInfo.firstName.charAt(0).toUpperCase()
+                ) : (
+                  <PersonIcon />
+                )}
+              </Avatar>
+            </IconButton>
+          </Tooltip>
 
-            {/* Profile Menu */}
-            <Menu
-              anchorEl={anchorEl}
-              id="account-menu"
-              open={open}
-              onClose={handleMenuClose}
-              onClick={handleMenuClose}
-              PaperProps={{
-                elevation: 3,
-                sx: {
-                  overflow: "visible",
-                  filter: "drop-shadow(0px 2px 8px rgba(0,0,0,0.2))",
-                  mt: 1.5,
-                  minWidth: 230,
-                  "& .MuiAvatar-root": {
-                    width: 32,
-                    height: 32,
-                    ml: -0.5,
-                    mr: 1,
-                  },
-                },
-              }}
-              transformOrigin={{ horizontal: "right", vertical: "top" }}
-              anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-            >
-              {userInfo ? (
-                <div>
-                  <Box sx={{ px: 2, py: 1 }}>
-                    <Typography
-                      variant="subtitle1"
-                      fontWeight="medium"
-                      color="primary"
-                    >
-                      Hi, {userInfo.firstName}!
-                    </Typography>
-                  </Box>
-                  <Divider />
 
-                  <MenuItem onClick={handleHomeClick}>
-                    <ListItemIcon>
-                      <HomeIcon fontSize="small" color="primary" />
-                    </ListItemIcon>
-                    Home
-                  </MenuItem>
+          {/* Profile Menu */}
+          <Menu
+            anchorEl={anchorEl}
+            id="account-menu"
+            open={open}
+            onClose={handleMenuClose}
+            onClick={handleMenuClose}
+            PaperProps={{
+              className: "profile-menu-paper",
+              elevation: 3
+            }}
+            transformOrigin={{ horizontal: "right", vertical: "top" }}
+            anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+          >
+            {userInfo ? (
+              <div>
+                <div className="profile-greeting">
+                  <Typography variant="subtitle1" color="primary" fontWeight="medium">
+                    Hi, {userInfo.firstName}!
+                  </Typography>
 
-                  <MenuItem onClick={() => handleNavigate("/messaging")}>
-                    <ListItemIcon>
-                      <ChatIcon fontSize="small" color="primary" />
-                    </ListItemIcon>
-                    Messages
-                  </MenuItem>
-
-                  <MenuItem onClick={() => handleNavigate("/notifications")}>
-                    <ListItemIcon>
-                      <Badge
-                        badgeContent={3}
-                        color="secondary"
-                        sx={{ "& .MuiBadge-badge": { fontSize: "9px" } }}
-                      >
-                        <NotificationsIcon fontSize="small" color="primary" />
-                      </Badge>
-                    </ListItemIcon>
-                    Notifications
-                  </MenuItem>
-
-                  <MenuItem onClick={() => handleNavigate("/orderhistory")}>
-                    <ListItemIcon>
-                      <ShippingIcon fontSize="small" color="primary" />
-                    </ListItemIcon>
-                    Orders
-                  </MenuItem>
-
-                  <MenuItem onClick={() => handleNavigate("/cart")}>
-                    <ListItemIcon>
-                      <ShoppingCartIcon fontSize="small" color="primary" />
-                    </ListItemIcon>
-                    Cart
-                  </MenuItem>
-
-                  <Divider />
-
-                  <MenuItem onClick={() => handleNavigate("/account")}>
-                    <ListItemIcon>
-                      <PersonIcon fontSize="small" color="primary" />
-                    </ListItemIcon>
-                    My Profile
-                  </MenuItem>
-
-                  <MenuItem onClick={() => handleNavigate("/uploadProduct")}>
-                    <ListItemIcon>
-                      <ShoppingCartIcon fontSize="small" color="primary" />
-                    </ListItemIcon>
-                    Sell an Item
-                  </MenuItem>
-
-                  <MenuItem onClick={() => handleNavigate("/account")}>
-                    <ListItemIcon>
-                      <SettingsIcon fontSize="small" color="primary" />
-                    </ListItemIcon>
-                    Settings
-                  </MenuItem>
-
-                  <Divider />
-                  <MenuItem onClick={handleLogout} sx={{ color: "error.main" }}>
-                    <ListItemIcon>
-                      <LogoutIcon fontSize="small" color="error" />
-                    </ListItemIcon>
-                    Logout
-                  </MenuItem>
                 </div>
-              ) : (
-                <div>
-                  <MenuItem onClick={handleLogin}>
-                    <ListItemIcon>
-                      <LoginIcon fontSize="small" color="primary" />
-                    </ListItemIcon>
-                    Login
-                  </MenuItem>
-                  <MenuItem onClick={handleSignUp}>
-                    <ListItemIcon>
-                      <PersonAddIcon fontSize="small" color="primary" />
-                    </ListItemIcon>
-                    Sign Up
-                  </MenuItem>
-                </div>
-              )}
-            </Menu>
-          </Box>
-        </Toolbar>
-      </Box>
+                <Divider className="menu-divider" />
+
+                <MenuItem onClick={handleHomeClick} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <HomeIcon fontSize="small" />
+                  </ListItemIcon>
+                  Home
+                </MenuItem>
+
+                <MenuItem onClick={() => handleNavigate("/messaging")} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <ChatIcon fontSize="small" />
+                  </ListItemIcon>
+                  Messages
+                </MenuItem>
+
+                <MenuItem onClick={() => handleNavigate("/notifications")} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <Badge badgeContent={3} color="secondary" className="notification-badge">
+                      <NotificationsIcon fontSize="small" />
+                    </Badge>
+                  </ListItemIcon>
+                  Notifications
+                </MenuItem>
+
+                <MenuItem onClick={() => handleNavigate("/orderhistory")} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <ShippingIcon fontSize="small" />
+                  </ListItemIcon>
+                  Orders
+                </MenuItem>
+
+                <MenuItem onClick={() => handleNavigate("/cart")} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <ShoppingCartIcon fontSize="small" />
+                  </ListItemIcon>
+                  Cart
+                </MenuItem>
+
+                <Divider className="menu-divider" />
+
+                <MenuItem onClick={() => handleNavigate("/account")} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <PersonIcon fontSize="small" />
+                  </ListItemIcon>
+                  My Profile
+                </MenuItem>
+
+                <MenuItem onClick={() => handleNavigate("/uploadProduct")} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <ShoppingCartIcon fontSize="small" />
+                  </ListItemIcon>
+                  Sell an Item
+                </MenuItem>
+
+                <MenuItem onClick={() => handleNavigate("/account")} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <SettingsIcon fontSize="small" />
+                  </ListItemIcon>
+                  Settings
+                </MenuItem>
+
+                <Divider className="menu-divider" />
+                <MenuItem onClick={handleLogout} className="menu-item logout-item">
+                  <ListItemIcon>
+                    <LogoutIcon fontSize="small" color="error" />
+                  </ListItemIcon>
+                  Logout
+                </MenuItem>
+              </div>
+            ) : (
+              <div>
+                <MenuItem onClick={handleLogin} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <LoginIcon fontSize="small" />
+                  </ListItemIcon>
+                  Login
+                </MenuItem>
+                <MenuItem onClick={handleSignUp} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <PersonAddIcon fontSize="small" />
+                  </ListItemIcon>
+                  Sign Up
+                </MenuItem>
+              </div>
+            )}
+          </Menu>
+        </Box>
+      </div>
     </AppBar>
   );
 };
