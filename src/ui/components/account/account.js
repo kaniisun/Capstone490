@@ -79,6 +79,10 @@ const Account = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
+  
+  const [openSoldDialog, setOpenSoldDialog] = useState(false);
+  const [productToSell, setProductToSell] = useState(null);
+
 
   useEffect(() => {
     if (user) {
@@ -241,6 +245,47 @@ const Account = () => {
     }
   };
 
+  const handleMarkAsSold = (productId) => {
+    setProductToSell(productId);
+    setOpenSoldDialog(true);
+  };
+  
+  const confirmMarkAsSold = async () => {
+    if (!productToSell) return;
+  
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ status: "Sold" })
+        .eq("productID", productToSell);
+  
+      if (error) throw error;
+  
+      setProducts((prevProducts) =>
+        prevProducts.map((product) =>
+          product.productID === productToSell
+            ? { ...product, status: "Sold" }
+            : product
+        )
+      );
+  
+      setSnackbar({
+        open: true,
+        message: "Product marked as sold successfully!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error updating product status:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error updating status: ${error.message}`,
+        severity: "error",
+      });
+    } finally {
+      setOpenSoldDialog(false);
+      setProductToSell(null);
+    }
+  };
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
@@ -1042,6 +1087,29 @@ const Account = () => {
                                       Delete
                                     </Button>
                                   </Tooltip>
+
+                                  <Tooltip title="Mark as Sold">
+                                  <Button
+                                    variant="contained"
+                                    startIcon={<LocalOfferIcon />}
+                                    onClick={() => handleMarkAsSold(product.productID)}
+                                    size="small"
+                                    sx={{
+                                      flex: 1,
+                                      borderRadius: 1,
+                                      textTransform: "none",
+                                      bgcolor: "#0f2044", // UNCG Blue
+                                      color: "white",
+                                      "&:hover": {
+                                        bgcolor: "#1a365d", // Slightly lighter UNCG Blue
+                                      },
+                                    }}
+                                    disabled={product.status === "Sold"}
+                                  >
+                                    Sold
+                                  </Button>
+                                </Tooltip>
+
                                 </Box>
                               </Card>
                             </Zoom>
@@ -1054,6 +1122,43 @@ const Account = () => {
             )}
           </Box>
         </Paper>
+
+         {/* Sold Confirmation Dialog */}
+        <Dialog
+          open={openSoldDialog}
+          onClose={() => setOpenSoldDialog(false)}
+          PaperProps={{ style: { borderRadius: "8px" } }}
+        >
+          <DialogTitle sx={{ bgcolor: "#0f2044", color: "white" }}>
+            Mark Product as Sold
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ mt: 2 }}>
+              Are you sure you want to mark this product as sold?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button
+              onClick={() => setOpenSoldDialog(false)}
+              sx={{ textTransform: "none", color: "#0f2044" }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmMarkAsSold}
+              sx={{
+                borderRadius: 1,
+                textTransform: "none",
+                bgcolor: "#d32f2f",
+                color: "white",
+                "&:hover": { bgcolor: "#b71c1c" },
+              }}
+              variant="contained"
+            >
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Delete Confirmation Dialog */}
         <Dialog
@@ -1132,6 +1237,9 @@ const Account = () => {
       </Container>
     </Fade>
   );
+
+  
 };
+
 
 export default Account;
