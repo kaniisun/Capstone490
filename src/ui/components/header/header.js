@@ -162,7 +162,6 @@ const Header = () => {
             </IconButton>
           </Tooltip>
 
-
           {/* Profile Menu */}
           <Menu
             anchorEl={anchorEl}
@@ -172,7 +171,7 @@ const Header = () => {
             onClick={handleMenuClose}
             PaperProps={{
               className: "profile-menu-paper",
-              elevation: 3
+              elevation: 3,
             }}
             transformOrigin={{ horizontal: "right", vertical: "top" }}
             anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
@@ -180,10 +179,13 @@ const Header = () => {
             {userInfo ? (
               <div>
                 <div className="profile-greeting">
-                  <Typography variant="subtitle1" color="primary" fontWeight="medium">
+                  <Typography
+                    variant="subtitle1"
+                    color="primary"
+                    fontWeight="medium"
+                  >
                     Hi, {userInfo.firstName}!
                   </Typography>
-
                 </div>
                 <Divider className="menu-divider" />
 
@@ -194,53 +196,88 @@ const Header = () => {
                   Home
                 </MenuItem>
 
-                <MenuItem onClick={() => handleNavigate("/messaging")} className="menu-item">
+                <MenuItem
+                  onClick={() => handleNavigate("/messaging")}
+                  className="menu-item"
+                >
                   <ListItemIcon className="menu-item-icon">
                     <ChatIcon fontSize="small" />
                   </ListItemIcon>
                   Messages
                 </MenuItem>
 
-                <MenuItem onClick={() => handleNavigate("/notifications")} className="menu-item">
+                <MenuItem
+                  onClick={() => handleNavigate("/notifications")}
+                  className="menu-item"
+                >
                   <ListItemIcon className="menu-item-icon">
-                    <Badge badgeContent={3} color="secondary" className="notification-badge">
+                    <Badge
+                      badgeContent={3}
+                      color="secondary"
+                      className="notification-badge"
+                    >
                       <NotificationsIcon fontSize="small" />
                     </Badge>
                   </ListItemIcon>
                   Notifications
                 </MenuItem>
 
-                <MenuItem onClick={() => handleNavigate("/orderhistory")} className="menu-item">
+                <MenuItem
+                  onClick={() => handleNavigate("/orderhistory")}
+                  className="menu-item"
+                >
                   <ListItemIcon className="menu-item-icon">
                     <ShippingIcon fontSize="small" />
                   </ListItemIcon>
                   Orders
                 </MenuItem>
 
-                <MenuItem onClick={() => handleNavigate("/cart")} className="menu-item">
+                <MenuItem
+                  onClick={() => handleNavigate("/cart")}
+                  className="menu-item"
+                >
                   <ListItemIcon className="menu-item-icon">
                     <ShoppingCartIcon fontSize="small" />
                   </ListItemIcon>
                   Cart
                 </MenuItem>
 
+                <MenuItem
+                  onClick={() => handleNavigate("/favorites")}
+                  className="menu-item"
+                >
+                  <ListItemIcon className="menu-item-icon">
+                    <FavoriteIcon fontSize="small" />
+                  </ListItemIcon>
+                  Favorites
+                </MenuItem>
+
                 <Divider className="menu-divider" />
 
-                <MenuItem onClick={() => handleNavigate("/account")} className="menu-item">
+                <MenuItem
+                  onClick={() => handleNavigate("/account")}
+                  className="menu-item"
+                >
                   <ListItemIcon className="menu-item-icon">
                     <PersonIcon fontSize="small" />
                   </ListItemIcon>
                   My Profile
                 </MenuItem>
 
-                <MenuItem onClick={() => handleNavigate("/uploadProduct")} className="menu-item">
+                <MenuItem
+                  onClick={() => handleNavigate("/uploadProduct")}
+                  className="menu-item"
+                >
                   <ListItemIcon className="menu-item-icon">
                     <ShoppingCartIcon fontSize="small" />
                   </ListItemIcon>
                   Sell an Item
                 </MenuItem>
 
-                <MenuItem onClick={() => handleNavigate("/account")} className="menu-item">
+                <MenuItem
+                  onClick={() => handleNavigate("/account")}
+                  className="menu-item"
+                >
                   <ListItemIcon className="menu-item-icon">
                     <SettingsIcon fontSize="small" />
                   </ListItemIcon>
@@ -248,7 +285,10 @@ const Header = () => {
                 </MenuItem>
 
                 <Divider className="menu-divider" />
-                <MenuItem onClick={handleLogout} className="menu-item logout-item">
+                <MenuItem
+                  onClick={handleLogout}
+                  className="menu-item logout-item"
+                >
                   <ListItemIcon>
                     <LogoutIcon fontSize="small" color="error" />
                   </ListItemIcon>
