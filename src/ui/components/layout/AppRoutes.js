@@ -14,6 +14,7 @@ import Chatroom from "../chatroom/chatroom";
 import Editproduct from "../editproduct/editproduct";
 import Login from "../login/Login";
 import MessageArea from "../messageArea/messageArea";
+import MessageHome from "../messageArea/messageHome";
 import VerifySuccess from "../registration/VerifySuccess";
 import ConnectionTester from "../common/ConnectionTester";
 import ResetPassword from "../password/ResetPassword";
@@ -23,6 +24,30 @@ import LandingPage from "../home/LandingPage";
 import SessionTimeoutModal from "../common/SessionTimeoutModal";
 import ProtectedRoute from "../auth/ProtectedRoute";
 import FixVerification from "../auth/FixVerification";
+import Favorites from "../favorites/Favorites";
+import { useAuth } from "../../../contexts/AuthContext";
+
+// Wrapper component for MessageArea that provides required props
+const MessageAreaWrapper = () => {
+  const { user } = useAuth();
+
+  // Default empty receiver or get from state/context if available
+  const receiver = { id: null, name: "Select a recipient" };
+
+  // Handler to close the chat
+  const handleCloseChat = () => {
+    // Add close chat logic if needed
+    console.log("Chat closed");
+  };
+
+  return (
+    <MessageArea
+      user={user || {}}
+      receiver={receiver}
+      onCloseChat={handleCloseChat}
+    />
+  );
+};
 
 function AppRoutes() {
   return (
@@ -88,7 +113,7 @@ function AppRoutes() {
           path="/messaging"
           element={
             <ProtectedRoute>
-              <MessageArea />
+              <MessageHome />
             </ProtectedRoute>
           }
         />
@@ -97,6 +122,16 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Editproduct />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Add Favorites route */}
+        <Route
+          path="/favorites"
+          element={
+            <ProtectedRoute>
+              <Favorites />
             </ProtectedRoute>
           }
         />

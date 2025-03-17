@@ -7,6 +7,21 @@ import { supabase } from "../supabaseClient";
  */
 export async function updateVerificationStatus() {
   try {
+    // Add rate limiting - only update once per hour
+    const lastVerificationUpdate = localStorage.getItem(
+      "lastVerificationUpdate"
+    );
+    const now = new Date().getTime();
+
+    if (
+      lastVerificationUpdate &&
+      now - parseInt(lastVerificationUpdate, 10) < 3600000
+    ) {
+      // 1 hour
+      console.log("Skipping verification update - updated recently");
+      return { success: true, error: null };
+    }
+
     // Get the current user
     const {
       data: { user },
@@ -44,6 +59,9 @@ export async function updateVerificationStatus() {
       console.error("Error updating user database record:", dbError);
       return { success: false, error: dbError };
     }
+
+    // Store the last update time
+    localStorage.setItem("lastVerificationUpdate", now.toString());
 
     return { success: true, error: null };
   } catch (err) {
