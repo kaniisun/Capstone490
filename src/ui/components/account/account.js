@@ -6,6 +6,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../../supabaseClient";
 import { useAuth } from "../../../contexts/AuthContext";
 import "./account.css";
+import placeholderImage from "../../../assets/placeholder.js";
+import fallbackImage from "../../../assets/placeholder-fallback.js";
 // Material-UI imports
 import {
   Avatar,
@@ -92,22 +94,20 @@ const Account = () => {
   // Fetch user profile data
   const fetchUserProfile = async () => {
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
+      // Since there's no profiles table, just use the user object from Auth
+      if (user) {
         setProfile({
           email: user.email || "",
-          fullName: data.full_name || "",
+          fullName:
+            user.user_metadata?.full_name || user.user_metadata?.name || "",
         });
       }
     } catch (error) {
-      console.error("Error fetching user profile:", error.message);
+      console.error("Error setting up user profile:", error.message);
+      setProfile({
+        email: user.email || "",
+        fullName: "",
+      });
     }
   };
 
@@ -135,13 +135,12 @@ const Account = () => {
     setUpdating(true);
 
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
+      // Update the user metadata instead of a separate profiles table
+      const { error } = await supabase.auth.updateUser({
+        data: {
           full_name: profile.fullName,
-          updated_at: new Date(),
-        })
-        .eq("id", user.id);
+        },
+      });
 
       if (error) throw error;
 
@@ -708,10 +707,7 @@ const Account = () => {
                                       }}
                                     >
                                       <img
-                                        src={
-                                          product.image ||
-                                          "https://via.placeholder.com/150"
-                                        }
+                                        src={product.image || placeholderImage}
                                         alt={product.name}
                                         style={{
                                           maxWidth: "100%",
@@ -723,8 +719,16 @@ const Account = () => {
                                             e.target instanceof HTMLImageElement
                                           ) {
                                             e.target.onerror = null;
-                                            e.target.src =
-                                              "https://via.placeholder.com/150";
+                                            // Try placeholder image first
+                                            if (
+                                              e.target.src !== placeholderImage
+                                            ) {
+                                              e.target.src = placeholderImage;
+                                            }
+                                            // If placeholder also fails, use fallback
+                                            else {
+                                              e.target.src = fallbackImage;
+                                            }
                                           }
                                         }}
                                       />
@@ -882,10 +886,7 @@ const Account = () => {
                                   }}
                                 >
                                   <img
-                                    src={
-                                      product.image ||
-                                      "https://via.placeholder.com/150"
-                                    }
+                                    src={product.image || placeholderImage}
                                     alt={product.name}
                                     style={{
                                       maxWidth: "100%",
@@ -897,8 +898,14 @@ const Account = () => {
                                         e.target instanceof HTMLImageElement
                                       ) {
                                         e.target.onerror = null;
-                                        e.target.src =
-                                          "https://via.placeholder.com/150";
+                                        // Try placeholder image first
+                                        if (e.target.src !== placeholderImage) {
+                                          e.target.src = placeholderImage;
+                                        }
+                                        // If placeholder also fails, use fallback
+                                        else {
+                                          e.target.src = fallbackImage;
+                                        }
                                       }
                                     }}
                                   />

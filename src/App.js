@@ -27,7 +27,7 @@ import UploadProduct from "./ui/components/uploadproduct/uploadProduct";
 import Chatroom from "./ui/components/chatroom/chatroom";
 import Editproduct from "./ui/components/editproduct/editproduct";
 import Login from "./ui/components/login/Login";
-
+import Favorites from "./ui/components/favorites/Favorites";
 import MessageHome from "./ui/components/messageArea/messageHome";
 import VerifySuccess from "./ui/components/registration/VerifySuccess";
 import ConnectionTester from "./ui/components/common/ConnectionTester";
@@ -95,9 +95,6 @@ function AppContent() {
               <Route path="/product/:id" element={<Detail />} />
               <Route path="/search-results" element={<SearchResults />} />
               <Route path="/orderhistory" element={<OrderHistory />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/orderconfirmation" element={<OrderConfirmation />} />
-
 
               {/* Protected routes */}
               <Route
@@ -105,6 +102,14 @@ function AppContent() {
                 element={
                   <ProtectedRoute>
                     <Cart />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/favorites"
+                element={
+                  <ProtectedRoute>
+                    <Favorites />
                   </ProtectedRoute>
                 }
               />
@@ -136,7 +141,11 @@ function AppContent() {
                 path="/messaging"
                 element={
                   <ProtectedRoute>
-                    <MessageHome/>
+                    <MessageHome
+                      // user={{}} // temporary dummy user object
+                      // receiver={{}} // temporary dummy receiver object
+                      // onCloseChat={() => {}} // temporary empty function
+                    />
                   </ProtectedRoute>
                 }
               />
