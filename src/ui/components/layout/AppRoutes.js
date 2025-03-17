@@ -86,6 +86,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/favorites"
+          element={
+            <ProtectedRoute>
+              <Favorites />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/chatroom"
           element={
             <ProtectedRoute>
