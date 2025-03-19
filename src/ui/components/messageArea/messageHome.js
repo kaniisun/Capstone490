@@ -3,17 +3,23 @@ import { supabase } from "../../../supabaseClient";
 import MessageArea from "./messageArea";
 import UserList from "./userList";
 import "./messages.css";
+import { useParams } from "react-router-dom";
 
 const MessageHome = () => {
   const [user, setUser] = useState(null);
   const [receiver, setReceiver] = useState(null);
+  const { userId } = useParams();
+
+  console.log("MessageHome rendered with userId:", userId);
 
   // get auth user
   useEffect(() => {
     const getUser = async () => {
+      console.log("Fetching current user...");
       const { data, error } = await supabase.auth.getUser();
       if (!error && data?.user) {
         const userID = data.user.id;
+        console.log("Auth user ID:", userID);
         const { data: userData, error: userError } = await supabase
           .from("users")
           .select("*")
@@ -21,6 +27,7 @@ const MessageHome = () => {
           .single();
 
         if (!userError) {
+          console.log("Fetched user data:", userData);
           setUser(userData);
           localStorage.setItem("userId", userData.userID);
         }
@@ -29,6 +36,29 @@ const MessageHome = () => {
 
     getUser();
   }, []);
+
+  // If userId is provided in URL, fetch and set receiver
+  useEffect(() => {
+    const fetchReceiver = async () => {
+      console.log("Fetching receiver with userId:", userId);
+      if (userId) {
+        const { data, error } = await supabase
+          .from("users")
+          .select("*")
+          .eq("userID", userId)
+          .single();
+
+        if (!error && data) {
+          console.log("Fetched receiver data:", data);
+          setReceiver(data);
+        } else {
+          console.error("Error fetching receiver:", error);
+        }
+      }
+    };
+
+    fetchReceiver();
+  }, [userId]);
   
   // close chat
   const handleCloseChat = () => {
@@ -52,7 +82,6 @@ const MessageHome = () => {
       )}
     </div>
   );
-  
 };
 
 export default MessageHome;

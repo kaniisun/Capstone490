@@ -93,6 +93,8 @@ function AppContent() {
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/products" element={<Products />} />
               <Route path="/product/:id" element={<Detail />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/orderconfirmation" element={<OrderConfirmation />} />
               <Route path="/search-results" element={<SearchResults />} />
               <Route path="/orderhistory" element={<OrderHistory />} />
 
@@ -141,11 +143,15 @@ function AppContent() {
                 path="/messaging"
                 element={
                   <ProtectedRoute>
-                    <MessageHome
-                      // user={{}} // temporary dummy user object
-                      // receiver={{}} // temporary dummy receiver object
-                      // onCloseChat={() => {}} // temporary empty function
-                    />
+                    <MessageHome />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/messaging/:userId"
+                element={
+                  <ProtectedRoute>
+                    <MessageHome />
                   </ProtectedRoute>
                 }
               />
