@@ -266,33 +266,75 @@ const Account = () => {
         return "info";
     }
   };
-  const handleMarkAsSold = (productID) => {
-    // Logic to update product status
-    setProducts((prevProducts) =>
-      prevProducts.map((product) =>
-        product.productID === productID
-          ? {
-              ...product,
-              status: product.status === "Sold" ? "Available" : "Sold",
-            }
-          : product
-      )
-    );
+  
+  // Mark product as sold
+  const handleMarkAsSold = async (productID) => {
+    try {
+      // Update the product status to "Sold" in Supabase
+      const { error } = await supabase
+        .from("products")
+        .update({ status: "Sold" })
+        .eq("productID", productID);
+  
+      if (error) throw error;
+  
+      // If successful, update the local state
+      setProducts((prevProducts) =>
+        prevProducts.map((product) =>
+          product.productID === productID ? { ...product, status: "Sold" } : product
+        )
+      );
+  
+      setSnackbar({
+        open: true,
+        message: "Product marked as Sold!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error marking product as Sold:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error: ${error.message}`,
+        severity: "error",
+      });
+    }
   };
 
-  const handleMarkAsAvailable = (productID) => {
-    // Logic to update product status
-    setProducts((prevProducts) =>
-      prevProducts.map((product) =>
-        product.productID === productID
-          ? {
-              ...product,
-              status: product.status === "Available" ? "Sold" : "Available",
-            }
-          : product
-      )
-    );
+// Mark product as available
+  const handleMarkAsAvailable = async (productID) => {
+    try {
+      // Update status in the database
+      const { error } = await supabase
+        .from("products")
+        .update({ status: "Available" })
+        .eq("productID", productID);
+  
+      if (error) throw error;
+  
+      // Update local state after successful database update
+      setProducts((prevProducts) =>
+        prevProducts.map((product) =>
+          product.productID === productID
+            ? { ...product, status: "Available" }
+            : product
+        )
+      );
+  
+      setSnackbar({
+        open: true,
+        message: "Product marked as Available!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error marking product as Available:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error: ${error.message}`,
+        severity: "error",
+      });
+    }
   };
+  
   // Get product condition stars
   const getConditionStars = (condition) => {
     switch (condition?.toLowerCase()) {
@@ -654,6 +696,7 @@ const Account = () => {
                   >
                     Your Products
                   </Typography>
+                
                   <Button
                     component={Link}
                     to="/uploadProduct"
@@ -860,10 +903,13 @@ const Account = () => {
                   </Paper>
                 ) : (
                   <Grid container spacing={3}>
+                    
                     {Array.isArray(products) &&
-                      products.map((product) => {
-                        if (!product?.productID) return null;
-                        return (
+                      products
+                        .filter((product) => product.status === "Available") // Only available products
+                        .map((product) => {
+                          if (!product?.productID) return null;
+                          return (
                           <Grid
                             item
                             xs={12}
@@ -1188,6 +1234,8 @@ const Account = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        {/* Sold Itmes */}
         <Box sx={{ p: 3 }} hidden={tabValue !== 2}>
           {tabValue === 2 && (
             <Box>
