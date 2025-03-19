@@ -32,18 +32,33 @@ export const Detail = () => {
   // fetch product details by id
   useEffect(() => {
     const fetchProduct = async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("productID", id)
-        .single(); // fetch singular product
+      try {
+        console.log("Fetching product with ID:", id);
+        const { data, error } = await supabase
+          .from("products")
+          .select(`
+            *,
+            users:userID (
+              firstName,
+              lastName
+            )
+          `)
+          .eq("productID", id)
+          .single();
 
-      if (error) {
-        console.error("Error fetching product:", error);
-      } else {
-        setProduct(data);
+        if (error) {
+          console.error("Error fetching product:", error);
+        } else {
+          console.log("Fetched product data:", data);
+          console.log("Product userID:", data.userID);
+          console.log("Product seller info:", data.users);
+          setProduct(data);
+        }
+      } catch (err) {
+        console.error("Exception while fetching product:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchProduct();
@@ -141,9 +156,18 @@ export const Detail = () => {
                 alt={product.name}
               />
             </div>
+            <div className="detail-seller-info">
+              <span className="detail-seller-name">
+                Seller: {product.users?.firstName} {product.users?.lastName}
+              </span>
+            </div>
             <button
               className="detail-chat-button"
-              onClick={() => navigate(`/messaging?receiverId=${product.userID}`)}
+              onClick={() => {
+                console.log("Chat button clicked");
+                console.log("Product userID:", product.userID);
+                navigate(`/messaging/${product.userID}`);
+              }}
             >
               <FontAwesomeIcon icon={faComments} />
               Chat with Seller

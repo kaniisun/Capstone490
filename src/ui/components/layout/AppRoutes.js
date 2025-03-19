@@ -126,6 +126,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/messaging/:userId"
+          element={
+            <ProtectedRoute>
+              <MessageHome />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/editProduct/:productID"
           element={
             <ProtectedRoute>
