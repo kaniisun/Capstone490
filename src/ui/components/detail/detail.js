@@ -191,7 +191,7 @@ export const Detail = () => {
 
               <div className="detail-description-section">
                 <h3 className="detail-section-title">Description</h3>
-                <p className="detail-description">{product.description}</p>
+                <div className="detail-description" dangerouslySetInnerHTML={{ __html: product.description.replace(/\n/g, "<br />") }}></div>
               </div>
             </div>
 
