@@ -8,6 +8,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import "./account.css";
 import placeholderImage from "../../../assets/placeholder.js";
 import fallbackImage from "../../../assets/placeholder-fallback.js";
+
 // Material-UI imports
 import {
   Avatar,
@@ -51,6 +52,7 @@ import {
   LocalOffer as LocalOfferIcon,
   Category as CategoryIcon,
   Star as StarIcon,
+  Sell as Sell,
 } from "@mui/icons-material";
 import { useTheme as useMuiTheme } from "@mui/material/styles";
 
@@ -264,7 +266,75 @@ const Account = () => {
         return "info";
     }
   };
+  
+  // Mark product as sold
+  const handleMarkAsSold = async (productID) => {
+    try {
+      // Update the product status to "Sold" in Supabase
+      const { error } = await supabase
+        .from("products")
+        .update({ status: "Sold" })
+        .eq("productID", productID);
+  
+      if (error) throw error;
+  
+      // If successful, update the local state
+      setProducts((prevProducts) =>
+        prevProducts.map((product) =>
+          product.productID === productID ? { ...product, status: "Sold" } : product
+        )
+      );
+  
+      setSnackbar({
+        open: true,
+        message: "Product marked as Sold!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error marking product as Sold:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error: ${error.message}`,
+        severity: "error",
+      });
+    }
+  };
 
+// Mark product as available
+  const handleMarkAsAvailable = async (productID) => {
+    try {
+      // Update status in the database
+      const { error } = await supabase
+        .from("products")
+        .update({ status: "Available" })
+        .eq("productID", productID);
+  
+      if (error) throw error;
+  
+      // Update local state after successful database update
+      setProducts((prevProducts) =>
+        prevProducts.map((product) =>
+          product.productID === productID
+            ? { ...product, status: "Available" }
+            : product
+        )
+      );
+  
+      setSnackbar({
+        open: true,
+        message: "Product marked as Available!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error marking product as Available:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error: ${error.message}`,
+        severity: "error",
+      });
+    }
+  };
+  
   // Get product condition stars
   const getConditionStars = (condition) => {
     switch (condition?.toLowerCase()) {
@@ -373,6 +443,7 @@ const Account = () => {
                 iconPosition="start"
               />
               <Tab label="Products" icon={<StoreIcon />} iconPosition="start" />
+              <Tab label="Sold" icon={<Sell />} iconPosition="start" />
             </Tabs>
           </Box>
 
@@ -625,6 +696,7 @@ const Account = () => {
                   >
                     Your Products
                   </Typography>
+                
                   <Button
                     component={Link}
                     to="/uploadProduct"
@@ -831,10 +903,13 @@ const Account = () => {
                   </Paper>
                 ) : (
                   <Grid container spacing={3}>
+                    
                     {Array.isArray(products) &&
-                      products.map((product) => {
-                        if (!product?.productID) return null;
-                        return (
+                      products
+                        .filter((product) => product.status === "Available") // Only available products
+                        .map((product) => {
+                          if (!product?.productID) return null;
+                          return (
                           <Grid
                             item
                             xs={12}
@@ -873,6 +948,29 @@ const Account = () => {
                                     sx={{ fontSize: "0.75rem" }}
                                   />
                                 </Box>
+                                <Tooltip title="Mark as Sold">
+                                  <Button
+                                    variant="contained"
+                                    startIcon={<LocalOfferIcon />}
+                                    onClick={() =>
+                                      handleMarkAsSold(product.productID)
+                                    }
+                                    size="small"
+                                    sx={{
+                                      flex: 1,
+                                      borderRadius: 1,
+                                      textTransform: "none",
+                                      bgcolor: "#0f2044", // UNCG Blue
+                                      color: "white",
+                                      "&:hover": {
+                                        bgcolor: "#1a365d", // Slightly lighter UNCG Blue
+                                      },
+                                    }}
+                                    disabled={product.status === "Sold"}
+                                  >
+                                    Mark as Sold
+                                  </Button>
+                                </Tooltip>
 
                                 {/* Product image */}
                                 <Box
@@ -1136,6 +1234,197 @@ const Account = () => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        {/* Sold Itmes */}
+        <Box sx={{ p: 3 }} hidden={tabValue !== 2}>
+          {tabValue === 2 && (
+            <Box>
+              <Typography
+                variant="h6"
+                fontWeight="500"
+                sx={{ mb: 2, color: "#0f2044" }}
+              >
+                Sold Items
+              </Typography>
+
+              {/* If there are no sold products */}
+              {products.length > 0 &&
+              products.some((p) => p.status === "Sold") ? (
+                <Grid container spacing={3}>
+                  {products
+                    .filter((product) => product.status === "Sold")
+                    .map((product) => (
+                      <Grid item xs={12} sm={6} md={4} key={product.productID}>
+                        <Card
+                          variant="outlined"
+                          sx={{
+                            borderRadius: 2,
+                            transition: "all 0.2s",
+                            border: "1px solid #e0e0e0",
+                            "&:hover": {
+                              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                            },
+                          }}
+                        >
+                          {/* Product Image */}
+                          <Box
+                            sx={{
+                              height: 180,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              p: 2,
+                              bgcolor: "grey.50",
+                            }}
+                          >
+                            <img
+                              src={
+                                product.image ||
+                                "https://via.placeholder.com/150"
+                              }
+                              alt={product.name}
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: "100%",
+                                objectFit: "contain",
+                              }}
+                            />
+                          </Box>
+
+                          {/* Product details */}
+                          <CardContent sx={{ flexGrow: 1, p: 2 }}>
+                            <Typography
+                              variant="subtitle1"
+                              fontWeight="500"
+                              gutterBottom
+                              title={product.name}
+                            >
+                              {product.name?.length > 24
+                                ? `${product.name.substring(0, 24)}...`
+                                : product.name}
+                            </Typography>
+
+                            <Typography
+                              variant="h6"
+                              sx={{
+                                fontWeight: 500,
+                                my: 1,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.5,
+                                color: "#0f2044", // UNCG Blue
+                              }}
+                            >
+                              <LocalOfferIcon fontSize="small" />$
+                              {parseFloat(product.price).toFixed(2)}
+                            </Typography>
+
+                            <Stack spacing={1} sx={{ mb: 1 }}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                }}
+                              >
+                                <CategoryIcon
+                                  fontSize="small"
+                                  color="action"
+                                  sx={{ fontSize: 18 }}
+                                />
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  {product.category}
+                                </Typography>
+                              </Box>
+
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                }}
+                              >
+                                <Box sx={{ display: "flex" }}>
+                                  {[...Array(5)].map((_, i) => (
+                                    <StarIcon
+                                      key={i}
+                                      sx={{
+                                        color:
+                                          i <
+                                          getConditionStars(product.condition)
+                                            ? "warning.main"
+                                            : "text.disabled",
+                                        fontSize: "0.8rem",
+                                      }}
+                                    />
+                                  ))}
+                                </Box>
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  {product.condition}
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          </CardContent>
+
+                          {/* Toggle Back to Available */}
+                          <Divider />
+                          <Box
+                            sx={{
+                              p: 2,
+                              display: "flex",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Tooltip title="Mark as Available">
+                              <Button
+                                variant="contained"
+                                startIcon={<LocalOfferIcon />}
+                                onClick={() =>
+                                  handleMarkAsAvailable(product.productID)
+                                }
+                                size="small"
+                                sx={{
+                                  flex: 1,
+                                  borderRadius: 1,
+                                  textTransform: "none",
+                                  bgcolor: "#d32f2f", // UNCG Blue
+                                  color: "white",
+                                  "&:hover": {
+                                    bgcolor: "#b71c1c", // Slightly lighter UNCG Blue
+                                  },
+                                }}
+                                disabled={product.status === "Available"}
+                              >
+                                Change to Available
+                              </Button>
+                            </Tooltip>
+                          </Box>
+                        </Card>
+                      </Grid>
+                    ))}
+                </Grid>
+              ) : (
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 4, textAlign: "center", borderRadius: 2 }}
+                >
+                  <LocalOfferIcon
+                    sx={{ fontSize: 40, color: "text.disabled", mb: 1 }}
+                  />
+                  <Typography variant="body1" color="text.secondary">
+                    No products have been marked as sold.
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
+          )}
+        </Box>
       </Container>
     </Fade>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from "../../../supabaseClient";
 import './orderhistory.css';
 
 const OrderHistory = () => {
@@ -9,11 +10,7 @@ const OrderHistory = () => {
     { id: 3, name: 'Item C', price: 100, quantity: 3, imageUrl: 'https://via.placeholder.com/50' }
   ]);
   
-  const [soldItems, setSoldItems] = useState([
-    { id: 1, name: 'Item A', price: 60, quantity: 2, imageUrl: 'https://via.placeholder.com/50' },
-    { id: 2, name: 'Item B', price: 40, quantity: 1, imageUrl: 'https://via.placeholder.com/50' },
-    { id: 3, name: 'Item C', price: 120, quantity: 3, imageUrl: 'https://via.placeholder.com/50' }
-  ]);
+  
 
   // Updated purchase confirmations state to match checkout data structure
   const [purchaseConfirmations, setPurchaseConfirmations] = useState([]);
@@ -27,25 +24,32 @@ const OrderHistory = () => {
 
   // Calculate total spent and total made
   const totalSpent = orderedItems.reduce((total, item) => total + item.price * item.quantity, 0);
-  const totalMade = soldItems.reduce((total, item) => total + item.price * item.quantity, 0);
+
+
+  const [soldItems, setSoldItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Function to load purchase confirmations from localStorage
   useEffect(() => {
-    const loadConfirmations = () => {
-      const savedPurchases = localStorage.getItem('purchaseConfirmations');
-      const savedSales = localStorage.getItem('saleConfirmations');
-      
-      if (savedPurchases) {
-        setPurchaseConfirmations(JSON.parse(savedPurchases));
-      }
-      
-      if (savedSales) {
-        setSaleConfirmations(JSON.parse(savedSales));
+    const fetchSoldItems = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("products") // Change this to your actual table name
+          .select("*")
+          .eq("status", "Sold");
+  
+        if (error) throw error;
+        setSoldItems(data || []);
+      } catch (error) {
+        console.error("Error fetching sold items:", error.message);
+      } finally {
+        setLoading(false);
       }
     };
-
-    loadConfirmations();
+  
+    fetchSoldItems();
   }, []);
+
 
   // Toggle expanded state for a confirmation
   const toggleConfirmationView = (orderId) => {
@@ -193,7 +197,7 @@ const OrderHistory = () => {
               <tbody>
                 {orderedItems.map(item => (
                   <tr key={item.id}>
-                    <td><img src={item.imageUrl} alt={item.name} className="item-image" /></td>
+                    <td><img src={item.image} alt={item.name} className="item-image" /></td>
                     <td>{item.name}</td>
                     <td>${item.price}</td>
                     <td>{item.quantity}</td>
@@ -223,36 +227,45 @@ const OrderHistory = () => {
           </div>
         )}
 
-        {activeView === 'sold' && (
-          <div className="order-section fade-in">
-            <h3>Sold Items</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Item Image</th>
-                  <th>Item Name</th>
-                  <th>Price</th>
-                  <th>Quantity</th>
-                  <th>Total Earnings</th>
+{activeView === 'sold' && (
+  <div className="order-section fade-in">
+    <h3>Sold Items</h3>
+    {loading ? (
+      <p>Loading sold items...</p>
+    ) : soldItems.length > 0 ? (
+      <>
+        <table>
+          <thead>
+            <tr>
+              <th>Item Image</th>
+              <th>Item Name</th>
+              <th>Price</th>
+              <th>Date</th>
+
+            </tr>
+          </thead>
+          <tbody>
+            {soldItems.map(item => (
+              <tr key={item.id}>
+                <td><img src={item.image || "https://via.placeholder.com/50"} alt={item.name} className="item-image" /></td>
+                <td>{item.name}</td>
+                <td>${item.price.toFixed(2)}</td>
+                <td>{new Date(item.modified_at).toLocaleDateString("en-US")}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {soldItems.map(item => (
-                  <tr key={item.id}>
-                    <td><img src={item.imageUrl} alt={item.name} className="item-image" /></td>
-                    <td>{item.name}</td>
-                    <td>${item.price}</td>
-                    <td>{item.quantity}</td>
-                    <td>${item.price * item.quantity}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="total-earned">
-              <strong>Total Earnings: </strong>${totalMade}
-            </div>
-          </div>
-        )}
+            ))}
+          </tbody>
+        </table>
+        <div className="total-earned">
+          <strong>Total Earnings: </strong>$
+          {soldItems.reduce((total, item) => total + item.price, 0).toFixed(2)}
+        </div>
+      </>
+    ) : (
+      <p>No sold items found.</p>
+    )}
+  </div>
+)}
+
 
         {activeView === 'sale-confirmations' && (
           <div className="order-section fade-in">
@@ -274,3 +287,4 @@ const OrderHistory = () => {
 };
 
 export default OrderHistory;
+
