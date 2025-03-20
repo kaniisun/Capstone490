@@ -29,6 +29,7 @@ import {
   PersonAdd as PersonAddIcon,
   School as SchoolIcon,
   Favorite as FavoriteIcon,
+  ViewList as ViewListIcon,
 } from "@mui/icons-material";
 import "./header.css";
 
@@ -197,6 +198,16 @@ const Header = () => {
                 </MenuItem>
 
                 <MenuItem
+                  onClick={() => handleNavigate("/products")}
+                  className="menu-item"
+                >
+                  <ListItemIcon className="menu-item-icon">
+                    <ViewListIcon fontSize="small" />
+                  </ListItemIcon>
+                  All Listings
+                </MenuItem>
+
+                <MenuItem
                   onClick={() => handleNavigate("/messaging")}
                   className="menu-item"
                 >
@@ -252,8 +263,6 @@ const Header = () => {
                   Favorites
                 </MenuItem>
 
-                <Divider className="menu-divider" />
-
                 <MenuItem
                   onClick={() => handleNavigate("/account")}
                   className="menu-item"
@@ -261,36 +270,14 @@ const Header = () => {
                   <ListItemIcon className="menu-item-icon">
                     <PersonIcon fontSize="small" />
                   </ListItemIcon>
-                  My Profile
-                </MenuItem>
-
-                <MenuItem
-                  onClick={() => handleNavigate("/uploadProduct")}
-                  className="menu-item"
-                >
-                  <ListItemIcon className="menu-item-icon">
-                    <ShoppingCartIcon fontSize="small" />
-                  </ListItemIcon>
-                  Sell an Item
-                </MenuItem>
-
-                <MenuItem
-                  onClick={() => handleNavigate("/account")}
-                  className="menu-item"
-                >
-                  <ListItemIcon className="menu-item-icon">
-                    <SettingsIcon fontSize="small" />
-                  </ListItemIcon>
-                  Settings
+                  Account
                 </MenuItem>
 
                 <Divider className="menu-divider" />
-                <MenuItem
-                  onClick={handleLogout}
-                  className="menu-item logout-item"
-                >
-                  <ListItemIcon>
-                    <LogoutIcon fontSize="small" color="error" />
+
+                <MenuItem onClick={handleLogout} className="menu-item">
+                  <ListItemIcon className="menu-item-icon">
+                    <LogoutIcon fontSize="small" />
                   </ListItemIcon>
                   Logout
                 </MenuItem>

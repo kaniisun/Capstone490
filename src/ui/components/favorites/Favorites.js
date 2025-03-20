@@ -29,10 +29,11 @@ import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../../../supabaseClient";
 
 /**
  * Enhanced Favorites component with a sleek, modern UI
- * Keeps things simple by working with localStorage instead of complex API calls
+ * Now fetches favorite products directly from Supabase
  */
 const Favorites = () => {
   const theme = useTheme();
@@ -43,20 +44,28 @@ const Favorites = () => {
 
   // Load favorites
   useEffect(() => {
-    // Simple loading of favorites
-    const loadFavorites = () => {
+    const loadFavorites = async () => {
       setLoading(true);
 
       // Get IDs of favorited products
       const favoriteIds = getFavoriteIds();
 
-      // Get product data for those IDs, filtering out any test products
-      const products = getFavoriteProducts(favoriteIds).filter((product) => {
+      if (favoriteIds.length === 0) {
+        setFavoriteProducts([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get product data for those IDs from Supabase
+      const products = await getFavoriteProducts(supabase, favoriteIds);
+
+      // Filter out any test products
+      const filteredProducts = products.filter((product) => {
         const id = product.productID || product.id;
         return !String(id).startsWith("test");
       });
 
-      setFavoriteProducts(products);
+      setFavoriteProducts(filteredProducts);
       setLoading(false);
     };
 

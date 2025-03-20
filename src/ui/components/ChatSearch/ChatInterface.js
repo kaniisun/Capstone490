@@ -598,10 +598,15 @@ export default function ChatInterface() {
               <IconButton
                 size="small"
                 onClick={() => setShowSearchTips(false)}
-                sx={{ color: theme.palette.text.secondary }}
+                sx={{
+                  color: theme.palette.text.secondary,
+                  padding: "4px",
+                  width: "24px",
+                  height: "24px",
+                }}
                 aria-label="Close search tips"
               >
-                <CloseIcon fontSize="small" />
+                <CloseIcon sx={{ fontSize: "16px" }} />
               </IconButton>
             </Box>
 
@@ -623,12 +628,13 @@ export default function ChatInterface() {
                   sx={{
                     fontWeight: "bold",
                     color: "text.primary",
-                    minWidth: "40px",
+                    minWidth: "24px",
+                    textAlign: "center",
                   }}
                 >
                   1.
                 </Typography>
-                <Box>
+                <Box sx={{ flex: 1 }}>
                   <Typography
                     variant="body2"
                     sx={{ fontWeight: "bold", color: "text.primary" }}
@@ -648,12 +654,13 @@ export default function ChatInterface() {
                   sx={{
                     fontWeight: "bold",
                     color: "text.primary",
-                    minWidth: "40px",
+                    minWidth: "24px",
+                    textAlign: "center",
                   }}
                 >
                   2.
                 </Typography>
-                <Box>
+                <Box sx={{ flex: 1 }}>
                   <Typography
                     variant="body2"
                     sx={{ fontWeight: "bold", color: "text.primary" }}
@@ -672,12 +679,13 @@ export default function ChatInterface() {
                   sx={{
                     fontWeight: "bold",
                     color: "text.primary",
-                    minWidth: "40px",
+                    minWidth: "24px",
+                    textAlign: "center",
                   }}
                 >
                   3.
                 </Typography>
-                <Box>
+                <Box sx={{ flex: 1 }}>
                   <Typography
                     variant="body2"
                     sx={{ fontWeight: "bold", color: "text.primary" }}

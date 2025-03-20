@@ -1,0 +1,33 @@
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.logo-icon {
+  font-size: 2rem;
+  color: #1976d2;
+  margin-right: 8px;
+}
+
+.logo-text-gradient {
+  background: linear-gradient(45deg, #2196f3, #21cbf3);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.logo-text-plain {
+  color: #424242;
+  font-weight: 400;
+}
+
+/* Adjust main content padding when sidebar is visible */
+@media (min-width: 600px) {
+  .app-container {
+    padding-left: 240px;
+  }
+}

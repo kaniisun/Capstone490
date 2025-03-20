@@ -2,9 +2,19 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import { faCartShopping, faComments, faCheck, faTag, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCartShopping,
+  faComments,
+  faCheck,
+  faTag,
+  faInfoCircle,
+  faHeart as solidHeart,
+} from "@fortawesome/free-solid-svg-icons";
+import { faHeart as regularHeart } from "@fortawesome/free-regular-svg-icons";
 import { supabase } from "../../../supabaseClient";
 import "./detail.css";
+// Import favorite utilities
+import { isFavorite, toggleFavorite } from "../../../utils/favoriteUtils";
 
 export const Detail = () => {
   const { id } = useParams();
@@ -13,6 +23,8 @@ export const Detail = () => {
   const [userId, setUserId] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  // Add favorited state
+  const [favorited, setFavorited] = useState(false);
   const navigate = useNavigate();
 
   // fetch current user ID
@@ -29,6 +41,13 @@ export const Detail = () => {
     fetchUser();
   }, []);
 
+  // Check if product is favorited
+  useEffect(() => {
+    if (id) {
+      setFavorited(isFavorite(id));
+    }
+  }, [id]);
+
   // fetch product details by id
   useEffect(() => {
     const fetchProduct = async () => {
@@ -36,13 +55,15 @@ export const Detail = () => {
         console.log("Fetching product with ID:", id);
         const { data, error } = await supabase
           .from("products")
-          .select(`
+          .select(
+            `
             *,
             users:userID (
               firstName,
               lastName
             )
-          `)
+          `
+          )
           .eq("productID", id)
           .single();
 
@@ -66,42 +87,40 @@ export const Detail = () => {
 
   const handleAddToCart = async () => {
     if (!userId) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
 
     try {
       // First check if the item is already in the cart
       const { data: existingCartItem } = await supabase
-        .from('cart')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('product_id', id)
+        .from("cart")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("product_id", id)
         .single();
 
       if (existingCartItem) {
         // Update quantity if item exists
         const { error: updateError } = await supabase
-          .from('cart')
+          .from("cart")
           .update({ quantity: existingCartItem.quantity + 1 })
-          .eq('user_id', userId)
-          .eq('product_id', id);
+          .eq("user_id", userId)
+          .eq("product_id", id);
 
         if (updateError) throw updateError;
       } else {
         // Add new item if it doesn't exist
-        const { error: insertError } = await supabase
-          .from('cart')
-          .insert([
-            {
-              user_id: userId,
-              product_id: id,
-              quantity: 1,
-              product_name: product.name,
-              product_price: product.price,
-              product_image: product.image
-            }
-          ]);
+        const { error: insertError } = await supabase.from("cart").insert([
+          {
+            user_id: userId,
+            product_id: id,
+            quantity: 1,
+            product_name: product.name,
+            product_price: product.price,
+            product_image: product.image,
+          },
+        ]);
 
         if (insertError) throw insertError;
       }
@@ -126,6 +145,12 @@ export const Detail = () => {
       setShowConfirm(false); // Close confirmation popup
       navigate("/"); // redirect to home after deletion
     }
+  };
+
+  // Handle toggling favorite
+  const handleToggleFavorite = () => {
+    const newFavoritedState = toggleFavorite(id);
+    setFavorited(newFavoritedState);
   };
 
   if (loading) {
@@ -173,19 +198,23 @@ export const Detail = () => {
               Chat with Seller
             </button>
           </div>
-          
+
           <div className="detail-info-container">
             <div className="detail-header">
               <h1 className="detail-product-title">{product.name}</h1>
               <div className="detail-price-tag">
                 <FontAwesomeIcon icon={faTag} />
-                <span className="detail-price">${product.price.toFixed(2)}</span>
+                <span className="detail-price">
+                  ${product.price.toFixed(2)}
+                </span>
               </div>
             </div>
 
             <div className="detail-content">
               <div className="detail-metadata">
-                <p className="detail-condition">Condition: {product.condition}</p>
+                <p className="detail-condition">
+                  Condition: {product.condition}
+                </p>
                 <p className="detail-status">Status: {product.status}</p>
               </div>
 
@@ -199,6 +228,20 @@ export const Detail = () => {
               <button className="detail-cart-button" onClick={handleAddToCart}>
                 <FontAwesomeIcon icon={faCartShopping} />
                 Add to Cart
+              </button>
+
+              {/* Add Favorite button */}
+              <button
+                className={`detail-favorite-button ${
+                  favorited ? "favorited" : ""
+                }`}
+                onClick={handleToggleFavorite}
+                aria-label={
+                  favorited ? "Remove from favorites" : "Add to favorites"
+                }
+              >
+                <FontAwesomeIcon icon={favorited ? solidHeart : regularHeart} />
+                {favorited ? "Remove from Favorites" : "Add to Favorites"}
               </button>
             </div>
           </div>

@@ -102,21 +102,23 @@ function Filter({ filters, setFilters }) {
 
   // Handle price range selection
   const handlePriceRangeSelect = (min, max) => {
-    setFilters((prev) => ({
-      ...prev,
-      minPrice: min,
-      maxPrice: max,
-    }));
-  };
-
-  // Clear price filters
-  const handleClearPrice = () => {
-    setFilters((prev) => ({
-      ...prev,
-      minPrice: "",
-      maxPrice: "",
-      selectedPriceRange: null,
-    }));
+    // Toggle the price range selection - if already selected, clear it
+    if (
+      filters.minPrice === min.toString() &&
+      (max ? filters.maxPrice === max.toString() : true)
+    ) {
+      setFilters((prev) => ({
+        ...prev,
+        minPrice: "",
+        maxPrice: "",
+      }));
+    } else {
+      setFilters((prev) => ({
+        ...prev,
+        minPrice: min,
+        maxPrice: max,
+      }));
+    }
   };
 
   // eslint-disable-next-line no-unused-vars
@@ -251,15 +253,6 @@ function Filter({ filters, setFilters }) {
                 setFilters((prev) => ({ ...prev, maxPrice: e.target.value }))
               }
             />
-            {(filters.minPrice || filters.maxPrice) && (
-              <button
-                type="button"
-                className="clear-price-btn"
-                onClick={handleClearPrice}
-              >
-                Clear
-              </button>
-            )}
           </div>
         </form>
 
@@ -287,42 +280,146 @@ function Filter({ filters, setFilters }) {
 
       <div className="filter-section">
         <h2>Condition</h2>
-        <div className="radio-group">
+        <div className="checkbox-group">
           <label>
             <input
-              type="radio"
-              name="condition"
+              type="checkbox"
               value="New"
-              checked={filters.condition === "New"}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, condition: e.target.value }))
+              checked={
+                Array.isArray(filters.conditions)
+                  ? filters.conditions.includes("New")
+                  : false
               }
+              onChange={(e) => {
+                const { value, checked } = e.target;
+                setFilters((prev) => ({
+                  ...prev,
+                  conditions: checked
+                    ? [
+                        ...(Array.isArray(prev.conditions)
+                          ? prev.conditions
+                          : []),
+                        value,
+                      ]
+                    : Array.isArray(prev.conditions)
+                    ? prev.conditions.filter((c) => c !== value)
+                    : [],
+                }));
+              }}
             />
             New
           </label>
           <label>
             <input
-              type="radio"
-              name="condition"
+              type="checkbox"
               value="Like New"
-              checked={filters.condition === "Like New"}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, condition: e.target.value }))
+              checked={
+                Array.isArray(filters.conditions)
+                  ? filters.conditions.includes("Like New")
+                  : false
               }
+              onChange={(e) => {
+                const { value, checked } = e.target;
+                setFilters((prev) => ({
+                  ...prev,
+                  conditions: checked
+                    ? [
+                        ...(Array.isArray(prev.conditions)
+                          ? prev.conditions
+                          : []),
+                        value,
+                      ]
+                    : Array.isArray(prev.conditions)
+                    ? prev.conditions.filter((c) => c !== value)
+                    : [],
+                }));
+              }}
             />
             Like New
           </label>
           <label>
             <input
-              type="radio"
-              name="condition"
-              value="Used"
-              checked={filters.condition === "Used"}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, condition: e.target.value }))
+              type="checkbox"
+              value="Good"
+              checked={
+                Array.isArray(filters.conditions)
+                  ? filters.conditions.includes("Good")
+                  : false
               }
+              onChange={(e) => {
+                const { value, checked } = e.target;
+                setFilters((prev) => ({
+                  ...prev,
+                  conditions: checked
+                    ? [
+                        ...(Array.isArray(prev.conditions)
+                          ? prev.conditions
+                          : []),
+                        value,
+                      ]
+                    : Array.isArray(prev.conditions)
+                    ? prev.conditions.filter((c) => c !== value)
+                    : [],
+                }));
+              }}
             />
-            Used
+            Good
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              value="Fair"
+              checked={
+                Array.isArray(filters.conditions)
+                  ? filters.conditions.includes("Fair")
+                  : false
+              }
+              onChange={(e) => {
+                const { value, checked } = e.target;
+                setFilters((prev) => ({
+                  ...prev,
+                  conditions: checked
+                    ? [
+                        ...(Array.isArray(prev.conditions)
+                          ? prev.conditions
+                          : []),
+                        value,
+                      ]
+                    : Array.isArray(prev.conditions)
+                    ? prev.conditions.filter((c) => c !== value)
+                    : [],
+                }));
+              }}
+            />
+            Fair
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              value="Poor"
+              checked={
+                Array.isArray(filters.conditions)
+                  ? filters.conditions.includes("Poor")
+                  : false
+              }
+              onChange={(e) => {
+                const { value, checked } = e.target;
+                setFilters((prev) => ({
+                  ...prev,
+                  conditions: checked
+                    ? [
+                        ...(Array.isArray(prev.conditions)
+                          ? prev.conditions
+                          : []),
+                        value,
+                      ]
+                    : Array.isArray(prev.conditions)
+                    ? prev.conditions.filter((c) => c !== value)
+                    : [],
+                }));
+              }}
+            />
+            Poor
           </label>
         </div>
       </div>

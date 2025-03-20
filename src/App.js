@@ -94,7 +94,10 @@ function AppContent() {
               <Route path="/products" element={<Products />} />
               <Route path="/product/:id" element={<Detail />} />
               <Route path="/checkout" element={<Checkout />} />
-              <Route path="/orderconfirmation" element={<OrderConfirmation />} />
+              <Route
+                path="/orderconfirmation"
+                element={<OrderConfirmation />}
+              />
               <Route path="/search-results" element={<SearchResults />} />
               <Route path="/orderhistory" element={<OrderHistory />} />
 

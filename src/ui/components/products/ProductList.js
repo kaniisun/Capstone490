@@ -37,8 +37,12 @@ function ProductList({ filters }) {
       }
 
       //Apply condition filter
-      if (filters.condition) {
-        query = query.eq("condition", filters.condition); //Match exact condition
+      if (
+        filters.conditions &&
+        Array.isArray(filters.conditions) &&
+        filters.conditions.length > 0
+      ) {
+        query = query.in("condition", filters.conditions); //Match any of the selected conditions
       }
 
       //Apply bundle filter
@@ -77,7 +81,8 @@ function ProductList({ filters }) {
           {/*Unique key for each product */}
           <h3>{product.name}</h3> {/* Display product name */}
           <p>Price: ${product.price}</p> {/* Display product price */}
-          <p>Condition: {product.condition}</p> {/* Display product condition */}
+          <p>Condition: {product.condition}</p>{" "}
+          {/* Display product condition */}
         </div>
       ))}
     </div>

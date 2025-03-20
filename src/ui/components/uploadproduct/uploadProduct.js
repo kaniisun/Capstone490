@@ -76,7 +76,17 @@ const UploadProduct = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setProduct({ ...product, [name]: value });
+
+    // Capitalize first letter for category and condition
+    if (name === "category" || name === "condition") {
+      const capitalizedValue = value
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+      setProduct({ ...product, [name]: capitalizedValue });
+    } else {
+      setProduct({ ...product, [name]: value });
+    }
   };
 
   const handleCheckboxChange = (e) => {
@@ -264,11 +274,11 @@ const UploadProduct = () => {
                           },
                         }}
                       >
-                        <MenuItem value="new">New</MenuItem>
-                        <MenuItem value="like new">Like New</MenuItem>
-                        <MenuItem value="good">Good</MenuItem>
-                        <MenuItem value="fair">Fair</MenuItem>
-                        <MenuItem value="poor">Poor</MenuItem>
+                        <MenuItem value="New">New</MenuItem>
+                        <MenuItem value="Like New">Like New</MenuItem>
+                        <MenuItem value="Good">Good</MenuItem>
+                        <MenuItem value="Fair">Fair</MenuItem>
+                        <MenuItem value="Poor">Poor</MenuItem>
                       </TextField>
                     </FormControl>
                   </Grid>
