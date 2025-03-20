@@ -70,7 +70,7 @@ const MessageHome = () => {
     <div className="message-home">
       {user ? (
         <div className="message-home-chat-container">
-          <UserList setReceiver={setReceiver} />
+          <UserList setReceiver={setReceiver} currentReceiver={receiver} />
           {receiver ? (
             <MessageArea user={user} receiver={receiver} onCloseChat={handleCloseChat} />
           ) : (
