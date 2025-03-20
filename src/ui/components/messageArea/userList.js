@@ -3,7 +3,7 @@ import { supabase } from "../../../supabaseClient";
 import "./messages.css";
 import SearchIcon from '@mui/icons-material/Search';
 
-const UserList = ({ setReceiver }) => {
+const UserList = ({ setReceiver, currentReceiver }) => {
   const [users, setUsers] = useState([]);
   const loggedInUserId = localStorage.getItem("userId");
   const [searchTerm, setSearchTerm] = useState("");
@@ -50,7 +50,7 @@ const UserList = ({ setReceiver }) => {
       {filteredUsers.map((user) => (
         <div
           key={user.userID}
-          className="user-item"
+          className={`user-item ${currentReceiver?.userID === user.userID ? 'selected' : ''}`}
           onClick={() => setReceiver(user)}
         >
           <p>{user.firstName}</p>

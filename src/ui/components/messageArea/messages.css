@@ -331,6 +331,12 @@
   background-color: rgba(255, 183, 27, 0.1);
 }
 
+.user-item.selected {
+  background-color: rgba(255, 183, 27, 0.2);
+  border-left: 4px solid #FFB71B;
+  font-weight: 600;
+}
+
 .user-search-box {
   position: relative;
   display: flex;

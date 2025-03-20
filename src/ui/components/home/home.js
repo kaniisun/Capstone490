@@ -84,7 +84,7 @@ export const Home = () => {
           .eq("status", "Available") // Only get available products
           .eq("flag", false) // Don't show flagged products
           .order("created_at", { ascending: false }) // Get newest first
-          .limit(5); // Limit to 5 products
+          .limit(10); // Limit to 10 products
 
         if (error) {
           console.error("Error fetching products:", error);
