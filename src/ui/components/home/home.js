@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faBook,
-  faLaptop,
-  faCouch,
-  faTshirt,
-  faEllipsisH,
-} from "@fortawesome/free-solid-svg-icons";
 import "./home.css";
 import Search from "../search/search";
 import NotificationBanner from "../common/NotificationBanner";
@@ -163,49 +155,6 @@ export const Home = () => {
         <h1>Your Campus Marketplace</h1>
         <p>Buy, sell, and connect with fellow students</p>
         <Search />
-        
-      </section>
-
-      {/* Category Section - Unique to homepage */}
-      <section id="categories">
-        <h2>Browse Categories</h2>
-        <div className="category-list">
-          <div
-            className="category"
-            onClick={() => navigate("/products?category=Textbooks")}
-          >
-            <FontAwesomeIcon icon={faBook} className="category-icon" />
-            <span>Textbooks</span>
-          </div>
-          <div
-            className="category"
-            onClick={() => navigate("/products?category=Electronics")}
-          >
-            <FontAwesomeIcon icon={faLaptop} className="category-icon" />
-            <span>Electronics</span>
-          </div>
-          <div
-            className="category"
-            onClick={() => navigate("/products?category=Furniture")}
-          >
-            <FontAwesomeIcon icon={faCouch} className="category-icon" />
-            <span>Furniture</span>
-          </div>
-          <div
-            className="category"
-            onClick={() => navigate("/products?category=Clothing")}
-          >
-            <FontAwesomeIcon icon={faTshirt} className="category-icon" />
-            <span>Clothing</span>
-          </div>
-          <div
-            className="category"
-            onClick={() => navigate("/products?category=Miscellaneous")}
-          >
-            <FontAwesomeIcon icon={faEllipsisH} className="category-icon" />
-            <span>Miscellaneous</span>
-          </div>
-        </div>
       </section>
 
       {/* Featured Products - Already implemented */}

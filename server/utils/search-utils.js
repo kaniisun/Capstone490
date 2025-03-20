@@ -37,8 +37,9 @@ function extractPriceFilter(query) {
   // Normalize query for easier parsing
   const normalizedQuery = query.toLowerCase();
 
-  // Check for "over $X" pattern
-  const overPattern = /(?:over|more\s+than|above)\s+\$(\d+(\.\d+)?)/i;
+  // Check for "over $X" or "over X" pattern
+  // (?:\$)? makes the dollar sign optional
+  const overPattern = /(?:over|more\s+than|above)\s+(?:\$)?(\d+(\.\d+)?)/i;
   const overMatch = normalizedQuery.match(overPattern);
   if (overMatch) {
     return {
@@ -47,8 +48,9 @@ function extractPriceFilter(query) {
     };
   }
 
-  // Check for "under $X" pattern
-  const underPattern = /(?:under|less\s+than|below)\s+\$(\d+(\.\d+)?)/i;
+  // Check for "under $X" or "under X" pattern
+  // (?:\$)? makes the dollar sign optional
+  const underPattern = /(?:under|less\s+than|below)\s+(?:\$)?(\d+(\.\d+)?)/i;
   const underMatch = normalizedQuery.match(underPattern);
   if (underMatch) {
     return {
@@ -57,9 +59,10 @@ function extractPriceFilter(query) {
     };
   }
 
-  // Check for "between $X and $Y" pattern
+  // Check for "between $X and $Y" or "between X and Y" pattern
+  // (?:\$)? makes the dollar sign optional in multiple places
   const betweenPattern =
-    /(?:between\s+\$(\d+(\.\d+)?)\s+and\s+\$(\d+(\.\d+)?)|from\s+\$(\d+(\.\d+)?)\s+to\s+\$(\d+(\.\d+)?))/i;
+    /(?:between\s+(?:\$)?(\d+(\.\d+)?)\s+and\s+(?:\$)?(\d+(\.\d+)?)|from\s+(?:\$)?(\d+(\.\d+)?)\s+to\s+(?:\$)?(\d+(\.\d+)?))/i;
   const betweenMatch = normalizedQuery.match(betweenPattern);
   if (betweenMatch) {
     const lowerBound = parseFloat(betweenMatch[1] || betweenMatch[5]);

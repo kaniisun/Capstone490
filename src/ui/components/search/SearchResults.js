@@ -22,7 +22,7 @@ const SearchResults = () => {
     categories: [],
     minPrice: "",
     maxPrice: "",
-    condition: "",
+    conditions: [],
     isBundle: false,
   });
 

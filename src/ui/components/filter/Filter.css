@@ -219,15 +219,23 @@ input[type="radio"]:hover {
 
 .clear-price-btn {
   padding: 4px 8px;
-  background: none;
-  border: none;
-  color: #1a73e8;
+  background-color: #f1f3f4;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #3c4043;
   cursor: pointer;
   font-size: 13px;
+  font-weight: 500;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  margin-left: 4px;
 }
 
 .clear-price-btn:hover {
-  text-decoration: underline;
+  background-color: #e8eaed;
 }
 
 .price-ranges {
@@ -247,4 +255,25 @@ input[type="radio"]:hover {
 
 .price-range-option:hover {
   color: #000;
+}
+
+/* Clear All Filters button */
+.clear-all-section {
+  margin-bottom: 15px;
+}
+
+.clear-all-filters-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #f1f3f4;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #3c4043;
+  transition: background-color 0.2s;
+}
+
+.clear-all-filters-btn:hover {
+  background-color: #e8eaed;
 }

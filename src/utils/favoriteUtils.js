@@ -88,11 +88,36 @@ export const clearAllFavorites = () => {
 };
 
 /**
- * Gets product data for favorites from search results in localStorage
+ * Gets product data for favorites from Supabase
  * @param {Array} favoriteIds - Array of favorited product IDs
- * @returns {Array} - Product objects for the favorites
+ * @returns {Promise<Array>} - Promise resolving to array of product objects
  */
-export const getFavoriteProducts = (favoriteIds) => {
+export const getFavoriteProducts = async (supabase, favoriteIds) => {
+  if (!favoriteIds || favoriteIds.length === 0 || !supabase) {
+    return [];
+  }
+
+  try {
+    // Fetch products from Supabase using the favoriteIds
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .in("productID", favoriteIds);
+
+    if (error) {
+      console.error("Error fetching favorite products:", error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error("Error in getFavoriteProducts:", error);
+    return [];
+  }
+};
+
+// Keep the synchronous version for backward compatibility
+export const getFavoriteProductsFromLocal = (favoriteIds) => {
   if (!favoriteIds || favoriteIds.length === 0) {
     return [];
   }
