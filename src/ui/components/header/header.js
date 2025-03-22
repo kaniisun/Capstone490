@@ -30,6 +30,7 @@ import {
   School as SchoolIcon,
   Favorite as FavoriteIcon,
   ViewList as ViewListIcon,
+  Forum as ForumIcon,
 } from "@mui/icons-material";
 import "./header.css";
 
@@ -261,6 +262,16 @@ const Header = () => {
                     <FavoriteIcon fontSize="small" />
                   </ListItemIcon>
                   Favorites
+                </MenuItem>
+
+                <MenuItem
+                  onClick={() => handleNavigate("/openboard")}
+                  className="menu-item"
+                >
+                  <ListItemIcon className="menu-item-icon">
+                    <ForumIcon fontSize="small" />
+                  </ListItemIcon>
+                  Open Board
                 </MenuItem>
 
                 <MenuItem
