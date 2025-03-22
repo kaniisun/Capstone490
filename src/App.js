@@ -24,7 +24,6 @@ import SearchResults from "./ui/components/search/SearchResults";
 import SignUp from "./ui/components/registration/SignUp";
 import Account from "./ui/components/account/account";
 import UploadProduct from "./ui/components/uploadproduct/uploadProduct";
-import Chatroom from "./ui/components/chatroom/chatroom";
 import Editproduct from "./ui/components/editproduct/editproduct";
 import Login from "./ui/components/login/Login";
 import Favorites from "./ui/components/favorites/Favorites";
@@ -42,6 +41,7 @@ import EmailVerificationCheck from "./ui/components/auth/EmailVerificationCheck"
 import OrderHistory from "./ui/components/orderhistory/orderhistory";
 import Checkout from "./ui/components/checkout/checkout";
 import OrderConfirmation from "./ui/components/orderconfirmation/orderconfirmation";
+import OpenBoard from "./ui/components/openboard/openboard";
 
 function AppContent() {
   const location = useLocation();
@@ -119,14 +119,6 @@ function AppContent() {
                 }
               />
               <Route
-                path="/chatroom"
-                element={
-                  <ProtectedRoute>
-                    <Chatroom />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/account"
                 element={
                   <ProtectedRoute>
@@ -155,6 +147,14 @@ function AppContent() {
                 element={
                   <ProtectedRoute>
                     <MessageHome />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/openboard"
+                element={
+                  <ProtectedRoute>
+                    <OpenBoard />
                   </ProtectedRoute>
                 }
               />

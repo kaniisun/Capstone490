@@ -23,7 +23,7 @@
     "cohere-ai": "^7.16.0",
     "markdown-to-jsx": "^7.7.4",
     "nodemon": "^3.1.9",
-    "openai": "^4.87.3",
+    "openai": "^4.89.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.2.0",
