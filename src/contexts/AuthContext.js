@@ -43,6 +43,25 @@ export function AuthProvider({ children }) {
     localStorage.setItem("sessionExpiration", expirationTime.toString());
   };
 
+  // Add this function to determine if the current path is a public route
+  const isPublicRoute = () => {
+    const publicRoutes = [
+      "/login",
+      "/register",
+      "/forgot-password",
+      "/reset-password",
+      "/verify-email",
+      "/",
+      "/welcome",
+    ];
+    const currentPath = window.location.pathname;
+
+    // Check if the current path is in the list of public routes
+    return publicRoutes.some(
+      (route) => currentPath === route || currentPath === route + "/"
+    );
+  };
+
   // Function to check if the user's email is verified and set up their session
   const checkEmailVerification = async () => {
     try {
@@ -398,6 +417,11 @@ export function AuthProvider({ children }) {
 
       // Handler function to refresh the session timeout with debounce
       const activityHandler = () => {
+        // Don't refresh session on public routes
+        if (isPublicRoute()) {
+          return;
+        }
+
         // Clear any existing timer
         if (debounceTimer) {
           clearTimeout(debounceTimer);

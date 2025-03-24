@@ -14,9 +14,33 @@ function SessionTimeoutModal() {
   const [remainingTime, setRemainingTime] = useState(0);
   const [countdownInterval, setCountdownInterval] = useState(null);
 
+  // Add function to determine if the current path is a public route
+  const isPublicRoute = () => {
+    const publicRoutes = [
+      "/login",
+      "/register",
+      "/forgot-password",
+      "/reset-password",
+      "/verify-email",
+      "/",
+      "/welcome",
+    ];
+    const currentPath = window.location.pathname;
+
+    // Check if the current path is in the list of public routes
+    return publicRoutes.some(
+      (route) => currentPath === route || currentPath === route + "/"
+    );
+  };
+
   useEffect(() => {
     // Function to check if we should show the warning
     const checkSessionExpiration = () => {
+      // Don't check session expiration on public routes
+      if (isPublicRoute()) {
+        return;
+      }
+
       // Get the session expiration time from localStorage
       const expirationTime = localStorage.getItem("sessionExpiration");
 
