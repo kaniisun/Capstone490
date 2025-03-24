@@ -23,7 +23,7 @@ function SessionTimeoutModal() {
       "/reset-password",
       "/verify-email",
       "/",
-      "/landing",
+      "/welcome",
     ];
     const currentPath = window.location.pathname;
 
