@@ -17,6 +17,7 @@ import {
   Card,
   useTheme,
   Tooltip,
+  Grid,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
@@ -28,6 +29,7 @@ import ProductsDisplay from "./components/ProductsDisplay";
 import { extractProductsFromMessage } from "./utils/productParser";
 // Import markdown renderer
 import Markdown from "markdown-to-jsx";
+import ProductCard from "./components/ProductCard";
 
 const API_URL =
   process.env.NODE_ENV === "development"
@@ -50,34 +52,55 @@ export default function ChatInterface() {
   const [showSearchTips, setShowSearchTips] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const pagePositionRef = useRef(0);
+  const scrollLockTimeoutRef = useRef(null);
+  const scrollBlockerRef = useRef(null);
 
-  // Add this useEffect to get the session with basic error handling
+  // Get the session
   useEffect(() => {
-    // Check for active session
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (data?.session) {
         setSession(data.session);
-      } else {
-        // No active session found
       }
     };
     checkSession();
   }, []);
-
-  // Auto-scroll to bottom of messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
 
   // Focus input field on load
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  // Add this function to disable page scrolling temporarily
+  const lockPageScroll = () => {
+    // Store current scroll position
+    pagePositionRef.current = window.scrollY;
+
+    // Apply fixed positioning to body to prevent scroll
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${pagePositionRef.current}px`;
+    document.body.style.width = "100%";
+  };
+
+  // Add this function to re-enable page scrolling
+  const unlockPageScroll = () => {
+    // Remove fixed positioning
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.width = "";
+
+    // Restore scroll position
+    window.scrollTo(0, pagePositionRef.current);
+  };
+
   // New function to handle a user wanting to contact a seller about a product
   const handleContactSeller = (product) => {
     if (!product) return;
+
+    // Save window scroll position
+    const windowScrollY = window.scrollY;
 
     setSelectedProduct(product);
 
@@ -90,39 +113,130 @@ export default function ChatInterface() {
       },
     ]);
 
-    // Scroll to bottom after adding the message
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    // Restore window scroll position
+    window.scrollTo(0, windowScrollY);
   };
 
-  // Function to handle category chip clicks
-  const handleCategoryClick = (category) => {
-    // Add a message with the selected category
+  // Define a more robust scroll lock function
+  const forcePreventPageScroll = (callback) => {
+    // Store position
+    const scrollPos = window.scrollY;
+
+    // Create MutationObserver to detect any DOM changes that might cause scrolling
+    const observer = new MutationObserver(() => {
+      // Force window back to original position
+      window.scrollTo(0, scrollPos);
+    });
+
+    // Start observing the entire document for all changes
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true,
+    });
+
+    // Execute the callback
+    setTimeout(() => {
+      try {
+        if (typeof callback === "function") {
+          callback();
+        }
+      } finally {
+        // Force position again
+        window.scrollTo(0, scrollPos);
+
+        // Stop observing after a short delay to catch any delayed scrolling
+        setTimeout(() => observer.disconnect(), 300);
+      }
+    }, 0);
+  };
+
+  // Update handleCategoryClick to be more aggressive about scroll prevention
+  const handleCategoryClick = (category, event) => {
+    // 1. Cancel the event completely
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.nativeEvent) {
+        event.nativeEvent.stopImmediatePropagation();
+        event.nativeEvent.preventDefault();
+      }
+    }
+
+    // 2. Store the current scroll position immediately
+    const originalScrollPosition = window.scrollY;
+
+    // 3. Create the category search message
     const message = `Show me ${category}`;
-    setInput(message);
 
-    // Trigger send after a short delay to allow state update
-    setTimeout(() => {
-      handleSubmit({ preventDefault: () => {} });
-    }, 100);
+    // 4. Use our enhanced scroll prevention approach
+    forcePreventPageScroll(() => {
+      // Update the React state
+      setInput(message);
+
+      // Direct DOM update for immediate effect
+      if (inputRef.current) {
+        // Set value directly on DOM
+        inputRef.current.value = message;
+
+        // Create a fake submission event
+        const fakeEvent = {
+          preventDefault: () => {},
+          stopPropagation: () => {},
+          nativeEvent: {
+            stopImmediatePropagation: () => {},
+            preventDefault: () => {},
+          },
+        };
+
+        // Focus input without scrolling using the DOM directly
+        try {
+          // Use a more direct approach - defer the focus
+          setTimeout(() => {
+            inputRef.current.focus({ preventScroll: true });
+            // Force window position again
+            window.scrollTo(0, originalScrollPosition);
+
+            // Submit the form with some delay to ensure input is properly set
+            setTimeout(() => {
+              handleSubmit(fakeEvent);
+              // Final position enforcement
+              window.scrollTo(0, originalScrollPosition);
+            }, 10);
+          }, 0);
+        } catch (e) {
+          console.error("Focus error", e);
+          // Submit anyway if focus fails
+          handleSubmit(fakeEvent);
+        }
+      }
+    });
+
+    // 5. Enforce the scroll position again after everything
+    setTimeout(() => window.scrollTo(0, originalScrollPosition), 100);
+
+    return false;
   };
 
+  // Function to handle submission of chat messages - updated with Karpathy approach
   const handleSubmit = async (e) => {
-    // Prevent the default form submission
-    e.preventDefault();
-    if (!input.trim()) return;
+    // Complete event cancellation
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.nativeEvent) e.nativeEvent.stopImmediatePropagation();
+    }
 
-    // Add user message to chat
-    const userMessage = { role: "user", content: input };
+    // Get the current input value
+    const currentInput = input.trim();
+    if (!currentInput) return;
+
+    // Add user message to chat without scroll manipulation
+    const userMessage = { role: "user", content: currentInput };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
-
-    // Scroll to bottom after adding the message
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
 
     try {
       // Send message to API
@@ -148,14 +262,11 @@ export default function ChatInterface() {
         data.message
       );
 
-      // Check if this was a search query that might have been general
-      const isGeneralSearch =
-        userMessage.content.toLowerCase().includes("show me") ||
-        userMessage.content.toLowerCase().includes("what do you have") ||
-        userMessage.content.toLowerCase().includes("find");
+      // Check if products were found in the response
+      const hasProducts = products && products.length > 0;
 
       // For search queries with no products, suggest using category buttons
-      if (isGeneralSearch && (!products || products.length === 0)) {
+      if (currentInput.toLowerCase().includes("show me") && !hasProducts) {
         processedMessage.content +=
           "\n\nTry browsing by category using the buttons below.";
       }
@@ -163,11 +274,17 @@ export default function ChatInterface() {
       // Add AI response to chat
       setMessages((prev) => [...prev, processedMessage]);
 
+      // Focus the input without scrolling
+      if (inputRef.current) {
+        inputRef.current.focus({ preventScroll: true });
+      }
+
       // Set products if any were found
-      if (products && products.length > 0) {
+      if (hasProducts) {
         setSelectedProduct(products[0]);
       }
     } catch (error) {
+      console.error("Error sending message:", error);
       // Add error message to chat
       setMessages((prev) => [
         ...prev,
@@ -179,10 +296,6 @@ export default function ChatInterface() {
       ]);
     } finally {
       setIsLoading(false);
-      // Scroll to bottom after a short delay to ensure new messages are rendered
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
     }
   };
 
@@ -557,8 +670,141 @@ export default function ChatInterface() {
     }
   };
 
+  // Add a useEffect to trap wheel events within the chat container
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // Function to prevent wheel events from propagating to window
+    const handleWheel = (e) => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+
+      // If we're at the top of the container and trying to scroll up
+      if (scrollTop === 0 && e.deltaY < 0) {
+        // Allow normal window scrolling
+        return;
+      }
+
+      // If we're at the bottom of the container and trying to scroll down
+      if (scrollTop + clientHeight >= scrollHeight && e.deltaY > 0) {
+        // Allow normal window scrolling
+        return;
+      }
+
+      // Otherwise, we're in the middle of the container, so stop propagation
+      e.stopPropagation();
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, []);
+
+  // Add this useEffect to manage cleanup
+  useEffect(() => {
+    // Clean up scroll lock if component unmounts with lock still active
+    return () => {
+      clearTimeout(scrollLockTimeoutRef.current);
+
+      // Check if body still has fixed position and restore it
+      if (document.body.style.position === "fixed") {
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.width = "";
+        window.scrollTo(0, pagePositionRef.current);
+      }
+    };
+  }, []);
+
+  // Add this global scroll blocker function
+  useEffect(() => {
+    // Create variables to track if scrolling is currently blocked
+    let isScrollBlocked = false;
+    let originalScrollPosition = 0;
+
+    // Create a scroll blocker function
+    const blockScroll = (duration = 1000) => {
+      if (isScrollBlocked) return;
+
+      // Store current position
+      originalScrollPosition = window.scrollY;
+      isScrollBlocked = true;
+
+      // Function to force the scroll position
+      const forcePosition = (e) => {
+        if (isScrollBlocked) {
+          window.scrollTo(0, originalScrollPosition);
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }
+      };
+
+      // Capture all events that could cause scrolling
+      window.addEventListener("scroll", forcePosition, {
+        passive: false,
+        capture: true,
+      });
+      window.addEventListener("touchmove", forcePosition, {
+        passive: false,
+        capture: true,
+      });
+      window.addEventListener("mousewheel", forcePosition, {
+        passive: false,
+        capture: true,
+      });
+      window.addEventListener("DOMMouseScroll", forcePosition, {
+        passive: false,
+        capture: true,
+      });
+
+      // Create a style element to disable scrolling
+      const styleElement = document.createElement("style");
+      styleElement.innerHTML = `
+        html, body {
+          overflow: hidden !important;
+          position: fixed !important;
+          width: 100% !important;
+          height: 100% !important;
+          top: -${originalScrollPosition}px !important;
+        }
+      `;
+      document.head.appendChild(styleElement);
+
+      // Unblock after the specified duration
+      setTimeout(() => {
+        // Remove event listeners
+        window.removeEventListener("scroll", forcePosition, { capture: true });
+        window.removeEventListener("touchmove", forcePosition, {
+          capture: true,
+        });
+        window.removeEventListener("mousewheel", forcePosition, {
+          capture: true,
+        });
+        window.removeEventListener("DOMMouseScroll", forcePosition, {
+          capture: true,
+        });
+
+        // Remove style element
+        document.head.removeChild(styleElement);
+
+        // Restore original position
+        window.scrollTo(0, originalScrollPosition);
+        isScrollBlocked = false;
+      }, duration);
+
+      return forcePosition;
+    };
+
+    // Store the function in our ref
+    scrollBlockerRef.current = blockScroll;
+
+    // No cleanup needed since we're using a ref, not modifying window
+  }, []);
+
+  // Final return statement with restored original layout but keeping simplified handlers
   return (
-    <Container maxWidth="md" sx={{ height: "100%" }}>
+    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
       {/* Search Tips Panel - Only shows when user clicks the help button */}
       {showSearchTips && (
         <Paper
@@ -705,13 +951,11 @@ export default function ChatInterface() {
       <Paper
         elevation={3}
         sx={{
-          height: "600px",
-          display: "flex",
-          flexDirection: "column",
           borderRadius: 2,
           overflow: "hidden",
-          border: `1px solid ${theme.palette.divider}`,
-          backgroundColor: theme.palette.background.paper,
+          height: "70vh",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {/* Chat Header */}
@@ -784,19 +1028,21 @@ export default function ChatInterface() {
 
         {/* Messages Container */}
         <Box
+          ref={messagesContainerRef}
           sx={{
-            p: 2,
-            flexGrow: 1,
+            flex: 1,
             overflow: "auto",
-            backgroundColor: theme.palette.background.default,
-            scrollBehavior: "smooth",
+            p: 2,
+            backgroundColor: theme.palette.grey[50],
           }}
         >
           {messages.map((message, index) => (
             <Box
               key={index}
+              data-role={message.role}
               sx={{
                 display: "flex",
+                alignItems: "flex-start",
                 justifyContent:
                   message.role === "user" ? "flex-end" : "flex-start",
                 mb: 2,
@@ -823,23 +1069,22 @@ export default function ChatInterface() {
                   color: message.role === "user" ? "white" : "inherit",
                 }}
               >
-                {renderMessageContent(message)}
+                {message.role === "assistant" && message.products ? (
+                  <>
+                    {renderMessageContent(message)}
 
-                {/* Display products if available in this message */}
-                {message.role === "assistant" &&
-                  message.products &&
-                  message.products.length > 0 && (
-                    <>
-                      {/* Add a divider if there's both text content and products */}
-                      {message.content && message.content.trim() !== "" && (
-                        <Divider sx={{ my: 2 }} />
-                      )}
-                      <ProductsDisplay
-                        products={message.products}
-                        onContactSeller={handleContactSeller}
-                      />
-                    </>
-                  )}
+                    {/* Add a divider if there's both text content and products */}
+                    {message.content && message.content.trim() !== "" && (
+                      <Divider sx={{ my: 2 }} />
+                    )}
+                    <ProductsDisplay
+                      products={message.products}
+                      onContactSeller={handleContactSeller}
+                    />
+                  </>
+                ) : (
+                  renderMessageContent(message)
+                )}
               </Card>
 
               {message.role === "user" && (
@@ -894,7 +1139,10 @@ export default function ChatInterface() {
             display: "flex",
             flexDirection: "column",
           }}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            // Simple event containment
+            e.stopPropagation();
+          }}
         >
           {/* Category chips */}
           <Box
@@ -911,7 +1159,29 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={() => handleCategoryClick("electronics")}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "electronics";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
@@ -925,7 +1195,29 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={() => handleCategoryClick("furniture")}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "furniture";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
@@ -939,7 +1231,29 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={() => handleCategoryClick("textbooks")}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "textbooks";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
@@ -953,7 +1267,29 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={() => handleCategoryClick("clothing")}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "clothing";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
@@ -967,7 +1303,29 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={() => handleCategoryClick("miscellaneous")}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "miscellaneous";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
@@ -985,17 +1343,34 @@ export default function ChatInterface() {
               placeholder="Search for products or ask for help..."
               variant="outlined"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                // Simple direct update without scroll manipulation
+                setInput(e.target.value);
+              }}
               disabled={isLoading}
               inputRef={inputRef}
               sx={{ mr: 1 }}
               InputProps={{
                 sx: { borderRadius: 4 },
               }}
+              onFocus={(e) => {
+                // No need for complex focus handling
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
+                  // Prevent default Enter key behavior
                   e.preventDefault();
-                  if (input.trim()) handleSubmit(e);
+
+                  if (input.trim()) {
+                    // Store current scroll position
+                    const scrollPos = window.scrollY;
+
+                    // Handle submission
+                    handleSubmit(e);
+
+                    // Restore scroll position after a short delay
+                    setTimeout(() => window.scrollTo(0, scrollPos), 0);
+                  }
                 }
               }}
             />

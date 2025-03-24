@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
@@ -29,6 +29,11 @@ import "./LandingPage.css";
  */
 function LandingPage() {
   const theme = useTheme();
+
+  // Ensure page starts at the top
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   // Features section data
   const features = [

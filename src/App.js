@@ -1,7 +1,7 @@
 //App.js
 //This is the main component that renders the app
 
-import React from "react";
+import React, { useEffect } from "react";
 import "./App.css";
 import {
   BrowserRouter,
@@ -186,11 +186,31 @@ function AppContent() {
 }
 
 function App() {
+  // Disable scroll restoration for the whole app
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+  }, []);
+
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AppContent />
     </BrowserRouter>
   );
+}
+
+// Component to control scroll behavior throughout the app
+function ScrollToTop() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Scroll to top on route changes
+    window.scrollTo(0, 0);
+  }, [location]);
+
+  return null;
 }
 
 export default App;
