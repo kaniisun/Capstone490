@@ -149,7 +149,7 @@ const OpenBoard = () => {
 
     // Modify createNewContent to create a separate content entry
     const createNewContent = async () => {
-        const contentName = prompt("Enter the name for the new content:");
+        const contentName = prompt("Enter a title for your community post:");
         if (!contentName) return;
 
         // Prevent creating content with name 'Message'
@@ -164,7 +164,7 @@ const OpenBoard = () => {
                 .from('open_board')
                 .insert([{
                     title: contentName,
-                    content: 'Content created',
+                    content: 'Board Created',
                     creator_id: userID,
                     status: 'active'
                 }])
@@ -399,9 +399,9 @@ const OpenBoard = () => {
         <div className="openboard-chat">
             <div className="openboard-sidebar">
                 <div className="openboard-sidebar-header">
-                    <h3>Contents</h3>
+                    <h3>Community Posts</h3>
                     <button className="openboard-create-content-btn" onClick={createNewContent}>
-                        + New
+                        New Board
                     </button>
                 </div>
                 <div className="openboard-contents-list">
@@ -411,7 +411,7 @@ const OpenBoard = () => {
                         onClick={() => setSelectedContent('Message')}
                     >
                         <div className="openboard-content-info">
-                            <span className="openboard-content-name">Message</span>
+                            <span className="openboard-content-name">Community Board</span>
                             <span className="openboard-content-meta">General Chat Area</span>
                         </div>
                     </div>
@@ -557,7 +557,7 @@ const OpenBoard = () => {
                 <div className="report-popup-overlay">
                     <div className="report-popup">
                         <h3>Delete Content</h3>
-                        <p>Are you sure you want to delete this content? This action cannot be undone.</p>
+                        <p>Are you sure you want to delete this post? This action cannot be undone.</p>
                         <div className="report-popup-buttons">
                             <button className="cancel-report" onClick={() => setShowDeleteConfirm(false)}>
                                 Cancel

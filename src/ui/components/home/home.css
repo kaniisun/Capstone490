@@ -53,16 +53,38 @@
 }
 
 .home-product-card {
-  padding: 20px;
-  margin: 10px;
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  padding: 15px 15px 40px 15px;
+  margin: 15px;
+  border-radius: 2px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   width: 250px;
-  height: 280px;
-  text-align: left;
+  height: auto;
+  min-height: 340px;
+  text-align: center;
   position: relative;
   cursor: pointer;
-  background-color: #fffcf7 !important;
+  background-color: white !important;
+  border: 1px solid #e8e8e8;
+  transition: all 0.25s ease;
+  transform: rotate(-1.5deg);
+}
+
+.home-product-card:nth-child(odd) {
+  transform: rotate(1.5deg);
+}
+
+.home-product-card:nth-child(3n) {
+  transform: rotate(-0.5deg);
+}
+
+.home-product-card:nth-child(3n + 1) {
+  transform: rotate(0.8deg);
+}
+
+.home-product-card:hover {
+  transform: translateY(-8px) rotate(0deg) !important;
+  box-shadow: 0 15px 25px rgba(0, 0, 0, 0.18);
+  z-index: 10;
 }
 
 .home-product-card h3 {
@@ -93,31 +115,3 @@
   margin-bottom: 8px;
 }
 
-.home-product-image:hover {
-  transform: rotate(-5deg);
-}
-
-.home-product-card::before {
-  content: "";
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  width: 26px;
-  height: 26px;
-  background-image: url("../../../../public/redpin.png");
-  background-size: cover;
-  background-repeat: no-repeat;
-  transform: translateX(-50%);
-  z-index: 2;
-}
-
-.home-product-card::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, transparent 75%, #f4f4f4 75%);
-  border-radius: 0 0 10px 0;
-}
