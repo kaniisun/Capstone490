@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from "../../../supabaseClient";
-import { useAuth } from "../../../contexts/AuthContext";
 import './orderhistory.css';
-
-
-
 
 const OrderHistory = () => {
   // Sample data for ordered and sold items with images
@@ -14,7 +10,7 @@ const OrderHistory = () => {
     { id: 3, name: 'Item C', price: 100, quantity: 3, imageUrl: 'https://via.placeholder.com/50' }
   ]);
   
-  const { user } = useAuth();
+  
 
   // Updated purchase confirmations state to match checkout data structure
   const [purchaseConfirmations, setPurchaseConfirmations] = useState([]);
@@ -33,31 +29,26 @@ const OrderHistory = () => {
   const [soldItems, setSoldItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Function to load purchase confirmations from localStorage
+  useEffect(() => {
+    const fetchSoldItems = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("products") // Change this to your actual table name
+          .select("*")
+          .eq("status", "Sold");
   
- // Function to load Sold confirmations from localStorage
- useEffect(() => {
-  const fetchSoldItems = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("status", "Sold")
-        .eq("userID", user.id); // <- filter by logged-in user
-
-      if (error) throw error;
-      setSoldItems(data || []);
-    } catch (error) {
-      console.error("Error fetching sold items:", error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchSoldItems();
-}, [user]);
-
+        if (error) throw error;
+        setSoldItems(data || []);
+      } catch (error) {
+        console.error("Error fetching sold items:", error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchSoldItems();
+  }, []);
 
 
   // Toggle expanded state for a confirmation
@@ -294,7 +285,6 @@ const OrderHistory = () => {
     </div>
   );
 };
-
 
 export default OrderHistory;
 
