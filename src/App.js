@@ -51,6 +51,7 @@ function AppContent() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
+        <SessionTimeoutModal />
         <EmailVerificationCheck location={location}>
           <div>
             <Header />
@@ -177,7 +178,6 @@ function AppContent() {
               <Route path="/update-password" element={<UpdatePassword />} />
             </Routes>
             <Footer />
-            <SessionTimeoutModal />
           </div>
         </EmailVerificationCheck>
       </AuthProvider>

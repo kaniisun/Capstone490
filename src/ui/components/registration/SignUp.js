@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
-import { testSupabaseConnection } from "../../../supabaseClient";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -55,10 +54,26 @@ function SignUp() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const navigate = useNavigate();
 
+  // Function to test connection to Supabase
+  const testConnection = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("count", { count: "exact", head: true });
+
+      if (error) {
+        return { success: false, error };
+      }
+      return { success: true, data };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
+
   // Check connection status on component mount
   useEffect(() => {
     const checkConnection = async () => {
-      const result = await testSupabaseConnection();
+      const result = await testConnection();
       setConnectionStatus(result.success ? "connected" : "error");
 
       if (!result.success) {
@@ -109,7 +124,7 @@ function SignUp() {
 
     // Test connection before proceeding
     try {
-      const connectionTest = await testSupabaseConnection();
+      const connectionTest = await testConnection();
       if (!connectionTest.success) {
         setError(
           "Unable to connect to the server. Please check your internet connection and try again later."
