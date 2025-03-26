@@ -268,23 +268,25 @@ const Account = () => {
   };
   
   // Mark product as sold
+
   const handleMarkAsSold = async (productID) => {
     try {
-      // Update the product status to "Sold" in Supabase
-      const { error } = await supabase
+      const modifiedAt = new Date().toISOString();
+      const { data, error } = await supabase
         .from("products")
-        .update({ status: "Sold" })
-        .eq("productID", productID);
+        .update({ status: "Sold", modified_at: modifiedAt })
+        .eq("productID", productID)
+        .select();
   
       if (error) throw error;
-  
-      // If successful, update the local state
       setProducts((prevProducts) =>
         prevProducts.map((product) =>
-          product.productID === productID ? { ...product, status: "Sold" } : product
+          product.productID === productID
+            ? { ...product, status: "Sold", modified_at: modifiedAt }
+            : product
         )
       );
-  
+
       setSnackbar({
         open: true,
         message: "Product marked as Sold!",
@@ -301,39 +303,40 @@ const Account = () => {
   };
 
 // Mark product as available
-  const handleMarkAsAvailable = async (productID) => {
-    try {
-      // Update status in the database
-      const { error } = await supabase
-        .from("products")
-        .update({ status: "Available" })
-        .eq("productID", productID);
-  
-      if (error) throw error;
-  
-      // Update local state after successful database update
-      setProducts((prevProducts) =>
-        prevProducts.map((product) =>
-          product.productID === productID
-            ? { ...product, status: "Available" }
-            : product
-        )
-      );
-  
-      setSnackbar({
-        open: true,
-        message: "Product marked as Available!",
-        severity: "success",
-      });
-    } catch (error) {
-      console.error("Error marking product as Available:", error.message);
-      setSnackbar({
-        open: true,
-        message: `Error: ${error.message}`,
-        severity: "error",
-      });
-    }
-  };
+const handleMarkAsAvailable = async (productID) => {
+  try {
+    // Update database
+    const modifiedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from("products")
+      .update({ status: "Available", modified_at: modifiedAt })
+      .eq("productID", productID);
+
+    if (error) throw error;
+
+   
+    setProducts((prevProducts) =>
+      prevProducts.map((product) =>
+        product.productID === productID
+          ? { ...product, status: "Available", modified_at: modifiedAt  }
+          : product
+      )
+    );
+
+    setSnackbar({
+      open: true,
+      message: "Product marked as Available!",
+      severity: "success",
+    });
+  } catch (error) {
+    console.error("Error marking product as Available:", error.message);
+    setSnackbar({
+      open: true,
+      message: `Error: ${error.message}`,
+      severity: "error",
+    });
+  }
+};
   
   // Get product condition stars
   const getConditionStars = (condition) => {
