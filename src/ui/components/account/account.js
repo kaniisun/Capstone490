@@ -268,54 +268,57 @@ const Account = () => {
   };
   
   // Mark product as sold
-  const handleMarkAsSold = async (productID) => {
-    try {
-      // Update the product status to "Sold" in Supabase
-      const { error } = await supabase
-        .from("products")
-        .update({ status: "Sold" })
-        .eq("productID", productID);
-  
-      if (error) throw error;
-  
-      // If successful, update the local state
-      setProducts((prevProducts) =>
-        prevProducts.map((product) =>
-          product.productID === productID ? { ...product, status: "Sold" } : product
-        )
-      );
-  
-      setSnackbar({
-        open: true,
-        message: "Product marked as Sold!",
-        severity: "success",
-      });
-    } catch (error) {
-      console.error("Error marking product as Sold:", error.message);
-      setSnackbar({
-        open: true,
-        message: `Error: ${error.message}`,
-        severity: "error",
-      });
-    }
-  };
+  // Mark product as sold
+const handleMarkAsSold = async (productID) => {
+  try {
+    const modifiedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from("products")
+      .update({ status: "Sold", modified_at: modifiedAt })
+      .eq("productID", productID);
+
+    if (error) throw error;
+    setProducts((prevProducts) =>
+      prevProducts.map((product) =>
+        product.productID === productID
+          ? { ...product, status: "Sold", modified_at: modifiedAt }
+          : product
+      )
+    );
+
+    setSnackbar({
+      open: true,
+      message: "Product marked as Sold!",
+      severity: "success",
+    });
+  } catch (error) {
+    console.error("Error marking product as Sold:", error.message);
+    setSnackbar({
+      open: true,
+      message: `Error: ${error.message}`,
+      severity: "error",
+    });
+  }
+};
+
 
 // Mark product as available
   const handleMarkAsAvailable = async (productID) => {
     try {
-      // Update status in the database
+      // Update database
+      const modifiedAt = new Date().toISOString();
       const { error } = await supabase
         .from("products")
-        .update({ status: "Available" })
+        .update({ status: "Available", modified_at: modifiedAt })
         .eq("productID", productID);
   
       if (error) throw error;
   
-      // Update local state after successful database update
+     
       setProducts((prevProducts) =>
         prevProducts.map((product) =>
           product.productID === productID
-            ? { ...product, status: "Available" }
+            ? { ...product, status: "Available", modified_at: modifiedAt  }
             : product
         )
       );
@@ -966,7 +969,8 @@ const Account = () => {
                                         bgcolor: "#1a365d", // Slightly lighter UNCG Blue
                                       },
                                     }}
-                                    disabled={product.status === "Sold"}
+                                    disabled={product.status === "Sold" || updating}
+                                  
                                   >
                                     Mark as Sold
                                   </Button>
