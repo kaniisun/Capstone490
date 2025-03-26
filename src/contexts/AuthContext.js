@@ -13,8 +13,11 @@ const AuthContext = createContext({
   checkEmailVerification: () => {},
 });
 
-// Session timeout duration in milliseconds (30 minutes by default)
+// Set timeout for user session (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
+
+// Set warning time before session expires (1 minute)
+const WARNING_BEFORE_TIMEOUT = 60 * 1000;
 
 // Provider component that wraps the app and makes auth object available to any child component that calls useAuth()
 export function AuthProvider({ children }) {
@@ -26,21 +29,44 @@ export function AuthProvider({ children }) {
 
   // Function to refresh the session timeout
   const refreshSessionTimeout = () => {
-    // Clear any existing timeout
+    // Clear the session timeout first if it exists
     if (sessionTimeout) {
       clearTimeout(sessionTimeout);
+      setSessionTimeout(null);
     }
 
-    // Set a new timeout for automatic logout
-    const timeoutId = setTimeout(() => {
-      handleLogout();
-    }, SESSION_TIMEOUT);
+    // Reset any warning flags
+    localStorage.removeItem("sessionWarningActive");
 
-    setSessionTimeout(timeoutId);
+    // Get the current time and calculate when the session will expire
+    const now = new Date();
+    const expirationTime = new Date(now.getTime() + SESSION_TIMEOUT);
 
-    // Store the expiration time in localStorage (convert to string)
-    const expirationTime = new Date().getTime() + SESSION_TIMEOUT;
-    localStorage.setItem("sessionExpiration", expirationTime.toString());
+    // Store the session expiration time
+    localStorage.setItem(
+      "sessionExpiration",
+      expirationTime.getTime().toString()
+    );
+
+    // Update the last activity timestamp
+    localStorage.setItem("lastActivity", now.getTime().toString());
+
+    // Set a timeout to show the warning modal before the session expires
+    const newSessionTimeout = setTimeout(() => {
+      localStorage.setItem("sessionWarningActive", "true");
+
+      // Dispatch an event to notify the SessionTimeoutModal
+      try {
+        window.dispatchEvent(new Event("sessionWarning"));
+      } catch (error) {
+        console.error(
+          "[AuthContext] Error dispatching session warning event:",
+          error
+        );
+      }
+    }, SESSION_TIMEOUT - WARNING_BEFORE_TIMEOUT);
+
+    setSessionTimeout(newSessionTimeout);
   };
 
   // Add this function to determine if the current path is a public route
@@ -236,23 +262,41 @@ export function AuthProvider({ children }) {
         setSessionTimeout(null);
       }
 
-      // Clear localStorage items
+      // Clear localStorage items first
       localStorage.removeItem("userName");
       localStorage.removeItem("userEmail");
       localStorage.removeItem("userId");
       localStorage.removeItem("isLoggedIn");
       localStorage.removeItem("sessionExpiration");
       localStorage.removeItem("isEmailVerified");
+      localStorage.removeItem("sessionWarningActive");
+      localStorage.removeItem("lastActivity");
+      localStorage.removeItem("loggingOut");
 
-      // Sign out with Supabase
-      await supabase.auth.signOut();
+      // Update React state
       setUser(null);
       setIsEmailVerified(false);
+
+      // Sign out with Supabase - don't await this to allow the rest to continue
+      supabase.auth.signOut().catch((error) => {
+        console.error("Error during Supabase signOut:", error.message);
+      });
 
       // Redirect to login page
       navigate("/login");
     } catch (error) {
-      console.error("Error logging out:", error.message);
+      console.error("Error during logout:", error.message);
+
+      // Force clearing localStorage and redirect as a fallback
+      localStorage.clear();
+
+      // Use window.location as a fallback if navigation fails
+      try {
+        navigate("/login");
+      } catch (navError) {
+        console.error("Navigation failed, using direct redirect");
+        window.location.href = "/login";
+      }
     }
   };
 
@@ -402,68 +446,96 @@ export function AuthProvider({ children }) {
       }
     };
 
+    // Set up the auth listener
     setupAuthListener();
+
+    // Activity events to listen for
+    const activityEvents = [
+      "mousedown",
+      "mousemove",
+      "keydown",
+      "scroll",
+      "touchstart",
+      "click",
+    ];
+
+    // Function to handle user activity and refresh session if needed
+    const handleUserActivity = () => {
+      // Only refresh if user is logged in and not on a public route
+      if (localStorage.getItem("isLoggedIn") === "true") {
+        // Get the last activity time (or use 0 if not set)
+        const lastActivity = localStorage.getItem("lastActivity") || "0";
+        const now = new Date().getTime();
+
+        // Only refresh if it's been at least 1 minute since the last activity
+        if (now - parseInt(lastActivity, 10) > 60000) {
+          // Update the last activity timestamp
+          localStorage.setItem("lastActivity", now.toString());
+
+          // Refresh the session timeout
+          refreshSessionTimeout();
+        }
+      }
+    };
+
+    // Add event listeners for user activity
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, handleUserActivity, { passive: true });
+    });
+
+    // Clean up
+    return () => {
+      // Clear the session timeout
+      if (sessionTimeout) {
+        clearTimeout(sessionTimeout);
+      }
+
+      // Remove activity event listeners
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, handleUserActivity);
+      });
+    };
   }, [navigate]);
 
-  // Set up event listeners to refresh session on user activity
-  useEffect(() => {
-    if (user) {
-      // List of events to listen for
-      const events = ["mousedown", "keydown", "touchstart", "scroll"];
+  // Function to refresh the user's session
+  const refreshSession = async () => {
+    try {
+      // Refresh the session timeout first
+      refreshSessionTimeout();
 
-      // Add debounce to prevent too many calls
-      let debounceTimer = null;
-      const DEBOUNCE_DELAY = 2000; // 2 seconds
+      // Attempt to refresh the Supabase token if needed
+      const { data, error } = await supabase.auth.refreshSession();
 
-      // Handler function to refresh the session timeout with debounce
-      const activityHandler = () => {
-        // Don't refresh session on public routes
-        if (isPublicRoute()) {
-          return;
+      if (error) {
+        console.error("Error refreshing auth session:", error.message);
+      } else if (data) {
+        // Update user data if needed
+        if (data.user) {
+          setUser(data.user);
         }
+      }
 
-        // Clear any existing timer
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
-        }
-
-        // Set a new timer to call refreshSessionTimeout after delay
-        debounceTimer = setTimeout(() => {
-          refreshSessionTimeout();
-        }, DEBOUNCE_DELAY);
-      };
-
-      // Add event listeners
-      events.forEach((event) => {
-        window.addEventListener(event, activityHandler);
-      });
-
-      // Clean up event listeners on unmount
-      return () => {
-        events.forEach((event) => {
-          window.removeEventListener(event, activityHandler);
-        });
-
-        // Clear any pending timers
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
-        }
-      };
+      return { success: true };
+    } catch (err) {
+      console.error("Error in refreshSession:", err.message);
+      return { success: false, error: err.message };
     }
-  }, [user, sessionTimeout]);
+  };
 
-  // Expose the auth context to components
-  const value = {
+  // Return the context value
+  const contextValue = {
     user,
     loading,
     logout: handleLogout,
-    refreshSession: refreshSessionTimeout,
+    refreshSession,
     isAuthenticated: !!user,
     isEmailVerified,
     checkEmailVerification,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+  );
 }
 
 // Custom hook to use the auth context

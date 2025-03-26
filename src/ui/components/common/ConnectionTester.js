@@ -1,9 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { supabase, testSupabaseConnection } from "../../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
 
 function ConnectionTester() {
   const [testResults, setTestResults] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Local implementation of connection test
+  const testConnection = async () => {
+    try {
+      // Try a simple query to test the connection
+      const { data, error } = await supabase
+        .from("users")
+        .select("count", { count: "exact", head: true });
+
+      if (error) {
+        return { success: false, error };
+      }
+
+      return { success: true, data };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
 
   // Run basic test on component mount
   useEffect(() => {
@@ -13,7 +31,7 @@ function ConnectionTester() {
   const runBasicTest = async () => {
     setLoading(true);
     try {
-      const result = await testSupabaseConnection();
+      const result = await testConnection();
       addTestResult("Basic Connection Test", result.success, result.error);
     } catch (error) {
       addTestResult("Basic Connection Test", false, error);
@@ -27,7 +45,7 @@ function ConnectionTester() {
 
     // Test 1: Basic connection
     try {
-      const result = await testSupabaseConnection();
+      const result = await testConnection();
       addTestResult("Basic Connection Test", result.success, result.error);
     } catch (error) {
       addTestResult("Basic Connection Test", false, error);

@@ -21,7 +21,6 @@ import ResetPassword from "../password/ResetPassword";
 import UpdatePassword from "../password/UpdatePassword";
 import VerifyEmail from "../registration/VerifyEmail";
 import LandingPage from "../home/LandingPage";
-import SessionTimeoutModal from "../common/SessionTimeoutModal";
 import ProtectedRoute from "../auth/ProtectedRoute";
 import FixVerification from "../auth/FixVerification";
 import Favorites from "../favorites/Favorites";
@@ -162,7 +161,6 @@ function AppRoutes() {
         <Route path="/update-password" element={<UpdatePassword />} />
       </Routes>
       <Footer />
-      <SessionTimeoutModal />
     </div>
   );
 }
