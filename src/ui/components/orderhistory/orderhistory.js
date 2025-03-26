@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from "../../../contexts/AuthContext";
 import { supabase } from "../../../supabaseClient";
 import './orderhistory.css';
 
@@ -28,15 +29,19 @@ const OrderHistory = () => {
 
   const [soldItems, setSoldItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   // Function to load purchase confirmations from localStorage
   useEffect(() => {
     const fetchSoldItems = async () => {
+      if (!user) return;
+  
       try {
         const { data, error } = await supabase
-          .from("products") // Change this to your actual table name
+          .from("products")
           .select("*")
-          .eq("status", "Sold");
+          .eq("status", "Sold")
+          .eq("userID", user.id);
   
         if (error) throw error;
         setSoldItems(data || []);
@@ -48,7 +53,8 @@ const OrderHistory = () => {
     };
   
     fetchSoldItems();
-  }, []);
+  }, [user]);
+  
 
 
   // Toggle expanded state for a confirmation
