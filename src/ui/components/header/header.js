@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
+import { supabase } from "../../../supabaseClient";
 import {
   AppBar,
   Avatar,
@@ -66,32 +67,66 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, isEmailVerified, user, logout } = useAuth();
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   const open = Boolean(anchorEl);
 
-  useEffect(() => {
-    const updateUserInfo = () => {
-      if (isAuthenticated) {
-        const userName = localStorage.getItem("userName");
-        if (userName) {
-          setUserInfo({ firstName: userName });
-        } else if (user?.user_metadata?.firstName) {
-          const firstName = user.user_metadata.firstName;
-          setUserInfo({ firstName });
-          localStorage.setItem("userName", firstName);
-        } else {
-          setUserInfo({ firstName: "User" });
-        }
+  // ✅ 1. Handles user info updates
+useEffect(() => {
+  const updateUserInfo = () => {
+    if (isAuthenticated) {
+      const userName = localStorage.getItem("userName");
+      if (userName) {
+        setUserInfo({ firstName: userName });
+      } else if (user?.user_metadata?.firstName) {
+        const firstName = user.user_metadata.firstName;
+        setUserInfo({ firstName });
+        localStorage.setItem("userName", firstName);
       } else {
-        setUserInfo(null);
+        setUserInfo({ firstName: "User" });
       }
-    };
+    } else {
+      setUserInfo(null);
+    }
+  };
 
-    updateUserInfo();
-    const timeoutId = setTimeout(updateUserInfo, 50);
-    return () => clearTimeout(timeoutId);
-  }, [isAuthenticated, user, location]);
+  updateUserInfo();
+  const timeoutId = setTimeout(updateUserInfo, 50); // optional fallback
+  return () => clearTimeout(timeoutId);
+}, [isAuthenticated, user, location]);
 
+// ✅ 2. Handles unread message tracking via Supabase
+useEffect(() => {
+  if (!user) return;
+
+  const fetchUnread = async () => {
+    const count = await getUnreadMessageCount(user.id);
+    setUnreadMessagesCount(count);
+  };
+
+  fetchUnread();
+
+  const subscription = supabase
+    .channel("messages-channel")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "messages",
+        filter: `receiver_id=eq.${user.id}`,
+      },
+      () => {
+        fetchUnread();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(subscription);
+  };
+}, [user]);
+  
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -130,6 +165,21 @@ const Header = () => {
     } else {
       navigate("/");
     }
+  };
+
+  const getUnreadMessageCount = async (userId) => {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('id', { count: 'exact' })
+      .eq('receiver_id', userId)
+      .eq('is_read', false);
+  
+    if (error) {
+      console.error('Error fetching unread messages:', error);
+      return 0;
+    }
+  
+    return data.length;
   };
 
   return (
@@ -212,11 +262,19 @@ const Header = () => {
                   onClick={() => handleNavigate("/messaging")}
                   className="menu-item"
                 >
-                  <ListItemIcon className="menu-item-icon">
-                    <ChatIcon fontSize="small" />
-                  </ListItemIcon>
+            <ListItemIcon className="menu-item-icon">
+              <Badge
+                badgeContent={unreadMessagesCount}
+                color="secondary"
+                invisible={unreadMessagesCount === 0}
+              >
+                <ChatIcon fontSize="small" />
+              </Badge>
+            </ListItemIcon>
+
                   Messages
                 </MenuItem>
+
 
                 <MenuItem
                   onClick={() => handleNavigate("/notifications")}
