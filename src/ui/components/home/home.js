@@ -195,7 +195,7 @@ export const Home = () => {
       {/* Hero Section - Unique to homepage */}
       <section id="hero">
         <h1>Your Campus Marketplace</h1>
-        <p>Buy, sell, and connect with fellow students</p>
+        <p>Buy, Sell, and Connect with Fellow Students</p>
         <Search />
       </section>
 

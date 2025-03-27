@@ -53,6 +53,35 @@
   cursor: pointer;
 }
 
+.checkbox-group input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #666;
+  border-radius: 4px;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  background-color: white;
+  transition: all 0.2s ease;
+}
+
+.checkbox-group input[type="checkbox"]::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  transform: scale(0);
+  transition: transform 0.2s ease;
+  background-color: #FFB71B; 
+  border-radius: 2px;
+}
+
+.checkbox-group input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+
 .price-slider {
   width: 100%;
   margin-bottom: 16px;
@@ -291,8 +320,7 @@
 }
 
 /* Product name styling for Polaroid caption */
-.product-info h3 {
-  margin: 0 0 8px 0;
+.product-info .products-product-name {
   font-size: 0.9rem;
   color: #333;
   font-weight: 600;
@@ -303,10 +331,15 @@
   -webkit-box-orient: vertical;
   max-width: 100%;
   height: auto;
-  max-height: 2.8em;
+  max-height: 3.2em;  
   line-height: 1.4;
   text-align: center;
 }
+
+.products-product-name {
+  margin-bottom: -57px;
+}
+
 
 /* Price styling for Polaroid */
 .price {

@@ -259,7 +259,7 @@ function Products() {
                           }
                         >
                           {/* Product name */}
-                          <h3>{product.name}</h3>
+                          <div className="products-product-name">{product.name}</div>
 
                           {/* Price */}
                           <p className="price">
