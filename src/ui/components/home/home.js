@@ -6,6 +6,7 @@ import Search from "../search/search";
 import NotificationBanner from "../common/NotificationBanner";
 import { useAuth } from "../../../contexts/AuthContext";
 import placeholderImage from "../../../assets/placeholder.js";
+import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
 
 export const Home = () => {
   const [products, setProducts] = useState([]);
@@ -111,12 +112,14 @@ export const Home = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // Fetch products that are available and not flagged
+        // Fetch products that are available, not flagged, not deleted, and approved
         const { data, error } = await supabase
           .from("products")
           .select("*")
           .eq("status", "Available") // Only get available products
           .eq("flag", false) // Don't show flagged products
+          .eq("is_deleted", false) // Don't show deleted products
+          .eq("moderation_status", "approved") // Only show approved products
           .order("created_at", { ascending: false }) // Get newest first
           .limit(10); // Limit to 10 products
 
@@ -213,7 +216,7 @@ export const Home = () => {
                 onClick={() => navigate(`/product/${product.productID}`)}
               >
                 <img
-                  src={product.image || placeholderImage}
+                  src={getFormattedImageUrl(product.image) || placeholderImage}
                   alt={product.name}
                   className="home-product-image"
                   onError={(e) => {

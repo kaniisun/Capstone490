@@ -36,12 +36,15 @@ import VerifyEmail from "./ui/components/registration/VerifyEmail";
 import LandingPage from "./ui/components/home/LandingPage";
 import SessionTimeoutModal from "./ui/components/common/SessionTimeoutModal";
 import ProtectedRoute from "./ui/components/auth/ProtectedRoute";
+import AdminRoute from "./ui/components/auth/AdminRoute";
 import FixVerification from "./ui/components/auth/FixVerification";
 import EmailVerificationCheck from "./ui/components/auth/EmailVerificationCheck";
 import OrderHistory from "./ui/components/orderhistory/orderhistory";
 import Checkout from "./ui/components/checkout/checkout";
 import OrderConfirmation from "./ui/components/orderconfirmation/orderconfirmation";
 import OpenBoard from "./ui/components/openboard/openboard";
+import AdminDashboard from "./ui/components/admin/AdminDashboard";
+import AdminSetup from "./ui/components/admin/AdminSetup";
 
 function AppContent() {
   const location = useLocation();
@@ -53,130 +56,152 @@ function AppContent() {
       <AuthProvider>
         <SessionTimeoutModal />
         <EmailVerificationCheck location={location}>
-          <div>
+          <div className="app-container">
             <Header />
-            <Routes>
-              {/* Landing page - redirect to home if authenticated */}
-              <Route
-                path="/"
-                element={
-                  isAuthenticated && isEmailVerified ? (
-                    <Navigate to="/home" replace />
-                  ) : (
-                    <LandingPage />
-                  )
-                }
-              />
-              <Route
-                path="/welcome"
-                element={
-                  isAuthenticated && isEmailVerified ? (
-                    <Navigate to="/home" replace />
-                  ) : (
-                    <LandingPage />
-                  )
-                }
-              />
+            <main className="app-content">
+              <Routes>
+                {/* Landing page - redirect to home if authenticated */}
+                <Route
+                  path="/"
+                  element={
+                    isAuthenticated && isEmailVerified ? (
+                      <Navigate to="/home" replace />
+                    ) : (
+                      <LandingPage />
+                    )
+                  }
+                />
+                <Route
+                  path="/welcome"
+                  element={
+                    isAuthenticated && isEmailVerified ? (
+                      <Navigate to="/home" replace />
+                    ) : (
+                      <LandingPage />
+                    )
+                  }
+                />
 
-              {/* Home route - protected for verified users only */}
-              <Route
-                path="/home"
-                element={
-                  <ProtectedRoute>
-                    <Home />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Home route - protected for verified users only */}
+                <Route
+                  path="/home"
+                  element={
+                    <ProtectedRoute>
+                      <Home />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Other routes */}
-              <Route path="/register" element={<SignUp />} />
-              <Route path="/verify-success" element={<VerifySuccess />} />
-              <Route path="/verify-email" element={<VerifyEmail />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/product/:id" element={<Detail />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route
-                path="/orderconfirmation"
-                element={<OrderConfirmation />}
-              />
-              <Route path="/search-results" element={<SearchResults />} />
-              <Route path="/orderhistory" element={<OrderHistory />} />
+                {/* Other routes */}
+                <Route path="/register" element={<SignUp />} />
+                <Route path="/verify-success" element={<VerifySuccess />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/product/:id" element={<Detail />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route
+                  path="/orderconfirmation"
+                  element={<OrderConfirmation />}
+                />
+                <Route path="/search-results" element={<SearchResults />} />
+                <Route path="/orderhistory" element={<OrderHistory />} />
 
-              {/* Protected routes */}
-              <Route
-                path="/cart"
-                element={
-                  <ProtectedRoute>
-                    <Cart />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/favorites"
-                element={
-                  <ProtectedRoute>
-                    <Favorites />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/account"
-                element={
-                  <ProtectedRoute>
-                    <Account />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/uploadProduct"
-                element={
-                  <ProtectedRoute>
-                    <UploadProduct />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/messaging"
-                element={
-                  <ProtectedRoute>
-                    <MessageHome />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/messaging/:userId"
-                element={
-                  <ProtectedRoute>
-                    <MessageHome />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/openboard"
-                element={
-                  <ProtectedRoute>
-                    <OpenBoard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/editProduct/:productID"
-                element={
-                  <ProtectedRoute>
-                    <Editproduct />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Protected routes */}
+                <Route
+                  path="/cart"
+                  element={
+                    <ProtectedRoute>
+                      <Cart />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/favorites"
+                  element={
+                    <ProtectedRoute>
+                      <Favorites />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/account"
+                  element={
+                    <ProtectedRoute>
+                      <Account />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/uploadProduct"
+                  element={
+                    <ProtectedRoute>
+                      <UploadProduct />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/messaging"
+                  element={
+                    <ProtectedRoute>
+                      <MessageHome />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/messaging/:userId"
+                  element={
+                    <ProtectedRoute>
+                      <MessageHome />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/openboard"
+                  element={
+                    <ProtectedRoute>
+                      <OpenBoard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/editProduct/:productID"
+                  element={
+                    <ProtectedRoute>
+                      <Editproduct />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Verification fix route */}
-              <Route path="/fix-verification" element={<FixVerification />} />
+                {/* Admin Dashboard Route */}
+                <Route
+                  path="/admin"
+                  element={
+                    <AdminRoute>
+                      <AdminDashboard />
+                    </AdminRoute>
+                  }
+                />
 
-              {/* Auth routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/connection-test" element={<ConnectionTester />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/update-password" element={<UpdatePassword />} />
-            </Routes>
+                {/* Admin Setup Route - Should be limited and possibly removed after initial setup */}
+                <Route
+                  path="/admin-setup"
+                  element={
+                    <ProtectedRoute>
+                      <AdminSetup />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Verification fix route */}
+                <Route path="/fix-verification" element={<FixVerification />} />
+
+                {/* Auth routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/connection-test" element={<ConnectionTester />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/update-password" element={<UpdatePassword />} />
+              </Routes>
+            </main>
             <Footer />
           </div>
         </EmailVerificationCheck>
@@ -206,7 +231,7 @@ function ScrollToTop() {
   const location = useLocation();
 
   useEffect(() => {
-    // Scroll to top on route changes
+    // Scroll to top on route change
     window.scrollTo(0, 0);
   }, [location]);
 

@@ -10,7 +10,11 @@ const AuthContext = createContext({
   refreshSession: () => {},
   isAuthenticated: false,
   isEmailVerified: false,
+  isAdmin: false,
+  userRole: null,
   checkEmailVerification: () => {},
+  refreshUserData: async () => ({ success: false }),
+  updateUserRole: async () => ({ success: false }),
 });
 
 // Set timeout for user session (30 minutes)
@@ -25,6 +29,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [sessionTimeout, setSessionTimeout] = useState(null);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState(null);
   const navigate = useNavigate();
 
   // Function to refresh the session timeout
@@ -239,6 +245,54 @@ export function AuthProvider({ children }) {
         } catch (err) {
           console.error("Error saving user data during verification:", err);
         }
+
+        // Fetch user role/admin status from the database
+        if (isVerified && currentUser) {
+          try {
+            const { data: userData, error: userError } = await supabase
+              .from("users")
+              .select("role")
+              .eq("userID", currentUser.id)
+              .single();
+
+            if (userError) {
+              console.error("Error fetching user role:", userError);
+            } else if (userData) {
+              setUserRole(userData.role);
+              setIsAdmin(userData.role === "admin");
+            }
+          } catch (err) {
+            console.error("Error checking admin status:", err);
+            setUserRole(null);
+            setIsAdmin(false);
+          }
+        }
+
+        // Check if there's a stored expiration time
+        const storedExpiration = localStorage.getItem("sessionExpiration");
+
+        if (storedExpiration) {
+          const expirationTime = parseInt(storedExpiration, 10);
+          const currentTime = new Date().getTime();
+
+          if (currentTime > expirationTime) {
+            // Session has expired
+            handleLogout();
+          } else {
+            // Session is still valid, set a new timeout for the remaining time
+            const remainingTime = expirationTime - currentTime;
+            const timeoutId = setTimeout(() => {
+              handleLogout();
+            }, remainingTime);
+
+            setSessionTimeout(timeoutId);
+          }
+        } else {
+          // No expiration time found, set a new one
+          refreshSessionTimeout();
+        }
+      } else if (isEmailVerified) {
+        localStorage.setItem("isEmailVerified", "true");
       } else {
         localStorage.setItem("isEmailVerified", "false");
       }
@@ -276,6 +330,8 @@ export function AuthProvider({ children }) {
       // Update React state
       setUser(null);
       setIsEmailVerified(false);
+      setIsAdmin(false);
+      setUserRole(null);
 
       // Sign out with Supabase - don't await this to allow the rest to continue
       supabase.auth.signOut().catch((error) => {
@@ -310,6 +366,8 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("isEmailVerified");
     setUser(null);
     setIsEmailVerified(false);
+    setIsAdmin(false);
+    setUserRole(null);
   };
 
   useEffect(() => {
@@ -346,18 +404,82 @@ export function AuthProvider({ children }) {
           setIsEmailVerified(isVerified);
           localStorage.setItem("isEmailVerified", isVerified.toString());
 
-          // Verify user data exists in users table
-          const { data: userData, error: userDataError } = await supabase
-            .from("users")
-            .select("*")
-            .eq("userID", session.user.id)
-            .single();
+          let roleFromMetadata = null;
+          let isAdminFromMetadata = false;
 
-          if (userDataError || !userData) {
-            console.log("User data not found in database, logging out");
-            handleLogout();
-            setLoading(false);
-            return;
+          // Check for role in user metadata
+          if (session.user.user_metadata) {
+            console.log(
+              "Checking user metadata for role:",
+              session.user.user_metadata
+            );
+
+            if (session.user.user_metadata.role) {
+              roleFromMetadata = session.user.user_metadata.role;
+              isAdminFromMetadata =
+                session.user.user_metadata.isAdmin === true ||
+                roleFromMetadata === "admin";
+
+              console.log(
+                "Found role in metadata:",
+                roleFromMetadata,
+                "isAdmin:",
+                isAdminFromMetadata
+              );
+
+              // Set role from metadata right away for faster UI response
+              setUserRole(roleFromMetadata);
+              setIsAdmin(isAdminFromMetadata);
+            }
+          }
+
+          // After login, always verify role against database
+          try {
+            console.log("Fetching user role from database for verification");
+            const { data: dbUserData, error: dbUserError } = await supabase
+              .from("users")
+              .select("role")
+              .eq("userID", session.user.id)
+              .single();
+
+            if (dbUserError) {
+              console.error(
+                "Error fetching user role from database:",
+                dbUserError
+              );
+            } else if (dbUserData && dbUserData.role) {
+              // Database has authoritative role information
+              const dbRole = dbUserData.role;
+              const isDbAdmin = dbRole === "admin";
+
+              console.log("Database role:", dbRole, "isAdmin:", isDbAdmin);
+
+              // Set role from database as the source of truth
+              setUserRole(dbRole);
+              setIsAdmin(isDbAdmin);
+
+              // If metadata doesn't match database, update metadata
+              if (
+                roleFromMetadata !== dbRole ||
+                isAdminFromMetadata !== isDbAdmin
+              ) {
+                console.log("Syncing metadata with database role");
+
+                try {
+                  await supabase.auth.updateUser({
+                    data: {
+                      role: dbRole,
+                      isAdmin: isDbAdmin,
+                    },
+                  });
+                  console.log("User metadata updated to match database role");
+                } catch (err) {
+                  console.error("Error updating user metadata:", err);
+                }
+              }
+            }
+          } catch (err) {
+            console.error("Error syncing roles after login:", err);
           }
 
           // Check if there's a stored expiration time
@@ -401,6 +523,29 @@ export function AuthProvider({ children }) {
               setIsEmailVerified(isVerified);
               localStorage.setItem("isEmailVerified", isVerified.toString());
 
+              // Check for role in user metadata
+              if (session.user.user_metadata) {
+                console.log(
+                  "Checking user metadata for role:",
+                  session.user.user_metadata
+                );
+                if (session.user.user_metadata.role) {
+                  const metadataRole = session.user.user_metadata.role;
+                  const isMetadataAdmin =
+                    session.user.user_metadata.isAdmin === true ||
+                    metadataRole === "admin";
+
+                  console.log(
+                    "Found role in metadata:",
+                    metadataRole,
+                    "isAdmin:",
+                    isMetadataAdmin
+                  );
+                  setUserRole(metadataRole);
+                  setIsAdmin(isMetadataAdmin);
+                }
+              }
+
               // Add a slight delay before refreshing session to ensure everything is set
               setTimeout(() => {
                 refreshSessionTimeout();
@@ -409,6 +554,8 @@ export function AuthProvider({ children }) {
             } else if (event === "SIGNED_OUT") {
               setUser(null);
               setIsEmailVerified(false);
+              setIsAdmin(false);
+              setUserRole(null);
               localStorage.removeItem("isEmailVerified");
 
               if (sessionTimeout) {
@@ -423,6 +570,30 @@ export function AuthProvider({ children }) {
               const isVerified = !!session.user.email_confirmed_at;
               setIsEmailVerified(isVerified);
               localStorage.setItem("isEmailVerified", isVerified.toString());
+
+              // Check for updated role in metadata
+              if (session.user.user_metadata) {
+                console.log(
+                  "Checking updated user metadata for role:",
+                  session.user.user_metadata
+                );
+                if (session.user.user_metadata.role) {
+                  const metadataRole = session.user.user_metadata.role;
+                  const isMetadataAdmin =
+                    session.user.user_metadata.isAdmin === true ||
+                    metadataRole === "admin";
+
+                  console.log(
+                    "Found role in updated metadata:",
+                    metadataRole,
+                    "isAdmin:",
+                    isMetadataAdmin
+                  );
+                  setUserRole(metadataRole);
+                  setIsAdmin(isMetadataAdmin);
+                }
+              }
+
               setLoading(false);
             } else {
               setLoading(false);
@@ -522,6 +693,7 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Add refreshUserData function to the AuthContext to be called after role changes
   // Return the context value
   const contextValue = {
     user,
@@ -530,7 +702,135 @@ export function AuthProvider({ children }) {
     refreshSession,
     isAuthenticated: !!user,
     isEmailVerified,
+    isAdmin,
+    userRole,
     checkEmailVerification,
+    refreshUserData: async () => {
+      // Only proceed if we have a user
+      if (!user) return { success: false, error: "No user logged in" };
+
+      try {
+        console.log("Refreshing user role data from database");
+        // Fetch fresh user role data from the database
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("role")
+          .eq("userID", user.id)
+          .single();
+
+        if (userError) {
+          console.error("Error refreshing user role:", userError);
+          return { success: false, error: userError.message };
+        }
+
+        if (userData) {
+          // Update the role and admin status in context
+          console.log("Updated user role from database:", userData.role);
+          setUserRole(userData.role);
+          setIsAdmin(userData.role === "admin");
+
+          // Update the user metadata in Supabase auth with the new role
+          // This ensures the role persists even after logout/login
+          try {
+            const { error: metadataError } = await supabase.auth.updateUser({
+              data: {
+                role: userData.role,
+                isAdmin: userData.role === "admin",
+              },
+            });
+
+            if (metadataError) {
+              console.error("Error updating user metadata:", metadataError);
+            } else {
+              console.log(
+                "Successfully updated Supabase user metadata with role:",
+                userData.role
+              );
+            }
+          } catch (metadataErr) {
+            console.error("Exception updating user metadata:", metadataErr);
+          }
+
+          return {
+            success: true,
+            role: userData.role,
+            isAdmin: userData.role === "admin",
+          };
+        }
+
+        return { success: false, error: "No user data found" };
+      } catch (err) {
+        console.error("Error in refreshUserData:", err.message);
+        return { success: false, error: err.message };
+      }
+    },
+    updateUserRole: async (targetUserId, newRole) => {
+      try {
+        console.log(`Updating user ${targetUserId} to role: ${newRole}`);
+
+        // First update the users table
+        const { data, error } = await supabase
+          .from("users")
+          .update({
+            role: newRole,
+            modified_at: new Date().toISOString(),
+          })
+          .eq("userID", targetUserId);
+
+        if (error) {
+          // Try with 'id' column if 'userID' fails
+          const { data: retryData, error: retryError } = await supabase
+            .from("users")
+            .update({
+              role: newRole,
+              modified_at: new Date().toISOString(),
+            })
+            .eq("id", targetUserId);
+
+          if (retryError) {
+            console.error(
+              "Both attempts to update role in database failed:",
+              retryError
+            );
+            return { success: false, error: retryError.message };
+          }
+        }
+
+        // For the current user, we can directly update their metadata
+        if (user && user.id === targetUserId) {
+          try {
+            const { error: metadataError } = await supabase.auth.updateUser({
+              data: {
+                role: newRole,
+                isAdmin: newRole === "admin",
+              },
+            });
+
+            if (metadataError) {
+              console.error("Error updating user metadata:", metadataError);
+            } else {
+              console.log(
+                "Successfully updated auth metadata for current user"
+              );
+            }
+          } catch (metadataErr) {
+            console.error("Error updating metadata:", metadataErr);
+          }
+        } else {
+          console.log(
+            "Updated role in database only. User needs to log out and back in for changes to fully apply."
+          );
+        }
+
+        return {
+          success: true,
+          message: `User role updated to ${newRole} in the database. User will need to log out and log back in for changes to fully apply.`,
+        };
+      } catch (err) {
+        console.error("Error in updateUserRole:", err);
+        return { success: false, error: err.message };
+      }
+    },
   };
 
   return (

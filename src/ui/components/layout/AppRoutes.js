@@ -22,9 +22,12 @@ import UpdatePassword from "../password/UpdatePassword";
 import VerifyEmail from "../registration/VerifyEmail";
 import LandingPage from "../home/LandingPage";
 import ProtectedRoute from "../auth/ProtectedRoute";
+import AdminRoute from "../auth/AdminRoute";
 import FixVerification from "../auth/FixVerification";
 import Favorites from "../favorites/Favorites";
 import { useAuth } from "../../../contexts/AuthContext";
+import AdminDashboard from "../admin/AdminDashboard";
+import AdminSetup from "../admin/AdminSetup";
 
 // Wrapper component for MessageArea that provides required props
 const MessageAreaWrapper = () => {
@@ -141,12 +144,22 @@ function AppRoutes() {
           }
         />
 
-        {/* Add Favorites route */}
+        {/* Admin routes */}
         <Route
-          path="/favorites"
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+
+        {/* Admin setup route - requires authentication but not admin status */}
+        <Route
+          path="/admin-setup"
           element={
             <ProtectedRoute>
-              <Favorites />
+              <AdminSetup />
             </ProtectedRoute>
           }
         />

@@ -15,6 +15,7 @@ import { supabase } from "../../../supabaseClient";
 import "./detail.css";
 // Import favorite utilities
 import { isFavorite, toggleFavorite } from "../../../utils/favoriteUtils";
+import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
 
 export const Detail = () => {
   const { id } = useParams();
@@ -52,7 +53,6 @@ export const Detail = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        console.log("Fetching product with ID:", id);
         const { data, error } = await supabase
           .from("products")
           .select(
@@ -65,14 +65,12 @@ export const Detail = () => {
           `
           )
           .eq("productID", id)
+          .eq("is_deleted", false)
           .single();
 
         if (error) {
           console.error("Error fetching product:", error);
         } else {
-          console.log("Fetched product data:", data);
-          console.log("Product userID:", data.userID);
-          console.log("Product seller info:", data.users);
           setProduct(data);
         }
       } catch (err) {
@@ -133,17 +131,36 @@ export const Detail = () => {
     }
   };
 
-  // delete product function
+  // delete product function - implements soft delete
   const handleDelete = async () => {
-    const { error } = await supabase
-      .from("products")
-      .delete()
-      .eq("productID", id);
-    if (error) {
-      console.error("Error deleting product:", error);
-    } else {
+    try {
+      // Use the API endpoint for soft delete
+      const { data: session } = await supabase.auth.getSession();
+      if (!session || !session.session) {
+        throw new Error("You must be logged in to delete a product");
+      }
+
+      const response = await fetch("http://localhost:3001/api/delete-product", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session.access_token}`,
+        },
+        body: JSON.stringify({
+          productId: id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to delete product");
+      }
+
       setShowConfirm(false); // Close confirmation popup
       navigate("/"); // redirect to home after deletion
+    } catch (error) {
+      console.error("Error deleting product:", error.message);
     }
   };
 
@@ -177,7 +194,7 @@ export const Detail = () => {
             <div className="detail-product-image-wrapper">
               <img
                 className="detail-product-image"
-                src={product.image || "placeholder.jpg"}
+                src={getFormattedImageUrl(product.image) || "placeholder.jpg"}
                 alt={product.name}
               />
             </div>
@@ -189,8 +206,6 @@ export const Detail = () => {
             <button
               className="detail-chat-button"
               onClick={() => {
-                console.log("Chat button clicked");
-                console.log("Product userID:", product.userID);
                 navigate(`/messaging/${product.userID}`);
               }}
             >
@@ -220,7 +235,12 @@ export const Detail = () => {
 
               <div className="detail-description-section">
                 <h3 className="detail-section-title">Description</h3>
-                <div className="detail-description" dangerouslySetInnerHTML={{ __html: product.description.replace(/\n/g, "<br />") }}></div>
+                <div
+                  className="detail-description"
+                  dangerouslySetInnerHTML={{
+                    __html: product.description.replace(/\n/g, "<br />"),
+                  }}
+                ></div>
               </div>
             </div>
 

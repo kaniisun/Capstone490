@@ -1,19 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import './cart.css';
+import "./cart.css";
+import { getFormattedImageUrl } from "../../components/ChatSearch/utils/imageUtils";
 
 export const Cart = () => {
   const navigate = useNavigate();
   // Sample cart items, could be fetched from an API or passed as props
   const [cartItems, setCartItems] = useState([
-    { id: 1, name: 'Product 1', price: 15.00, condition: 'New', image: 'physics.jpg' },
-    { id: 2, name: 'Product 2', price: 15.00, condition: 'New', image: 'purse.jpg' },
-    { id: 3, name: 'Product 3', price: 15.00, condition: 'New', image: 'physics.jpg' },
-    { id: 4, name: 'Product 4', price: 15.00, condition: 'New', image: 'physics.jpg' },
+    {
+      id: 1,
+      name: "Product 1",
+      price: 15.0,
+      condition: "New",
+      image: "physics.jpg",
+    },
+    {
+      id: 2,
+      name: "Product 2",
+      price: 15.0,
+      condition: "New",
+      image: "purse.jpg",
+    },
+    {
+      id: 3,
+      name: "Product 3",
+      price: 15.0,
+      condition: "New",
+      image: "physics.jpg",
+    },
+    {
+      id: 4,
+      name: "Product 4",
+      price: 15.0,
+      condition: "New",
+      image: "physics.jpg",
+    },
   ]);
 
   const removeItem = (id) => {
-    setCartItems(cartItems.filter(item => item.id !== id));
+    setCartItems(cartItems.filter((item) => item.id !== id));
   };
 
   const calculateSubtotal = () => {
@@ -21,11 +46,11 @@ export const Cart = () => {
   };
 
   const calculateTax = (subtotal) => {
-    return (subtotal * 0.05); // 5% tax
+    return subtotal * 0.05; // 5% tax
   };
 
   const calculateShipping = () => {
-    return cartItems.length > 0 ? 5.00 : 0; // Fixed shipping cost
+    return cartItems.length > 0 ? 5.0 : 0; // Fixed shipping cost
   };
 
   const calculateTotal = (subtotal, tax, shipping) => {
@@ -54,8 +79,9 @@ export const Cart = () => {
 
         <div className="shopping-cart-count-section">
           <span className="shopping-cart-count">
-            Cart Total: <span className="shopping-cart-count-badge">{totalItems}</span>
-            {totalItems === 1 ? ' Item' : ' Items'}
+            Cart Total:{" "}
+            <span className="shopping-cart-count-badge">{totalItems}</span>
+            {totalItems === 1 ? " Item" : " Items"}
           </span>
 
           <Link to="/home" className="shopping-cart-continue-btn">
@@ -75,11 +101,16 @@ export const Cart = () => {
                 {cartItems.map((item) => (
                   <div className="shopping-cart-product-item" key={item.id}>
                     <div className="shopping-cart-product-image">
-                      <img src={item.image} alt={item.name} />
+                      <img
+                        src={getFormattedImageUrl(item.image)}
+                        alt={item.name}
+                      />
                     </div>
                     <div className="shopping-cart-product-details">
                       <h2>{item.name}</h2>
-                      <p className="shopping-cart-product-condition">Condition: {item.condition}</p>
+                      <p className="shopping-cart-product-condition">
+                        Condition: {item.condition}
+                      </p>
                       <div className="shopping-cart-product-price">
                         ${item.price.toFixed(2)}
                       </div>
@@ -101,7 +132,9 @@ export const Cart = () => {
             <h2>Order Summary</h2>
             <div className="shopping-cart-summary-details">
               <div className="shopping-cart-summary-row">
-                <span>Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})</span>
+                <span>
+                  Subtotal ({totalItems} {totalItems === 1 ? "item" : "items"})
+                </span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
               <div className="shopping-cart-summary-row">
@@ -132,25 +165,24 @@ export const Cart = () => {
                 disabled={totalItems === 0}
                 onClick={() => {
                   const cartData = {
-                    items: cartItems.map(item => ({
+                    items: cartItems.map((item) => ({
                       name: item.name,
                       price: item.price,
-                      quantity: 1 // You might want to add quantity management to cart items
+                      quantity: 1, // You might want to add quantity management to cart items
                     })),
                     summary: {
                       subtotal: subtotal,
                       tax: tax,
                       shipping: shipping,
-                      total: parseFloat(total)
-                    }
+                      total: parseFloat(total),
+                    },
                   };
-                  navigate('/checkout', { state: { cartData } });
+                  navigate("/checkout", { state: { cartData } });
                 }}
               >
                 Proceed to Checkout
               </button>
             </div>
-
           </div>
         </div>
       </div>

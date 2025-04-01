@@ -1,0 +1,316 @@
+const express = require("express");
+const router = express.Router();
+const { createClient } = require("@supabase/supabase-js");
+require("dotenv").config();
+
+// Initialize Supabase
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Middleware for logging (minimal)
+router.use((req, res, next) => {
+  // Just log the access without details
+  console.log(
+    `[${new Date().toISOString()}] GET /api/moderate-products accessed`
+  );
+  next();
+});
+
+// Verify user is authenticated and is an admin
+const verifyAdmin = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      console.log("No authorization header provided");
+      return res.status(401).json({
+        success: false,
+        message: "No authorization header provided",
+        requestSource: "api/moderate-products",
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      console.log("No token provided in authorization header");
+      return res.status(401).json({
+        success: false,
+        message: "No token provided in authorization header",
+        requestSource: "api/moderate-products",
+      });
+    }
+
+    // Get user from token
+    const { data: userData, error: userError } = await supabase.auth.getUser(
+      token
+    );
+    if (userError || !userData.user) {
+      console.log("Invalid token or user not found:", userError);
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token or user not found",
+        error: userError,
+        requestSource: "api/moderate-products",
+      });
+    }
+
+    // Check if user is admin - Updated to use userID column
+    const { data: userRecord, error: userRecordError } = await supabase
+      .from("users")
+      .select("role")
+      .eq("userID", userData.user.id)
+      .single();
+
+    if (userRecordError || !userRecord) {
+      console.log("User record not found:", userRecordError);
+      return res.status(401).json({
+        success: false,
+        message: "User record not found",
+        error: userRecordError,
+        requestSource: "api/moderate-products",
+      });
+    }
+
+    if (userRecord.role !== "admin") {
+      console.log("User is not an admin:", userRecord.role);
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized. Only admins can access this endpoint",
+        requestSource: "api/moderate-products",
+      });
+    }
+
+    // Add user to request for later use
+    req.user = userData.user;
+    next();
+  } catch (error) {
+    console.error("Error verifying admin:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while verifying admin status",
+      error: error.message,
+      requestSource: "api/moderate-products",
+    });
+  }
+};
+
+// Verify products table has moderation_status column
+const verifyProductsTable = async (req, res, next) => {
+  try {
+    // Check if products table has moderation_status column
+    const { data, error } = await supabase
+      .from("products")
+      .select("moderation_status")
+      .limit(1);
+
+    if (error) {
+      // Check if the error is related to moderation_status column
+      if (error.message.includes("moderation_status")) {
+        console.log(
+          "moderation_status column does not exist in products table"
+        );
+
+        // Try to add moderation_status column
+        try {
+          await supabase.rpc("add_moderation_status_column");
+          console.log("Added moderation_status column to products table");
+        } catch (rpcError) {
+          console.error("Failed to add moderation_status column:", rpcError);
+          return res.status(500).json({
+            success: false,
+            message:
+              "Products table is missing moderation_status column and could not be added automatically",
+            error: rpcError.message,
+            requestSource: "api/moderate-products",
+          });
+        }
+      } else {
+        console.error("Error checking products table:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Error checking products table",
+          error: error.message,
+          requestSource: "api/moderate-products",
+        });
+      }
+    }
+
+    next();
+  } catch (error) {
+    console.error("Error verifying products table:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while verifying products table",
+      error: error.message,
+      requestSource: "api/moderate-products",
+    });
+  }
+};
+
+// GET /api/moderate-products
+router.get("/", verifyAdmin, verifyProductsTable, async (req, res) => {
+  try {
+    const requestSource =
+      req.get("host") === "localhost:3001" ? "direct" : "proxy";
+    const { status } = req.query;
+
+    // Build the query
+    let query = supabase.from("products").select("*").eq("is_deleted", false);
+
+    // Filter by moderation status if provided
+    if (status) {
+      if (status === "pending") {
+        // Pending includes null and "pending" values
+        query = query.or(
+          "moderation_status.is.null,moderation_status.eq.pending"
+        );
+      } else {
+        // For non-pending statuses, only get exact matches
+        query = query.eq("moderation_status", status);
+      }
+    } else {
+      // Default behavior: fetch only pending products
+      query = query.or(
+        "moderation_status.is.null,moderation_status.eq.pending"
+      );
+    }
+
+    // Order by creation date (newest first)
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    });
+
+    if (error) {
+      console.error("Error fetching products for moderation:", error);
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+        requestSource,
+      });
+    }
+
+    // Create a new variable instead of reassigning data
+    let processedData = data;
+
+    if (processedData && processedData.length > 0) {
+      // Do your filtering without any logging
+      if (status === "pending") {
+        // For pending tab, only include products with NULL or "pending" status
+        processedData = processedData.filter(
+          (product) =>
+            !product.moderation_status ||
+            product.moderation_status === "pending"
+        );
+      } else if (status) {
+        // For other tabs, only include products that exactly match the status
+        processedData = processedData.filter(
+          (product) => product.moderation_status === status
+        );
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      products: processedData || [],
+      count: processedData?.length || 0,
+      filter: status || "default",
+      userRole: req.user.role,
+      requestSource,
+    });
+  } catch (error) {
+    console.error("Error in moderate-products endpoint:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      requestSource: req.get("host") === "localhost:3001" ? "direct" : "proxy",
+    });
+  }
+});
+
+// Debug route to check product moderation statuses
+router.get("/debug", async (req, res) => {
+  try {
+    // Removed verbose logging;
+
+    const results = {};
+
+    // Get pending products (NULL or pending)
+    const { data: pendingProducts, error: pendingError } = await supabase
+      .from("products")
+      .select("productID, name, moderation_status")
+      .or("moderation_status.is.null,moderation_status.eq.pending")
+      .limit(10);
+
+    if (pendingError) {
+      results.pendingError = pendingError.message;
+    } else {
+      results.pending = {
+        count: pendingProducts.length,
+        samples: pendingProducts.slice(0, 3),
+      };
+    }
+
+    // Get approved products
+    const { data: approvedProducts, error: approvedError } = await supabase
+      .from("products")
+      .select("productID, name, moderation_status")
+      .eq("moderation_status", "approved")
+      .limit(10);
+
+    if (approvedError) {
+      results.approvedError = approvedError.message;
+    } else {
+      results.approved = {
+        count: approvedProducts.length,
+        samples: approvedProducts.slice(0, 3),
+      };
+    }
+
+    // Get rejected products
+    const { data: rejectedProducts, error: rejectedError } = await supabase
+      .from("products")
+      .select("productID, name, moderation_status")
+      .eq("moderation_status", "rejected")
+      .limit(10);
+
+    if (rejectedError) {
+      results.rejectedError = rejectedError.message;
+    } else {
+      results.rejected = {
+        count: rejectedProducts.length,
+        samples: rejectedProducts.slice(0, 3),
+      };
+    }
+
+    // Get archived products
+    const { data: archivedProducts, error: archivedError } = await supabase
+      .from("products")
+      .select("productID, name, moderation_status")
+      .eq("moderation_status", "archived")
+      .limit(10);
+
+    if (archivedError) {
+      results.archivedError = archivedError.message;
+    } else {
+      results.archived = {
+        count: archivedProducts.length,
+        samples: archivedProducts.slice(0, 3),
+      };
+    }
+
+    // Return results
+    res.status(200).json({
+      success: true,
+      results,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error in debug products endpoint:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+module.exports = router;

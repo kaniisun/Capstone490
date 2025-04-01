@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Upload Tester</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        line-height: 1.6;
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .container {
+        border: 1px solid #ddd;
+        padding: 20px;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      button {
+        background-color: #0f2044;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      button:hover {
+        background-color: #1a365d;
+      }
+      .preview-container {
+        margin-top: 20px;
+        text-align: center;
+      }
+      #imagePreview {
+        max-width: 100%;
+        max-height: 300px;
+        margin-top: 10px;
+        border: 1px solid #ddd;
+        display: none;
+      }
+      #resultContainer {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        display: none;
+      }
+      .success {
+        color: green;
+        font-weight: bold;
+      }
+      .error {
+        color: red;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Supabase Image Upload Test</h1>
+    <div class="container">
+      <div class="form-group">
+        <label for="supabaseUrl">Supabase URL:</label>
+        <input
+          type="text"
+          id="supabaseUrl"
+          class="form-control"
+          style="width: 100%"
+          placeholder="https://your-project.supabase.co"
+        />
+      </div>
+      <div class="form-group">
+        <label for="supabaseKey">Supabase Anon Key:</label>
+        <input
+          type="text"
+          id="supabaseKey"
+          class="form-control"
+          style="width: 100%"
+          placeholder="your-anon-key"
+        />
+      </div>
+      <div class="form-group">
+        <label for="bucketName">Storage Bucket Name:</label>
+        <input
+          type="text"
+          id="bucketName"
+          class="form-control"
+          value="product-images"
+        />
+      </div>
+      <div class="form-group">
+        <label for="imageFile">Select Image:</label>
+        <input type="file" id="imageFile" accept="image/*" />
+      </div>
+      <div class="preview-container">
+        <img id="imagePreview" alt="Image Preview" />
+      </div>
+      <button id="uploadBtn">Upload Image</button>
+    </div>
+
+    <div id="resultContainer"></div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const supabaseUrlInput = document.getElementById("supabaseUrl");
+        const supabaseKeyInput = document.getElementById("supabaseKey");
+        const bucketNameInput = document.getElementById("bucketName");
+        const imageFileInput = document.getElementById("imageFile");
+        const imagePreview = document.getElementById("imagePreview");
+        const uploadBtn = document.getElementById("uploadBtn");
+        const resultContainer = document.getElementById("resultContainer");
+
+        // Load from localStorage if available
+        if (localStorage.getItem("supabaseUrl")) {
+          supabaseUrlInput.value = localStorage.getItem("supabaseUrl");
+        }
+        if (localStorage.getItem("supabaseKey")) {
+          supabaseKeyInput.value = localStorage.getItem("supabaseKey");
+        }
+        if (localStorage.getItem("bucketName")) {
+          bucketNameInput.value = localStorage.getItem("bucketName");
+        }
+
+        // Handle file selection for preview
+        imageFileInput.addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              imagePreview.src = e.target.result;
+              imagePreview.style.display = "block";
+            };
+            reader.readAsDataURL(file);
+          } else {
+            imagePreview.style.display = "none";
+          }
+        });
+
+        // Handle upload button click
+        uploadBtn.addEventListener("click", async function () {
+          const supabaseUrl = supabaseUrlInput.value.trim();
+          const supabaseKey = supabaseKeyInput.value.trim();
+          const bucketName = bucketNameInput.value.trim();
+          const file = imageFileInput.files[0];
+
+          // Validate inputs
+          if (!supabaseUrl || !supabaseKey || !bucketName || !file) {
+            displayResult(
+              "Please fill all fields and select an image",
+              "error"
+            );
+            return;
+          }
+
+          // Save to localStorage
+          localStorage.setItem("supabaseUrl", supabaseUrl);
+          localStorage.setItem("supabaseKey", supabaseKey);
+          localStorage.setItem("bucketName", bucketName);
+
+          // Create Supabase client WITHOUT global headers
+          const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+          // Start upload
+          displayResult("Uploading...", "info");
+          uploadBtn.disabled = true;
+
+          try {
+            // Create unique filename
+            const fileExt = file.name.split(".").pop().toLowerCase();
+            const fileName = `test_${Date.now()}.${fileExt}`;
+            const filePath = `uploads/${fileName}`;
+
+            // Determine content type based on extension
+            let contentType = file.type;
+            if (!contentType || contentType === "application/octet-stream") {
+              if (fileExt === "png") contentType = "image/png";
+              else if (fileExt === "gif") contentType = "image/gif";
+              else if (fileExt === "webp") contentType = "image/webp";
+              else if (fileExt === "svg") contentType = "image/svg+xml";
+              else contentType = "image/jpeg"; // Default to JPEG
+            }
+
+            // Log upload details
+            let logText = `Uploading file: ${file.name}\n`;
+            logText += `Content type from file: ${file.type}\n`;
+            logText += `Content type being used: ${contentType}\n`;
+            logText += `Destination path: ${filePath}\n\n`;
+            displayResult(logText, "info");
+
+            // Upload the file with explicit content type
+            const { data, error } = await supabase.storage
+              .from(bucketName)
+              .upload(filePath, file, {
+                upsert: true,
+                contentType: contentType,
+              });
+
+            if (error) {
+              throw error;
+            }
+
+            // Get public URL
+            const { data: urlData } = supabase.storage
+              .from(bucketName)
+              .getPublicUrl(filePath);
+
+            // Verify the content type
+            logText += "Upload successful!\n\n";
+            logText += `Public URL: ${urlData.publicUrl}\n\n`;
+
+            try {
+              const response = await fetch(urlData.publicUrl, {
+                method: "HEAD",
+              });
+              const headersText = Array.from(response.headers.entries())
+                .map(([key, value]) => `${key}: ${value}`)
+                .join("\n");
+
+              logText += `HTTP Status: ${response.status} ${response.statusText}\n`;
+              logText += `Response Headers:\n${headersText}\n\n`;
+
+              const resultContentType = response.headers.get("content-type");
+              if (resultContentType === contentType) {
+                logText += `✅ SUCCESS: Image uploaded with correct content type: ${resultContentType}`;
+                displayResult(logText, "success");
+              } else {
+                logText += `❌ ERROR: Wrong content type detected: ${resultContentType}`;
+                displayResult(logText, "error");
+              }
+            } catch (verifyError) {
+              logText += `Error verifying content type: ${verifyError.message}`;
+              displayResult(logText, "error");
+            }
+          } catch (error) {
+            displayResult(`Error: ${error.message}`, "error");
+          } finally {
+            uploadBtn.disabled = false;
+          }
+        });
+
+        function displayResult(text, type) {
+          resultContainer.textContent = text;
+          resultContainer.style.display = "block";
+
+          // Reset classes
+          resultContainer.classList.remove("success", "error", "info");
+
+          // Add appropriate class
+          if (type) {
+            resultContainer.classList.add(type);
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

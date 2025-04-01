@@ -8,6 +8,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import "./account.css";
 import placeholderImage from "../../../assets/placeholder.js";
 import fallbackImage from "../../../assets/placeholder-fallback.js";
+import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
 
 // Material-UI imports
 import {
@@ -119,7 +120,8 @@ const Account = () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("userID", user.id);
+        .eq("userID", user.id)
+        .eq("is_deleted", false);
 
       if (error) throw error;
 
@@ -214,13 +216,30 @@ const Account = () => {
     if (!productToDelete) return;
 
     try {
-      const { error } = await supabase
-        .from("products")
-        .delete()
-        .eq("productID", productToDelete);
+      // Use the API endpoint for soft delete
+      const { data: session } = await supabase.auth.getSession();
+      if (!session || !session.session) {
+        throw new Error("You must be logged in to delete a product");
+      }
 
-      if (error) throw error;
+      const response = await fetch("http://localhost:3001/api/delete-product", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.session.access_token}`,
+        },
+        body: JSON.stringify({
+          productId: productToDelete,
+        }),
+      });
 
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to delete product");
+      }
+
+      // Remove the product from the UI
       setProducts(
         products.filter((product) => product.productID !== productToDelete)
       );
@@ -266,7 +285,164 @@ const Account = () => {
         return "info";
     }
   };
-  
+
+  // Special helper for problematic images
+  const getProductImageUrl = (product) => {
+    if (!product.image) {
+      return placeholderImage;
+    }
+
+    console.log(`Processing image for ${product.name}:`, product.image);
+
+    // Handle duplicate uploads/ in URL
+    if (product.image && product.image.includes("uploads/uploads/")) {
+      console.log("Found duplicate uploads/ in URL, fixing...");
+      const fixedUrl = product.image.replace("uploads/uploads/", "uploads/");
+      console.log("Fixed URL:", fixedUrl);
+      return fixedUrl;
+    }
+
+    // Special case for Nintendo Switch Lite image with the specific user ID
+    if (
+      product.name.includes("Nintendo Switch") &&
+      product.image &&
+      product.image.includes("4acc1983-951b-49e5-9ea3-0357496f68e7")
+    ) {
+      console.log("Nintendo Switch special case detected");
+
+      // If URL already has uploads/ path, don't modify it
+      if (product.image.includes("product-images/uploads/")) {
+        console.log(
+          "Nintendo Switch image already has correct path, using as is"
+        );
+        return product.image;
+      }
+
+      // If URL doesn't include uploads/ folder, add it exactly once
+      if (
+        product.image.includes("product-images/") &&
+        !product.image.includes("uploads/")
+      ) {
+        const parts = product.image.split("product-images/");
+        if (parts.length >= 2) {
+          const fixedUrl = `${parts[0]}product-images/uploads/${parts[1]}`;
+          console.log("Fixed URL for Nintendo Switch:", fixedUrl);
+          return fixedUrl;
+        }
+      }
+    }
+
+    // For all other products, use the utility function
+    return getFormattedImageUrl(product.image);
+  };
+
+  /**
+   * Fix the content type of the Nintendo Switch image by downloading a fresh image
+   * and uploading it correctly
+   */
+  const fixNintendoSwitchImage = async () => {
+    try {
+      setLoading(true);
+      // The path where we want to save the Nintendo Switch image
+      const filePath =
+        "uploads/4acc1983-951b-49e5-9ea3-0357496f68e7_1743436382053.jpg";
+
+      // We'll use a public image of a Nintendo Switch Lite
+      const switchImageUrl =
+        "https://www.nintendo.com/content/dam/noa/en_US/hardware/switch/nintendo-switch-lite-yellow/gallery/nintendo-switch-lite-yellow-front-flat.jpg";
+
+      console.log("Downloading Nintendo Switch image from:", switchImageUrl);
+
+      // Fetch the image from the public URL
+      const response = await fetch(switchImageUrl);
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch image: ${response.status} ${response.statusText}`
+        );
+      }
+
+      // Get image as blob
+      const imageBlob = await response.blob();
+
+      console.log(
+        "Image downloaded successfully, size:",
+        imageBlob.size,
+        "bytes"
+      );
+      console.log("Content type detected:", imageBlob.type);
+
+      // Upload the image blob directly
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, imageBlob, {
+          upsert: true,
+          contentType: "image/jpeg", // Explicitly set the correct MIME type
+        });
+
+      if (uploadError) {
+        console.error("Error re-uploading the image:", uploadError);
+        setSnackbar({
+          open: true,
+          message: `Error fixing image: ${uploadError.message}`,
+          severity: "error",
+        });
+        return;
+      }
+
+      console.log("Successfully uploaded the fixed Nintendo Switch image!");
+
+      // Get the public URL
+      const { data: publicUrlData } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(filePath);
+
+      if (!publicUrlData?.publicUrl) {
+        throw new Error("Failed to get public URL for uploaded image");
+      }
+
+      console.log("New image URL:", publicUrlData.publicUrl);
+
+      // Now update the product record in the database to ensure it has the correct URL
+      const { data: updateData, error: updateError } = await supabase
+        .from("products")
+        .update({
+          image: publicUrlData.publicUrl,
+          modified_at: new Date().toISOString(),
+        })
+        .eq("name", "Nintendo Switch Lite");
+
+      if (updateError) {
+        console.error("Error updating product record:", updateError);
+        setSnackbar({
+          open: true,
+          message: `Image uploaded but failed to update product: ${updateError.message}`,
+          severity: "warning",
+        });
+        return;
+      }
+
+      setSnackbar({
+        open: true,
+        message:
+          "Nintendo Switch image fixed successfully! Refresh to see the change.",
+        severity: "success",
+      });
+
+      // Force refresh product list
+      fetchUserProducts();
+    } catch (error) {
+      console.error("Error fixing image:", error);
+      setSnackbar({
+        open: true,
+        message: `Error: ${error.message}`,
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Mark product as sold
   const handleMarkAsSold = async (productID) => {
     try {
@@ -275,16 +451,18 @@ const Account = () => {
         .from("products")
         .update({ status: "Sold" })
         .eq("productID", productID);
-  
+
       if (error) throw error;
-  
+
       // If successful, update the local state
       setProducts((prevProducts) =>
         prevProducts.map((product) =>
-          product.productID === productID ? { ...product, status: "Sold" } : product
+          product.productID === productID
+            ? { ...product, status: "Sold" }
+            : product
         )
       );
-  
+
       setSnackbar({
         open: true,
         message: "Product marked as Sold!",
@@ -300,7 +478,7 @@ const Account = () => {
     }
   };
 
-// Mark product as available
+  // Mark product as available
   const handleMarkAsAvailable = async (productID) => {
     try {
       // Update status in the database
@@ -308,9 +486,9 @@ const Account = () => {
         .from("products")
         .update({ status: "Available" })
         .eq("productID", productID);
-  
+
       if (error) throw error;
-  
+
       // Update local state after successful database update
       setProducts((prevProducts) =>
         prevProducts.map((product) =>
@@ -319,7 +497,7 @@ const Account = () => {
             : product
         )
       );
-  
+
       setSnackbar({
         open: true,
         message: "Product marked as Available!",
@@ -334,7 +512,7 @@ const Account = () => {
       });
     }
   };
-  
+
   // Get product condition stars
   const getConditionStars = (condition) => {
     switch (condition?.toLowerCase()) {
@@ -696,7 +874,7 @@ const Account = () => {
                   >
                     Your Products
                   </Typography>
-                
+
                   <Button
                     component={Link}
                     to="/uploadProduct"
@@ -778,15 +956,28 @@ const Account = () => {
                                         mr: 2,
                                       }}
                                     >
+                                      {console.log(
+                                        `Loading image for ${product.name}:`,
+                                        product.image
+                                      )}
                                       <img
-                                        src={product.image || placeholderImage}
+                                        src={getProductImageUrl(product)}
                                         alt={product.name}
                                         style={{
                                           maxWidth: "100%",
                                           maxHeight: "100%",
                                           objectFit: "contain",
                                         }}
+                                        onLoad={() =>
+                                          console.log(
+                                            `Image for ${product.name} loaded successfully`
+                                          )
+                                        }
                                         onError={(e) => {
+                                          console.error(
+                                            `Error loading image for ${product.name}:`,
+                                            product.image
+                                          );
                                           if (
                                             e.target instanceof HTMLImageElement
                                           ) {
@@ -795,10 +986,16 @@ const Account = () => {
                                             if (
                                               e.target.src !== placeholderImage
                                             ) {
+                                              console.log(
+                                                `Falling back to placeholder for ${product.name}`
+                                              );
                                               e.target.src = placeholderImage;
                                             }
                                             // If placeholder also fails, use fallback
                                             else {
+                                              console.log(
+                                                `Falling back to fallback image for ${product.name}`
+                                              );
                                               e.target.src = fallbackImage;
                                             }
                                           }
@@ -903,256 +1100,276 @@ const Account = () => {
                   </Paper>
                 ) : (
                   <Grid container spacing={3}>
-                    
                     {Array.isArray(products) &&
                       products
                         .filter((product) => product.status === "Available") // Only available products
                         .map((product) => {
                           if (!product?.productID) return null;
                           return (
-                          <Grid
-                            item
-                            xs={12}
-                            sm={6}
-                            md={4}
-                            key={product.productID}
-                          >
-                            <Zoom in={true} timeout={500}>
-                              <Card
-                                variant="outlined"
-                                sx={{
-                                  height: "100%",
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  borderRadius: 2,
-                                  transition: "all 0.2s",
-                                  border: "1px solid #e0e0e0",
-                                  "&:hover": {
-                                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                                  },
-                                }}
-                              >
-                                {/* Status chip */}
-                                <Box
+                            <Grid
+                              item
+                              xs={12}
+                              sm={6}
+                              md={4}
+                              key={product.productID}
+                            >
+                              <Zoom in={true} timeout={500}>
+                                <Card
+                                  variant="outlined"
                                   sx={{
-                                    position: "absolute",
-                                    top: 12,
-                                    right: 12,
-                                    zIndex: 1,
-                                  }}
-                                >
-                                  <Chip
-                                    label={product.status || "Available"}
-                                    color={getStatusColor(product.status)}
-                                    size="small"
-                                    sx={{ fontSize: "0.75rem" }}
-                                  />
-                                </Box>
-                                <Tooltip title="Mark as Sold">
-                                  <Button
-                                    variant="contained"
-                                    startIcon={<LocalOfferIcon />}
-                                    onClick={() =>
-                                      handleMarkAsSold(product.productID)
-                                    }
-                                    size="small"
-                                    sx={{
-                                      flex: 1,
-                                      borderRadius: 1,
-                                      textTransform: "none",
-                                      bgcolor: "#0f2044", // UNCG Blue
-                                      color: "white",
-                                      "&:hover": {
-                                        bgcolor: "#1a365d", // Slightly lighter UNCG Blue
-                                      },
-                                    }}
-                                    disabled={product.status === "Sold"}
-                                  >
-                                    Mark as Sold
-                                  </Button>
-                                </Tooltip>
-
-                                {/* Product image */}
-                                <Box
-                                  sx={{
-                                    height: 180,
+                                    height: "100%",
                                     display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    p: 2,
-                                    bgcolor: "grey.50",
+                                    flexDirection: "column",
+                                    borderRadius: 2,
+                                    transition: "all 0.2s",
+                                    border: "1px solid #e0e0e0",
+                                    "&:hover": {
+                                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                                    },
                                   }}
                                 >
-                                  <img
-                                    src={product.image || placeholderImage}
-                                    alt={product.name}
-                                    style={{
-                                      maxWidth: "100%",
-                                      maxHeight: "100%",
-                                      objectFit: "contain",
-                                    }}
-                                    onError={(e) => {
-                                      if (
-                                        e.target instanceof HTMLImageElement
-                                      ) {
-                                        e.target.onerror = null;
-                                        // Try placeholder image first
-                                        if (e.target.src !== placeholderImage) {
-                                          e.target.src = placeholderImage;
-                                        }
-                                        // If placeholder also fails, use fallback
-                                        else {
-                                          e.target.src = fallbackImage;
-                                        }
-                                      }
-                                    }}
-                                  />
-                                </Box>
-
-                                {/* Product details */}
-                                <CardContent sx={{ flexGrow: 1, p: 2 }}>
-                                  <Typography
-                                    variant="subtitle1"
-                                    fontWeight="500"
-                                    gutterBottom
-                                    title={product.name}
-                                  >
-                                    {product.name?.length > 24
-                                      ? `${product.name.substring(0, 24)}...`
-                                      : product.name}
-                                  </Typography>
-
-                                  <Typography
-                                    variant="h6"
+                                  {/* Status chip */}
+                                  <Box
                                     sx={{
-                                      fontWeight: 500,
-                                      my: 1,
+                                      position: "absolute",
+                                      top: 12,
+                                      right: 12,
+                                      zIndex: 1,
+                                    }}
+                                  >
+                                    <Chip
+                                      label={product.status || "Available"}
+                                      color={getStatusColor(product.status)}
+                                      size="small"
+                                      sx={{ fontSize: "0.75rem" }}
+                                    />
+                                  </Box>
+                                  <Tooltip title="Mark as Sold">
+                                    <Button
+                                      variant="contained"
+                                      startIcon={<LocalOfferIcon />}
+                                      onClick={() =>
+                                        handleMarkAsSold(product.productID)
+                                      }
+                                      size="small"
+                                      sx={{
+                                        flex: 1,
+                                        borderRadius: 1,
+                                        textTransform: "none",
+                                        bgcolor: "#0f2044", // UNCG Blue
+                                        color: "white",
+                                        "&:hover": {
+                                          bgcolor: "#1a365d", // Slightly lighter UNCG Blue
+                                        },
+                                      }}
+                                      disabled={product.status === "Sold"}
+                                    >
+                                      Mark as Sold
+                                    </Button>
+                                  </Tooltip>
+
+                                  {/* Product image */}
+                                  <Box
+                                    sx={{
+                                      height: 180,
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: 0.5,
-                                      color: "#0f2044", // UNCG Blue
+                                      justifyContent: "center",
+                                      p: 2,
+                                      bgcolor: "grey.50",
                                     }}
                                   >
-                                    <LocalOfferIcon fontSize="small" />$
-                                    {parseFloat(product.price).toFixed(2)}
-                                  </Typography>
-
-                                  <Stack spacing={1} sx={{ mb: 1 }}>
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 0.5,
+                                    {console.log(
+                                      `Loading product card image for ${product.name}:`,
+                                      product.image
+                                    )}
+                                    <img
+                                      src={getProductImageUrl(product)}
+                                      alt={product.name}
+                                      style={{
+                                        maxWidth: "100%",
+                                        maxHeight: "100%",
+                                        objectFit: "contain",
                                       }}
-                                    >
-                                      <CategoryIcon
-                                        fontSize="small"
-                                        color="action"
-                                        sx={{ fontSize: 18 }}
-                                      />
-                                      <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                      >
-                                        {product.category}
-                                      </Typography>
-                                    </Box>
-
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 0.5,
-                                      }}
-                                    >
-                                      <Box sx={{ display: "flex" }}>
-                                        {[...Array(5)].map((_, i) => (
-                                          <StarIcon
-                                            key={i}
-                                            sx={{
-                                              color:
-                                                i <
-                                                getConditionStars(
-                                                  product.condition
-                                                )
-                                                  ? "warning.main"
-                                                  : "text.disabled",
-                                              fontSize: "0.8rem",
-                                            }}
-                                          />
-                                        ))}
-                                      </Box>
-                                      <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                      >
-                                        {product.condition}
-                                      </Typography>
-                                    </Box>
-                                  </Stack>
-                                </CardContent>
-
-                                {/* Action buttons */}
-                                <Divider />
-                                <Box
-                                  sx={{
-                                    p: 2,
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    gap: 1,
-                                  }}
-                                >
-                                  <Tooltip title="Edit product">
-                                    <Button
-                                      component={Link}
-                                      to={`/editProduct/${product.productID}`}
-                                      variant="outlined"
-                                      startIcon={<EditIcon />}
-                                      size="small"
-                                      sx={{
-                                        flex: 1,
-                                        borderRadius: 1,
-                                        textTransform: "none",
-                                        borderColor: "#0f2044",
-                                        color: "#0f2044",
-                                        "&:hover": {
-                                          borderColor: "#ffc72c", // UNCG Gold
-                                          bgcolor: "rgba(255, 199, 44, 0.04)",
-                                        },
-                                      }}
-                                    >
-                                      Edit
-                                    </Button>
-                                  </Tooltip>
-                                  <Tooltip title="Delete product">
-                                    <Button
-                                      variant="outlined"
-                                      startIcon={<DeleteIcon />}
-                                      onClick={() =>
-                                        handleDeleteProduct(product.productID)
+                                      onLoad={() =>
+                                        console.log(
+                                          `Product card image for ${product.name} loaded successfully`
+                                        )
                                       }
-                                      size="small"
+                                      onError={(e) => {
+                                        console.error(
+                                          `Error loading image for ${product.name}:`,
+                                          product.image
+                                        );
+                                        if (
+                                          e.target instanceof HTMLImageElement
+                                        ) {
+                                          e.target.onerror = null;
+                                          // Try placeholder image first
+                                          if (
+                                            e.target.src !== placeholderImage
+                                          ) {
+                                            console.log(
+                                              `Falling back to placeholder for ${product.name}`
+                                            );
+                                            e.target.src = placeholderImage;
+                                          }
+                                          // If placeholder also fails, use fallback
+                                          else {
+                                            console.log(
+                                              `Falling back to fallback image for ${product.name}`
+                                            );
+                                            e.target.src = fallbackImage;
+                                          }
+                                        }
+                                      }}
+                                    />
+                                  </Box>
+
+                                  {/* Product details */}
+                                  <CardContent sx={{ flexGrow: 1, p: 2 }}>
+                                    <Typography
+                                      variant="subtitle1"
+                                      fontWeight="500"
+                                      gutterBottom
+                                      title={product.name}
+                                    >
+                                      {product.name?.length > 24
+                                        ? `${product.name.substring(0, 24)}...`
+                                        : product.name}
+                                    </Typography>
+
+                                    <Typography
+                                      variant="h6"
                                       sx={{
-                                        flex: 1,
-                                        borderRadius: 1,
-                                        textTransform: "none",
-                                        color: "#d32f2f",
-                                        borderColor: "#d32f2f",
-                                        "&:hover": {
-                                          borderColor: "#d32f2f",
-                                          bgcolor: "rgba(211, 47, 47, 0.04)",
-                                        },
+                                        fontWeight: 500,
+                                        my: 1,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                        color: "#0f2044", // UNCG Blue
                                       }}
                                     >
-                                      Delete
-                                    </Button>
-                                  </Tooltip>
-                                </Box>
-                              </Card>
-                            </Zoom>
-                          </Grid>
-                        );
-                      })}
+                                      <LocalOfferIcon fontSize="small" />$
+                                      {parseFloat(product.price).toFixed(2)}
+                                    </Typography>
+
+                                    <Stack spacing={1} sx={{ mb: 1 }}>
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 0.5,
+                                        }}
+                                      >
+                                        <CategoryIcon
+                                          fontSize="small"
+                                          color="action"
+                                          sx={{ fontSize: 18 }}
+                                        />
+                                        <Typography
+                                          variant="body2"
+                                          color="text.secondary"
+                                        >
+                                          {product.category}
+                                        </Typography>
+                                      </Box>
+
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 0.5,
+                                        }}
+                                      >
+                                        <Box sx={{ display: "flex" }}>
+                                          {[...Array(5)].map((_, i) => (
+                                            <StarIcon
+                                              key={i}
+                                              sx={{
+                                                color:
+                                                  i <
+                                                  getConditionStars(
+                                                    product.condition
+                                                  )
+                                                    ? "warning.main"
+                                                    : "text.disabled",
+                                                fontSize: "0.8rem",
+                                              }}
+                                            />
+                                          ))}
+                                        </Box>
+                                        <Typography
+                                          variant="body2"
+                                          color="text.secondary"
+                                        >
+                                          {product.condition}
+                                        </Typography>
+                                      </Box>
+                                    </Stack>
+                                  </CardContent>
+
+                                  {/* Action buttons */}
+                                  <Divider />
+                                  <Box
+                                    sx={{
+                                      p: 2,
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      gap: 1,
+                                    }}
+                                  >
+                                    <Tooltip title="Edit product">
+                                      <Button
+                                        component={Link}
+                                        to={`/editProduct/${product.productID}`}
+                                        variant="outlined"
+                                        startIcon={<EditIcon />}
+                                        size="small"
+                                        sx={{
+                                          flex: 1,
+                                          borderRadius: 1,
+                                          textTransform: "none",
+                                          borderColor: "#0f2044",
+                                          color: "#0f2044",
+                                          "&:hover": {
+                                            borderColor: "#ffc72c", // UNCG Gold
+                                            bgcolor: "rgba(255, 199, 44, 0.04)",
+                                          },
+                                        }}
+                                      >
+                                        Edit
+                                      </Button>
+                                    </Tooltip>
+                                    <Tooltip title="Delete product">
+                                      <Button
+                                        variant="outlined"
+                                        startIcon={<DeleteIcon />}
+                                        onClick={() =>
+                                          handleDeleteProduct(product.productID)
+                                        }
+                                        size="small"
+                                        sx={{
+                                          flex: 1,
+                                          borderRadius: 1,
+                                          textTransform: "none",
+                                          color: "#d32f2f",
+                                          borderColor: "#d32f2f",
+                                          "&:hover": {
+                                            borderColor: "#d32f2f",
+                                            bgcolor: "rgba(211, 47, 47, 0.04)",
+                                          },
+                                        }}
+                                      >
+                                        Delete
+                                      </Button>
+                                    </Tooltip>
+                                  </Box>
+                                </Card>
+                              </Zoom>
+                            </Grid>
+                          );
+                        })}
                   </Grid>
                 )}
               </Box>
@@ -1211,6 +1428,25 @@ const Account = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Only show Fix Nintendo Switch button for admins */}
+        {user &&
+          (user.email?.includes("admin") ||
+            user.email?.includes("capstone490") ||
+            user.email === "kspage@uncg.edu") && (
+            <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={fixNintendoSwitchImage}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} /> : null}
+                sx={{ mb: 2 }}
+              >
+                Fix Nintendo Switch Image
+              </Button>
+            </Box>
+          )}
 
         {/* Snackbar for notifications */}
         <Snackbar
@@ -1278,15 +1514,40 @@ const Account = () => {
                             }}
                           >
                             <img
-                              src={
-                                product.image ||
-                                "https://via.placeholder.com/150"
-                              }
+                              src={getProductImageUrl(product)}
                               alt={product.name}
                               style={{
                                 maxWidth: "100%",
                                 maxHeight: "100%",
                                 objectFit: "contain",
+                              }}
+                              onLoad={() =>
+                                console.log(
+                                  `Image for ${product.name} loaded successfully`
+                                )
+                              }
+                              onError={(e) => {
+                                console.error(
+                                  `Error loading image for ${product.name}:`,
+                                  product.image
+                                );
+                                if (e.target instanceof HTMLImageElement) {
+                                  e.target.onerror = null;
+                                  // Try placeholder image first
+                                  if (e.target.src !== placeholderImage) {
+                                    console.log(
+                                      `Falling back to placeholder for ${product.name}`
+                                    );
+                                    e.target.src = placeholderImage;
+                                  }
+                                  // If placeholder also fails, use fallback
+                                  else {
+                                    console.log(
+                                      `Falling back to fallback image for ${product.name}`
+                                    );
+                                    e.target.src = fallbackImage;
+                                  }
+                                }
                               }}
                             />
                           </Box>
