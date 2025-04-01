@@ -8,6 +8,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbtack } from "@fortawesome/free-solid-svg-icons";
 import Filter from "../filter/Filter"; // Adjust the path to where Filter.js is located
 import "./SearchResults.css";
+// Import image utility function
+import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
 
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
@@ -22,7 +24,7 @@ const SearchResults = () => {
     categories: [],
     minPrice: "",
     maxPrice: "",
-    condition: "",
+    conditions: [],
     isBundle: false,
   });
 
@@ -38,11 +40,13 @@ const SearchResults = () => {
 
   const searchProducts = async (searchTerm) => {
     try {
-      // Get all available products
+      // Get all available, non-deleted, and approved products
       const { data: products, error } = await supabase
         .from("products")
         .select("*")
-        .eq("status", "Available");
+        .eq("status", "Available")
+        .eq("is_deleted", false)
+        .eq("moderation_status", "approved");
 
       if (error) throw error;
 
@@ -97,7 +101,7 @@ const SearchResults = () => {
 
 const ResultCard = ({ product }) => {
   const navigate = useNavigate();
-  const imageUrl = product.image || "/default-image.jpg";
+  const imageUrl = getFormattedImageUrl(product.image) || "/default-image.jpg";
 
   // Add this console log to check the product data
   console.log("Product data:", {

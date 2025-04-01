@@ -19,7 +19,7 @@ function ProductList({ filters }) {
       setError(null); //Clear any previous error messages
 
       //Base query to select all columns from products table
-      let query = supabase.from("products").select("*");
+      let query = supabase.from("products").select("*").eq("is_deleted", false);
 
       //Apply category filter
       if (filters.category) {
@@ -37,8 +37,12 @@ function ProductList({ filters }) {
       }
 
       //Apply condition filter
-      if (filters.condition) {
-        query = query.eq("condition", filters.condition); //Match exact condition
+      if (
+        filters.conditions &&
+        Array.isArray(filters.conditions) &&
+        filters.conditions.length > 0
+      ) {
+        query = query.in("condition", filters.conditions); //Match any of the selected conditions
       }
 
       //Apply bundle filter
@@ -77,7 +81,8 @@ function ProductList({ filters }) {
           {/*Unique key for each product */}
           <h3>{product.name}</h3> {/* Display product name */}
           <p>Price: ${product.price}</p> {/* Display product price */}
-          <p>Condition: {product.condition}</p> {/* Display product condition */}
+          <p>Condition: {product.condition}</p>{" "}
+          {/* Display product condition */}
         </div>
       ))}
     </div>

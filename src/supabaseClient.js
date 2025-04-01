@@ -1,10 +1,22 @@
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://vfjcutqzhhcvqjqjzwaf.supabase.co"; // Replace with your Project URL
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZmamN1dHF6aGhjdnFqcWp6d2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0MTEzOTcsImV4cCI6MjA1NTk4NzM5N30.qj8ZHoelOsaWJpskqYAdlcMegwl1T5mzeIefK7dNUbI"; // Replace with your Anon Key
+// Initialize the Supabase client
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseKey = process.env.REACT_APP_SUPABASE_KEY;
 
-// Create a single instance of the Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Create a single instance of the Supabase client without forced content-type headers
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true, // Default is true - keeps user logged in across page refreshes
+    autoRefreshToken: true, // Default is true - refresh access token before it expires
+  },
+  // Removed global headers that were forcing all requests to be JSON
+  // This allows file uploads to use the correct content type
+});
 
-// Export the single instance
-export { supabase };
+// Note: For local development, add a proxy in package.json:
+// "proxy": "http://localhost:3001"
+// This allows the React app to proxy API requests to our Express server
+
+// Export as default for backward compatibility
+export default supabase;

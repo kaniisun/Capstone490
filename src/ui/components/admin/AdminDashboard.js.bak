@@ -1,0 +1,2332 @@
+import React, { useState, useEffect } from "react";
+import { supabase } from "../../../supabaseClient";
+import { useAuth } from "../../../contexts/AuthContext";
+
+// Material UI imports
+import {
+  Box,
+  Container,
+  Typography,
+  Paper,
+  Tabs,
+  Tab,
+  Grid,
+  Card,
+  CardContent,
+  CardHeader,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  ListItemSecondaryAction,
+  IconButton,
+  Button,
+  Badge,
+  Tooltip,
+  Alert,
+  Snackbar,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  TextField,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
+
+// Icons
+import {
+  Dashboard as DashboardIcon,
+  People as PeopleIcon,
+  Message as MessageIcon,
+  Settings as SettingsIcon,
+  Report as ReportIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Block as BlockIcon,
+  CheckCircle as CheckCircleIcon,
+  InsertChart as InsertChartIcon,
+  FormatListBulleted as ListIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  Refresh as RefreshIcon,
+} from "@mui/icons-material";
+
+// Add a direct SQL helper function near the top of the file, after the imports and before the TabPanel component
+
+// This function executes raw SQL for reliable updates
+// The Karpathy approach: Instead of complex handling of all edge cases,
+// focus on the core functionality with the minimal reliable implementation
+const executeDirectUpdate = async (userId, fieldName, value) => {
+  console.log(
+    `Direct SQL update: Setting ${fieldName}=${value} for user ${userId}`
+  );
+
+  // Try to update by userID first (most likely column name)
+  // This handles schema uncertainty by trying both column name variations
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .update({ [fieldName]: value })
+      .eq("userID", userId)
+      .select();
+
+    if (error) throw error;
+    console.log(`Update successful by userID`, data);
+    return { success: true, data };
+  } catch (err1) {
+    console.warn(`Failed to update by userID:`, err1);
+
+    // Try with id column - this handles different table schemas
+    // where the primary key might be called 'id' instead of 'userID'
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .update({ [fieldName]: value })
+        .eq("id", userId)
+        .select();
+
+      if (error) throw error;
+      console.log(`Update successful by id`, data);
+      return { success: true, data };
+    } catch (err2) {
+      console.error(`All update attempts failed:`, err2);
+      return { success: false, error: err2 };
+    }
+  }
+};
+
+// Tab panel component
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`admin-tabpanel-${index}`}
+      aria-labelledby={`admin-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+}
+
+// Admin Dashboard Component
+const AdminDashboard = () => {
+  const { user, isAdmin, refreshUserData, updateUserRole } = useAuth();
+  const [tabValue, setTabValue] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "info",
+  });
+
+  // Data states
+  const [users, setUsers] = useState([]);
+  const [listings, setListings] = useState([]);
+  const [openboardPosts, setOpenboardPosts] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [reportedMessages, setReportedMessages] = useState([]);
+  const [analytics, setAnalytics] = useState({
+    totalUsers: 0,
+    suspendedUsers: 0,
+    totalListings: 0,
+    suspendedListings: 0,
+    activeListings: 0,
+    totalReports: 0,
+    openboardPostCount: 0,
+    suspendedPostCount: 0,
+  });
+  const [userMap, setUserMap] = useState({});
+
+  // Add state for edit listing dialog
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [currentListing, setCurrentListing] = useState(null);
+  const [editedListing, setEditedListing] = useState({
+    title: "",
+    description: "",
+    price: "",
+    status: "",
+  });
+
+  // Add state for edit user dialog
+  const [editUserDialogOpen, setEditUserDialogOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [editedUser, setEditedUser] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    accountStatus: "",
+    role: "",
+  });
+
+  // Add state to track whether to show suspended content
+  const [showSuspendedContent, setShowSuspendedContent] = useState(false);
+
+  // Toggle suspended content visibility
+  const toggleSuspendedContent = () => {
+    setShowSuspendedContent(!showSuspendedContent);
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      checkTables();
+      fetchAdminData();
+    }
+  }, [isAdmin]);
+
+  const fetchAdminData = async () => {
+    setLoading(true);
+    try {
+      // Fetch users with explicit logging and handle potential column name differences
+      console.log("Fetching users from Supabase...");
+      let userResult;
+
+      // Try standard query first - include all users regardless of status
+      userResult = await supabase.from("users").select("*");
+
+      // If that didn't work, try with different ID column names
+      if (userResult.error) {
+        console.warn(
+          "Initial user query failed, trying with different ID column:",
+          userResult.error
+        );
+        userResult = await supabase.from("users").select("*");
+      }
+
+      if (userResult.error) {
+        console.error("Error fetching users:", userResult.error);
+        throw userResult.error;
+      }
+
+      const userData = userResult.data || [];
+      console.log(`Retrieved ${userData.length} users from database`, userData);
+      setUsers(userData);
+
+      // Create a map of user IDs to user data for quick lookup
+      const userMapData = {};
+      userData.forEach((user) => {
+        // Support both userID and id column names
+        const userId = user.userID || user.id;
+        if (userId) {
+          userMapData[userId] = user;
+        }
+      });
+      setUserMap(userMapData);
+
+      // Try different approaches for fetching products - include ALL listings including suspended ones
+      console.log("Fetching product listings from Supabase...");
+      let productResult;
+
+      // Try standard query first for all products regardless of status
+      productResult = await supabase.from("products").select("*");
+
+      // If that failed, try with a different table name
+      if (productResult.error) {
+        console.warn(
+          "Products query failed, trying 'listings' table:",
+          productResult.error
+        );
+        productResult = await supabase.from("listings").select("*");
+      }
+
+      if (productResult.error) {
+        console.error("Error fetching products:", productResult.error);
+        throw productResult.error;
+      }
+
+      const productData = productResult.data || [];
+      console.log(
+        `Retrieved ${productData.length} products from database (including suspended)`,
+        productData
+      );
+
+      // Map the products to include seller information
+      const enhancedProducts = productData.map((product) => {
+        // Handle possible difference in column naming (userID vs userId vs seller_id)
+        const sellerId = product.userID || product.userId || product.seller_id;
+        const seller = sellerId ? userMapData[sellerId] : null;
+
+        return {
+          ...product,
+          users: seller
+            ? {
+                firstName: seller.firstName || seller.first_name,
+                lastName: seller.lastName || seller.last_name,
+                email: seller.email,
+                accountStatus: seller.accountStatus,
+              }
+            : null,
+          // Ensure every product has a status property, default to "available" if missing
+          status: product.status || "available",
+        };
+      });
+
+      setListings(enhancedProducts);
+
+      // Fetch openboard posts with fallback approaches - include ALL posts including suspended ones
+      console.log("Fetching openboard posts from Supabase...");
+      let openboardResult;
+
+      // Try standard query first
+      openboardResult = await supabase
+        .from("open_board")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      // If that failed, try with a different table name
+      if (openboardResult.error) {
+        console.warn(
+          "Openboard query failed, trying 'community_posts' table:",
+          openboardResult.error
+        );
+        openboardResult = await supabase
+          .from("community_posts")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(50);
+      }
+
+      if (openboardResult.error) {
+        console.error("Error fetching openboard posts:", openboardResult.error);
+        // Don't throw error here, just log it - continue with empty posts
+        setOpenboardPosts([]);
+      } else {
+        const openboardData = openboardResult.data || [];
+        console.log(
+          `Retrieved ${openboardData.length} openboard posts from database (including suspended)`,
+          openboardData
+        );
+
+        // Ensure every post has a status property, default to "active" if missing
+        const enhancedPosts = openboardData.map((post) => ({
+          ...post,
+          status: post.status || "active",
+        }));
+
+        setOpenboardPosts(enhancedPosts);
+      }
+
+      // NEW: Fetch reported messages
+      console.log("Fetching reported messages from Supabase...");
+      try {
+        // Based on the screenshot, the table has reported_at instead of created_at
+        // and has reported_by and message_id as UUIDs
+        const { data: reportedData, error: reportedError } = await supabase
+          .from("reported_messages")
+          .select("*, users!reported_messages_reported_by_fkey(*)") // Join with users table through the FK
+          .order("reported_at", { ascending: false });
+
+        if (reportedError) {
+          console.error("Error fetching reported messages:", reportedError);
+          console.log("Trying reported messages without ordering...");
+
+          // Second try - without ordering by reported_at
+          const { data: unorderedData, error: unorderedError } = await supabase
+            .from("reported_messages")
+            .select("*, users!reported_messages_reported_by_fkey(*)");
+
+          if (unorderedError) {
+            console.error("Error with unordered fetch:", unorderedError);
+
+            // Third try - simple select without joins
+            console.log("Trying simple reported messages query...");
+            const { data: simpleReportedData, error: simpleReportedError } =
+              await supabase.from("reported_messages").select("*");
+
+            if (simpleReportedError) {
+              console.error(
+                "Error fetching simple reported messages:",
+                simpleReportedError
+              );
+              // Initialize with empty array to prevent errors
+              setReportedMessages([]);
+              setAnalytics((prev) => ({
+                ...prev,
+                totalReports: 0,
+              }));
+            } else {
+              console.log(
+                `Retrieved ${simpleReportedData.length} reported messages (simple query)`
+              );
+              console.log("Sample data:", simpleReportedData[0] || "No data");
+              setReportedMessages(simpleReportedData);
+              setAnalytics((prev) => ({
+                ...prev,
+                totalReports: simpleReportedData.length,
+              }));
+            }
+          } else {
+            console.log(
+              `Retrieved ${unorderedData.length} reported messages (unordered)`
+            );
+            console.log("Sample data:", unorderedData[0] || "No data");
+            setReportedMessages(unorderedData);
+            setAnalytics((prev) => ({
+              ...prev,
+              totalReports: unorderedData.length,
+            }));
+          }
+        } else {
+          console.log(`Retrieved ${reportedData.length} reported messages`);
+          setReportedMessages(reportedData);
+          setAnalytics((prev) => ({
+            ...prev,
+            totalReports: reportedData.length,
+          }));
+        }
+      } catch (reportedErr) {
+        console.error("Exception fetching reported messages:", reportedErr);
+        // Ensure we have an empty array if there's an exception
+        setReportedMessages([]);
+      }
+
+      // Calculate active (non-suspended, available) listings count
+      const availableListings = productData.filter((p) => {
+        return (
+          (p.status === "available" || p.status === "Available") &&
+          p.status !== "suspended"
+        );
+      }).length;
+
+      // Count suspended listings
+      const suspendedListings = productData.filter(
+        (p) => p.status === "suspended"
+      ).length;
+      console.log(
+        `Found ${suspendedListings} suspended listings out of ${productData.length} total`
+      );
+
+      // Count suspended openboard posts
+      const suspendedPosts =
+        openboardResult.data?.filter((p) => p.status === "suspended").length ||
+        0;
+      console.log(
+        `Found ${suspendedPosts} suspended posts out of ${
+          openboardResult.data?.length || 0
+        } total`
+      );
+
+      // Count suspended users
+      const suspendedUsers = userData.filter(
+        (u) => u.accountStatus === "suspended"
+      ).length;
+      console.log(
+        `Found ${suspendedUsers} suspended users out of ${userData.length} total`
+      );
+
+      // Analytics calculation
+      setAnalytics({
+        totalUsers: userData.length,
+        suspendedUsers: suspendedUsers,
+        totalListings: productData.length,
+        suspendedListings: suspendedListings,
+        activeListings: availableListings,
+        totalReports: reportedMessages.length || 0,
+        openboardPostCount: openboardResult.data?.length || 0,
+        suspendedPostCount: suspendedPosts,
+      });
+
+      // If we got here without errors but no data, show a warning
+      if (userData.length === 0 && productData.length === 0) {
+        setSnackbar({
+          open: true,
+          message:
+            "Connection to Supabase successful, but no data found in the database. Ensure tables have data.",
+          severity: "warning",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching admin data:", error);
+      console.error("Error details:", error.message, error.stack);
+      setSnackbar({
+        open: true,
+        message: `Error loading admin data: ${error.message}. Check console for details.`,
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    event.preventDefault(); // Prevent default
+    event.stopPropagation(); // Stop propagation
+
+    // Set a flag to prevent multiple executions
+    if (event.target._tabChangeHandled) return;
+    event.target._tabChangeHandled = true;
+
+    // Change the tab value
+    setTabValue(newValue);
+
+    // Update URL without page refresh
+    if (newValue === 0) {
+      window.history.replaceState(null, "", "#users");
+    } else if (newValue === 1) {
+      window.history.replaceState(null, "", "#listings");
+    } else if (newValue === 2) {
+      window.history.replaceState(null, "", "#posts");
+    } else if (newValue === 3) {
+      window.history.replaceState(null, "", "#reports");
+    } else if (newValue === 4) {
+      window.history.replaceState(null, "", "#analytics");
+    } else if (newValue === 5) {
+      window.history.replaceState(null, "", "#settings");
+    }
+
+    // Reset the flag
+    setTimeout(() => {
+      event.target._tabChangeHandled = false;
+    }, 100);
+
+    return false;
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  // User Management Functions
+  const handleSuspendUser = async (user) => {
+    const newStatus = "nonactive"; // Always set to nonactive for suspension
+
+    try {
+      // Update UI first (optimistic update)
+      setUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.userID === user.userID || u.id === user.id
+            ? { ...u, accountStatus: newStatus }
+            : u
+        )
+      );
+
+      // Update database
+      const { error } = await supabase
+        .from("users")
+        .update({ accountStatus: newStatus })
+        .eq("userID", user.userID);
+
+      if (error) {
+        // Try with id as fallback
+        const { error: retryError } = await supabase
+          .from("users")
+          .update({ accountStatus: newStatus })
+          .eq("id", user.id || user.userID);
+
+        if (retryError) {
+          throw new Error(retryError.message);
+        }
+      }
+
+      // Show feedback
+      setSnackbar({
+        open: true,
+        message: "User has been suspended",
+        severity: "success",
+      });
+
+      // Refresh data after a delay to confirm changes
+      setTimeout(() => {
+        fetchAdminData();
+      }, 1000);
+    } catch (error) {
+      console.error("Status update failed:", error);
+
+      // Revert UI on failure
+      setUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.userID === user.userID || u.id === user.id
+            ? { ...u, accountStatus: user.accountStatus }
+            : u
+        )
+      );
+
+      // Show error message
+      setSnackbar({
+        open: true,
+        message: "Failed to suspend user: " + error.message,
+        severity: "error",
+      });
+    }
+  };
+
+  // Simple reinstate user function
+  const handleUnsuspendUser = async (user) => {
+    const newStatus = "active"; // Always set to active for reinstatement
+
+    try {
+      // Update UI first (optimistic update)
+      setUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.userID === user.userID || u.id === user.id
+            ? { ...u, accountStatus: newStatus }
+            : u
+        )
+      );
+
+      // Update database
+      const { error } = await supabase
+        .from("users")
+        .update({ accountStatus: newStatus })
+        .eq("userID", user.userID);
+
+      if (error) {
+        // Try with id as fallback
+        const { error: retryError } = await supabase
+          .from("users")
+          .update({ accountStatus: newStatus })
+          .eq("id", user.id || user.userID);
+
+        if (retryError) {
+          throw new Error(retryError.message);
+        }
+      }
+
+      // Show feedback
+      setSnackbar({
+        open: true,
+        message: "User has been reinstated",
+        severity: "success",
+      });
+
+      // Refresh data after a delay to confirm changes
+      setTimeout(() => {
+        fetchAdminData();
+      }, 1000);
+    } catch (error) {
+      console.error("Status update failed:", error);
+
+      // Revert UI on failure
+      setUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.userID === user.userID || u.id === user.id
+            ? { ...u, accountStatus: user.accountStatus }
+            : u
+        )
+      );
+
+      // Show error message
+      setSnackbar({
+        open: true,
+        message: "Failed to reinstate user: " + error.message,
+        severity: "error",
+      });
+    }
+  };
+
+  // Simplify role change function with Karpathy approach - do one thing well
+  const handleRoleChange = async (user) => {
+    // 1. Define the new role (toggle between admin and regular user)
+    const newRole = user.role === "admin" ? "user" : "admin";
+
+    try {
+      // 2. Update UI first (optimistic update)
+      setUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.userID === user.userID || u.id === user.id
+            ? { ...u, role: newRole }
+            : u
+        )
+      );
+
+      // 3. Simple database update
+      const { error } = await supabase
+        .from("users")
+        .update({ role: newRole })
+        .eq("userID", user.userID);
+
+      if (error) {
+        // Try with id as fallback
+        const { error: retryError } = await supabase
+          .from("users")
+          .update({ role: newRole })
+          .eq("id", user.id || user.userID);
+
+        if (retryError) {
+          throw new Error(retryError.message);
+        }
+      }
+
+      // 4. Show feedback
+      setSnackbar({
+        open: true,
+        message: `User role updated to ${newRole}`,
+        severity: "success",
+      });
+
+      // 5. Refresh data after a delay to confirm changes
+      setTimeout(() => {
+        fetchAdminData();
+      }, 1000);
+    } catch (error) {
+      console.error("Role update failed:", error);
+
+      // 6. Revert UI on failure
+      setUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.userID === user.userID || u.id === user.id
+            ? { ...u, role: user.role }
+            : u
+        )
+      );
+
+      // 7. Show error message
+      setSnackbar({
+        open: true,
+        message: "Failed to update role: " + error.message,
+        severity: "error",
+      });
+    }
+  };
+
+  // Add function to handle database table initialization
+  const showDatabaseHelp = () => {
+    setSnackbar({
+      open: true,
+      message:
+        "Please check your Supabase connection and make sure all required tables exist.",
+      severity: "warning",
+    });
+  };
+
+  // Add function to check Supabase environment variables
+  const checkSupabaseEnv = () => {
+    const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+    const supabaseKey = process.env.REACT_APP_SUPABASE_KEY;
+
+    // Only show first few characters of key for security
+    const maskedKey = supabaseKey
+      ? `${supabaseKey.substring(0, 5)}...${supabaseKey.substring(
+          supabaseKey.length - 5
+        )}`
+      : "not set";
+
+    const result = {
+      url: supabaseUrl || "not set",
+      keyStatus: supabaseKey ? "set" : "not set",
+      maskedKey,
+      valid: !!(supabaseUrl && supabaseKey),
+    };
+
+    console.log("Supabase environment check:", result);
+
+    // Show alert with info
+    setSnackbar({
+      open: true,
+      message: `Supabase URL: ${result.url} | Key: ${result.keyStatus}${
+        result.valid ? "" : " - ENVIRONMENT VARIABLES MAY BE MISSING!"
+      }`,
+      severity: result.valid ? "info" : "error",
+    });
+
+    return result;
+  };
+
+  // New function to handle dismissing a reported message
+  const handleDismissReport = async (reportId) => {
+    try {
+      const { error } = await supabase
+        .from("reported_messages")
+        .delete()
+        .eq("id", reportId);
+
+      if (error) throw error;
+
+      // Update local state
+      setReportedMessages(
+        reportedMessages.filter((report) => report.id !== reportId)
+      );
+
+      // Update analytics count
+      setAnalytics((prev) => ({
+        ...prev,
+        totalReports: prev.totalReports - 1,
+      }));
+
+      setSnackbar({
+        open: true,
+        message: "Report dismissed successfully",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error dismissing report:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error dismissing report: ${error.message}`,
+        severity: "error",
+      });
+    }
+  };
+
+  // New function to handle viewing the reported message
+  const viewReportedMessage = async (messageId) => {
+    try {
+      // Fetch the full message details from the messages table
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("id", messageId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      // Here you could open a dialog to show the message details
+      // For now, we'll just show an alert with the message content
+      setSnackbar({
+        open: true,
+        message: `Reported Message Content: ${
+          data.content || "No content available"
+        }`,
+        severity: "info",
+      });
+    } catch (error) {
+      console.error("Error viewing reported message:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error viewing message: ${error.message}`,
+        severity: "error",
+      });
+    }
+  };
+
+  // New helper function to filter suspended content from UI
+  const filterSuspendedContent = (item) => {
+    // Don't show items with "suspended" status in the UI
+    return item.status !== "suspended";
+  };
+
+  // Function to check if required tables exist in Supabase
+  const checkTables = async () => {
+    try {
+      // Use a simpler query structure with a known column instead of count(*)
+      const { data, error } = await supabase
+        .from("users")
+        .select("userID") // Select a known column
+        .limit(1); // Just get one record to verify table exists
+
+      if (error) {
+        console.error("Error checking tables:", error.message);
+        setSnackbar({
+          open: true,
+          message: `Database connection issue: ${error.message}`,
+          severity: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Error checking database:", error);
+    }
+  };
+
+  // Functions for handling edit listing dialog
+  const handleOpenEditDialog = (listing) => {
+    setCurrentListing(listing);
+    setEditedListing({
+      title: listing.title || "",
+      description: listing.description || "",
+      price: listing.price || "",
+      status: listing.status || "available",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setCurrentListing(null);
+    setEditedListing({
+      title: "",
+      description: "",
+      price: "",
+      status: "",
+    });
+  };
+
+  const handleEditInputChange = (event) => {
+    const { name, value } = event.target;
+    setEditedListing({
+      ...editedListing,
+      [name]: value,
+    });
+  };
+
+  const handleSaveEditedListing = async () => {
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({
+          title: editedListing.title,
+          description: editedListing.description,
+          price: editedListing.price,
+          status: editedListing.status,
+          modified_at: new Date().toISOString(),
+        })
+        .eq("id", currentListing.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setListings(
+        listings.map((listing) =>
+          listing.id === currentListing.id
+            ? { ...listing, ...editedListing }
+            : listing
+        )
+      );
+
+      setSnackbar({
+        open: true,
+        message: "Listing updated successfully",
+        severity: "success",
+      });
+
+      handleCloseEditDialog();
+    } catch (error) {
+      console.error("Error updating listing:", error);
+      setSnackbar({
+        open: true,
+        message: `Error updating listing: ${error.message}`,
+        severity: "error",
+      });
+    }
+  };
+
+  // Functions for handling edit user dialog
+  const handleOpenEditUserDialog = (user) => {
+    setCurrentUser(user);
+    setEditedUser({
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      email: user.email || "",
+      accountStatus: user.accountStatus || "active",
+      role: user.role || "user",
+    });
+    setEditUserDialogOpen(true);
+  };
+
+  const handleCloseEditUserDialog = () => {
+    setEditUserDialogOpen(false);
+    setCurrentUser(null);
+    setEditedUser({
+      firstName: "",
+      lastName: "",
+      email: "",
+      accountStatus: "",
+      role: "",
+    });
+  };
+
+  const handleEditUserInputChange = (event) => {
+    const { name, value } = event.target;
+    setEditedUser({
+      ...editedUser,
+      [name]: value,
+    });
+  };
+
+  const handleSaveEditedUser = async () => {
+    try {
+      // Use our direct update helper
+      const result = await supabase
+        .from("users")
+        .update({
+          firstName: editedUser.firstName,
+          lastName: editedUser.lastName,
+          email: editedUser.email,
+          accountStatus: editedUser.accountStatus,
+          role: editedUser.role,
+          modified_at: new Date().toISOString(),
+        })
+        .eq("userID", currentUser.userID)
+        .select();
+
+      if (result.error) throw result.error;
+
+      // Update local state
+      setUsers(
+        users.map((user) =>
+          user.userID === currentUser.userID ? { ...user, ...editedUser } : user
+        )
+      );
+
+      setSnackbar({
+        open: true,
+        message: "User updated successfully",
+        severity: "success",
+      });
+
+      handleCloseEditUserDialog();
+    } catch (error) {
+      console.error("Error updating user:", error);
+      setSnackbar({
+        open: true,
+        message: `Error updating user: ${error.message}`,
+        severity: "error",
+      });
+    }
+  };
+
+  // Function to delete a listing
+  const handleDeleteListing = async (listingId) => {
+    try {
+      // Check if user confirms deletion
+      if (!window.confirm("Are you sure you want to delete this listing?")) {
+        return;
+      }
+
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", listingId);
+
+      if (error) throw error;
+
+      // Update local state
+      setListings(listings.filter((listing) => listing.id !== listingId));
+
+      setAnalytics((prev) => ({
+        ...prev,
+        totalListings: prev.totalListings - 1,
+      }));
+
+      setSnackbar({
+        open: true,
+        message: "Listing deleted successfully",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error deleting listing:", error);
+      setSnackbar({
+        open: true,
+        message: `Error deleting listing: ${error.message}`,
+        severity: "error",
+      });
+    }
+  };
+
+  // Function to delete an openboard post
+  const handleDeleteOpenBoardPost = async (postId) => {
+    try {
+      // Check if user confirms deletion
+      if (
+        !window.confirm("Are you sure you want to delete this community post?")
+      ) {
+        return;
+      }
+
+      const { error } = await supabase
+        .from("open_board")
+        .delete()
+        .eq("open_board_id", postId);
+
+      if (error) throw error;
+
+      // Update local state
+      setOpenboardPosts(
+        openboardPosts.filter((post) => post.open_board_id !== postId)
+      );
+
+      setAnalytics((prev) => ({
+        ...prev,
+        openboardPostCount: prev.openboardPostCount - 1,
+      }));
+
+      setSnackbar({
+        open: true,
+        message: "Community post deleted successfully",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error deleting community post:", error);
+      setSnackbar({
+        open: true,
+        message: `Error deleting community post: ${error.message}`,
+        severity: "error",
+      });
+    }
+  };
+
+  // Add the preventFormSubmission function definition that was used but is missing
+  const preventFormSubmission = (e, actionFn) => {
+    // Stop event propagation and prevent default completely
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    // Find any parent form element that might be causing submissions
+    let element = e.target;
+    while (element && element.tagName !== "FORM") {
+      element = element.parentElement;
+    }
+
+    // If we found a parent form, prevent its default action
+    if (element && element.tagName === "FORM") {
+      console.log("Found parent form, preventing submission");
+      element.onsubmit = (formEvent) => {
+        formEvent.preventDefault();
+        return false;
+      };
+    }
+
+    // Execute the actual function
+    if (typeof actionFn === "function") {
+      actionFn();
+    }
+
+    return false; // Return false for good measure
+  };
+
+  // Add a dedicated function to verify if changes were saved to database
+  const verifyUserChanges = async (userId) => {
+    try {
+      console.log("Verifying database changes for user:", userId);
+
+      // Try to fetch the user directly from the database
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("userID", userId)
+        .single();
+
+      if (error) {
+        console.log("Error fetching user with userID:", error.message);
+
+        // Try with id column
+        const { data: retryData, error: retryError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", userId)
+          .single();
+
+        if (retryError) {
+          console.error("Could not verify user in database:", retryError);
+          return null;
+        }
+
+        console.log("User verified in database (using id):", retryData);
+        return retryData;
+      }
+
+      console.log("User verified in database (using userID):", data);
+      return data;
+    } catch (error) {
+      console.error("Error in verification:", error);
+      return null;
+    }
+  };
+
+  // Add a function to run after handleRoleChange and handleSuspendUser
+  const modifyAndVerify = async (userId, updateFunction) => {
+    try {
+      await updateFunction();
+
+      // Wait briefly for database to update
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Verify the changes
+      const userData = await verifyUserChanges(userId);
+      if (userData) {
+        console.log("Database verification complete:", userData);
+        return true;
+      } else {
+        console.warn("Could not verify database update");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in modify and verify:", error);
+      return false;
+    }
+  };
+
+  // If loading
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "80vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Container
+      maxWidth="lg"
+      sx={{ mt: 4, mb: 4 }}
+      onClick={(e) => {
+        // Find and neutralize any forms that might be causing unwanted submissions
+        const form = e.target.closest("form");
+        if (form) {
+          console.log("Found a form, preventing default submission behavior");
+          form.setAttribute("onsubmit", "return false;");
+          form.onsubmit = (formEvent) => {
+            formEvent.preventDefault();
+            return false;
+          };
+        }
+      }}
+    >
+      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <Typography
+              variant="h4"
+              component="h1"
+              gutterBottom
+              key="dashboard-title"
+            >
+              Admin Dashboard
+            </Typography>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              paragraph
+              key="dashboard-subtitle"
+            >
+              Manage users, content, and site settings as an administrator.
+            </Typography>
+          </div>
+        </Box>
+      </Paper>
+
+      <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          aria-label="admin dashboard tabs"
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ mb: 2 }}
+          // Prevent any form submission events from bubbling
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }}
+        >
+          <Tab
+            icon={<DashboardIcon />}
+            label="Overview"
+            id="admin-tab-0"
+            aria-controls="admin-tabpanel-0"
+            key="admin-tab-0"
+          />
+          <Tab
+            icon={<PeopleIcon />}
+            label="User Management"
+            id="admin-tab-1"
+            aria-controls="admin-tabpanel-1"
+            key="admin-tab-1"
+          />
+          <Tab
+            icon={<ListIcon />}
+            label="Content Moderation"
+            id="admin-tab-2"
+            aria-controls="admin-tabpanel-2"
+            key="admin-tab-2"
+          />
+          <Tab
+            icon={<ReportIcon />}
+            label="Reports"
+            id="admin-tab-3"
+            aria-controls="admin-tabpanel-3"
+            key="admin-tab-3"
+          />
+          <Tab
+            icon={<InsertChartIcon />}
+            label="Analytics"
+            id="admin-tab-4"
+            aria-controls="admin-tabpanel-4"
+            key="admin-tab-4"
+          />
+          <Tab
+            icon={<SettingsIcon />}
+            label="Settings"
+            id="admin-tab-5"
+            aria-controls="admin-tabpanel-5"
+            key="admin-tab-5"
+          />
+        </Tabs>
+      </Box>
+
+      {/* Overview Tab */}
+      <TabPanel value={tabValue} index={0}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={3} key="analytics-users">
+            <Card>
+              <CardContent>
+                <Typography
+                  color="text.secondary"
+                  gutterBottom
+                  key="total-users-label"
+                >
+                  Total Users
+                </Typography>
+                <Typography
+                  variant="h5"
+                  component="div"
+                  key="total-users-value"
+                >
+                  {analytics.totalUsers}
+                </Typography>
+                {analytics.suspendedUsers > 0 && (
+                  <Typography
+                    key="suspended-users-count"
+                    variant="caption"
+                    color="warning.main"
+                  >
+                    ({analytics.suspendedUsers} suspended)
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3} key="analytics-listings">
+            <Card>
+              <CardContent>
+                <Typography
+                  color="text.secondary"
+                  gutterBottom
+                  key="total-listings-label"
+                >
+                  Total Listings
+                </Typography>
+                <Typography
+                  variant="h5"
+                  component="div"
+                  key="total-listings-value"
+                >
+                  {analytics.totalListings}
+                </Typography>
+                {analytics.suspendedListings > 0 && (
+                  <Typography
+                    key="suspended-listings-count"
+                    variant="caption"
+                    color="warning.main"
+                  >
+                    ({analytics.suspendedListings} suspended)
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3} key="analytics-active-listings">
+            <Card>
+              <CardContent>
+                <Typography
+                  color="text.secondary"
+                  gutterBottom
+                  key="active-listings-label"
+                >
+                  Active Listings
+                </Typography>
+                <Typography
+                  variant="h5"
+                  component="div"
+                  key="active-listings-value"
+                >
+                  {analytics.activeListings}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3} key="analytics-reports">
+            <Card>
+              <CardContent>
+                <Typography
+                  color="text.secondary"
+                  gutterBottom
+                  key="reports-label"
+                >
+                  Reports
+                </Typography>
+                <Typography variant="h5" component="div" key="reports-value">
+                  {analytics.totalReports}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3} key="analytics-community-posts">
+            <Card>
+              <CardContent>
+                <Typography
+                  color="text.secondary"
+                  gutterBottom
+                  key="community-posts-label"
+                >
+                  Community Posts
+                </Typography>
+                <Typography
+                  variant="h5"
+                  component="div"
+                  key="community-posts-value"
+                >
+                  {analytics.openboardPostCount}
+                </Typography>
+                {analytics.suspendedPostCount > 0 && (
+                  <Typography
+                    key="suspended-posts-count"
+                    variant="caption"
+                    color="warning.main"
+                  >
+                    ({analytics.suspendedPostCount} suspended)
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Suspension Guide */}
+        <Paper sx={{ mt: 3, p: 3, bgcolor: "rgba(255, 235, 205, 0.2)" }}>
+          <Typography variant="h6" gutterBottom key="suspension-guide-heading">
+            User Suspension Guide
+          </Typography>
+
+          <Typography variant="body1" paragraph key="suspension-guide-intro">
+            When you suspend a user, the following happens:
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6} key="suspension-guide-left">
+              <List>
+                <ListItem key="suspension-item-1">
+                  <ListItemIcon>
+                    <BlockIcon color="warning" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="The user's account status is set to 'suspended'"
+                    secondary="This is stored in the Supabase database"
+                  />
+                </ListItem>
+                <ListItem key="suspension-item-2">
+                  <ListItemIcon>
+                    <BlockIcon color="warning" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="All of the user's product listings are hidden"
+                    secondary="They're marked as 'suspended' but the previous status is saved"
+                  />
+                </ListItem>
+                <ListItem key="suspension-item-3">
+                  <ListItemIcon>
+                    <BlockIcon color="warning" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="All of the user's community posts are hidden"
+                    secondary="They're marked as 'suspended' but the previous status is saved"
+                  />
+                </ListItem>
+              </List>
+            </Grid>
+            <Grid item xs={12} md={6} key="suspension-guide-right">
+              <List>
+                <ListItem key="reinstate-item-1">
+                  <ListItemIcon>
+                    <CheckCircleIcon color="success" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="When reinstating a user, all content is restored"
+                    secondary="Previous status values are used to restore posts/listings"
+                  />
+                </ListItem>
+                <ListItem key="reinstate-item-2">
+                  <ListItemIcon>
+                    <CheckCircleIcon color="success" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="In the Content Moderation tab, you can view suspended content"
+                    secondary="Use the 'Show Suspended Content' button to view hidden items"
+                  />
+                </ListItem>
+                <ListItem key="reinstate-item-3">
+                  <ListItemIcon>
+                    <CheckCircleIcon color="success" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="No content is permanently deleted during suspension"
+                    secondary="This allows for easy reversal if a suspension was in error"
+                  />
+                </ListItem>
+              </List>
+            </Grid>
+          </Grid>
+        </Paper>
+
+        {/* Database Diagnostic Section */}
+        {(analytics.totalUsers === 0 || analytics.totalListings === 0) && (
+          <Paper sx={{ mt: 3, p: 3, bgcolor: "rgba(255, 0, 0, 0.05)" }}>
+            <Typography variant="h6" gutterBottom>
+              Database Connection Diagnostics
+            </Typography>
+
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {analytics.totalUsers === 0 && analytics.totalListings === 0
+                ? "No users or listings found in the database. This might indicate a connection issue."
+                : analytics.totalUsers === 0
+                ? "No users found in the database. This might indicate an issue with the users table."
+                : "No listings found in the database. This might indicate an issue with the products table."}
+            </Alert>
+
+            <Typography variant="body1" paragraph>
+              Please check the following:
+            </Typography>
+
+            <ul>
+              <li key="diag-check-1">
+                Verify that your Supabase project is running and accessible
+              </li>
+              <li key="diag-check-2">
+                Check that the environment variables (REACT_APP_SUPABASE_URL and
+                REACT_APP_SUPABASE_KEY) are correctly set
+              </li>
+              <li key="diag-check-3">
+                Confirm that the "users" and "products" tables exist in your
+                Supabase database
+              </li>
+              <li key="diag-check-4">
+                Ensure the tables have the correct column names (userID,
+                firstName, lastName, etc. for users; id, title, price, status,
+                etc. for products)
+              </li>
+              <li key="diag-check-5">
+                Check browser console for detailed error messages
+              </li>
+            </ul>
+
+            <Box sx={{ mt: 2, display: "flex", gap: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => {
+                  setLoading(true);
+                  fetchAdminData();
+                }}
+              >
+                Retry Connection
+              </Button>
+
+              <Button variant="outlined" onClick={() => showDatabaseHelp()}>
+                Show Technical Details
+              </Button>
+
+              <Button
+                variant="outlined"
+                color="info"
+                onClick={() => checkSupabaseEnv()}
+              >
+                Check Environment
+              </Button>
+            </Box>
+          </Paper>
+        )}
+      </TabPanel>
+
+      {/* User Management Tab */}
+      <TabPanel value={tabValue} index={1}>
+        <Box sx={{ mb: 2 }}>
+          <Alert
+            severity="info"
+            sx={{ mb: 2 }}
+            key="user-management-info-alert"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => fetchAdminData()}
+                key="refresh-button"
+              >
+                Refresh
+              </Button>
+            }
+          >
+            <Typography variant="body2" component="div">
+              Manage registered users and their roles. Users with the admin role
+              can:
+              <ul>
+                <li key="admin-capability-1">View all users</li>
+                <li key="admin-capability-2">Suspend or reinstate users</li>
+                <li key="admin-capability-3">Manage product listings</li>
+                <li key="admin-capability-4">Moderate community posts</li>
+              </ul>
+            </Typography>
+          </Alert>
+        </Box>
+
+        {/* Disable default form submission */}
+        <Box
+          component="div"
+          onSubmit={(e) => {
+            console.log("Preventing list area form submission");
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }}
+          onClick={(e) => {
+            const closest = e.target.closest("form");
+            if (closest) {
+              console.log("Found form in list click event, neutralizing");
+              closest.onsubmit = (formEvent) => {
+                formEvent.preventDefault();
+                formEvent.stopPropagation();
+                return false;
+              };
+            }
+          }}
+          sx={{ width: "100%" }}
+        >
+          <Paper sx={{ width: "100%", overflowX: "hidden", maxWidth: "100%" }}>
+            <List disablePadding>
+              {users.length === 0 ? (
+                <ListItem key="no-users">
+                  <ListItemText
+                    primary={
+                      <React.Fragment key="no-users-text">
+                        No users found
+                      </React.Fragment>
+                    }
+                  />
+                </ListItem>
+              ) : (
+                users.map((user) => (
+                  <React.Fragment key={user.userID}>
+                    <ListItem
+                      sx={{
+                        display: "flex",
+                        flexDirection: "row",
+                        py: 1.5,
+                        pr: 2,
+                        width: "100%",
+                        maxWidth: "100%",
+                        bgcolor:
+                          user.accountStatus === "suspended" ||
+                          user.accountStatus === "nonactive"
+                            ? "rgba(255, 152, 0, 0.1)"
+                            : user.role === "admin"
+                            ? "rgba(25, 118, 210, 0.1)"
+                            : "transparent",
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 36 }}>
+                        {user.role === "admin" ? (
+                          <AdminPanelSettingsIcon color="primary" />
+                        ) : (
+                          <PeopleIcon fontSize="small" />
+                        )}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <React.Fragment key={`user-name-${user.userID}`}>
+                            {`${user.firstName || ""} ${user.lastName || ""}` ||
+                              user.email}
+                            {(user.accountStatus === "suspended" ||
+                              user.accountStatus === "nonactive") && (
+                              <Typography
+                                key={`suspended-flag-${user.userID}`}
+                                component="span"
+                                variant="caption"
+                                color="warning.main"
+                                sx={{ ml: 1, fontWeight: "bold" }}
+                              >
+                                (SUSPENDED)
+                              </Typography>
+                            )}
+                            {user.role === "admin" && (
+                              <Typography
+                                key={`admin-flag-${user.userID}`}
+                                component="span"
+                                variant="caption"
+                                color="primary"
+                                sx={{ ml: 1, fontWeight: "bold" }}
+                              >
+                                (ADMIN)
+                              </Typography>
+                            )}
+                          </React.Fragment>
+                        }
+                        secondary={
+                          <React.Fragment key={`user-details-${user.userID}`}>
+                            Email: {user.email} |
+                            <Typography
+                              key={`user-role-${user.userID}`}
+                              component="span"
+                              color={
+                                user.role === "admin"
+                                  ? "primary.main"
+                                  : "text.secondary"
+                              }
+                              sx={{
+                                fontWeight:
+                                  user.role === "admin" ? "bold" : "normal",
+                              }}
+                            >
+                              Role: {user.role || "user"}
+                            </Typography>{" "}
+                            | Status:{" "}
+                            <Typography
+                              key={`user-status-${user.userID}`}
+                              component="span"
+                              color={
+                                user.accountStatus === "suspended" ||
+                                user.accountStatus === "nonactive"
+                                  ? "warning.main"
+                                  : "success.main"
+                              }
+                              sx={{ fontWeight: "bold" }}
+                            >
+                              {user.accountStatus === "nonactive"
+                                ? "suspended"
+                                : user.accountStatus || "active"}
+                            </Typography>
+                          </React.Fragment>
+                        }
+                        sx={{
+                          flex: "1 1 auto",
+                          mr: 1,
+                          maxWidth: "calc(100% - 120px)",
+                        }}
+                      />
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 0.5,
+                          flexShrink: 0,
+                          alignItems: "center",
+                          width: "auto",
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        {user.accountStatus === "suspended" ||
+                        user.accountStatus === "nonactive" ? (
+                          <Tooltip title="Reinstate User">
+                            <IconButton
+                              size="small"
+                              type="button"
+                              onClick={(e) => {
+                                if (e) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (e.nativeEvent) {
+                                    e.nativeEvent.stopImmediatePropagation();
+                                  }
+                                }
+
+                                // Find any parent form and prevent its submission
+                                let element = e.target;
+                                while (element && element.tagName !== "FORM") {
+                                  element = element.parentElement;
+                                }
+                                if (element) {
+                                  element.onsubmit = (formEvent) => {
+                                    if (formEvent) {
+                                      formEvent.preventDefault();
+                                      formEvent.stopPropagation();
+                                    }
+                                    return false;
+                                  };
+                                }
+
+                                // Call the function with a small delay to break event chain
+                                setTimeout(() => {
+                                  handleUnsuspendUser(user);
+                                }, 10);
+
+                                return false;
+                              }}
+                              sx={{ padding: 0.5 }}
+                              onMouseDown={(e) => e.preventDefault()}
+                            >
+                              <CheckCircleIcon
+                                fontSize="small"
+                                color="success"
+                              />
+                            </IconButton>
+                          </Tooltip>
+                        ) : (
+                          <Tooltip title="Suspend User">
+                            <IconButton
+                              size="small"
+                              type="button"
+                              onClick={(e) => {
+                                if (e) {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (e.nativeEvent) {
+                                    e.nativeEvent.stopImmediatePropagation();
+                                  }
+                                }
+
+                                // Find any parent form and prevent its submission
+                                let element = e.target;
+                                while (element && element.tagName !== "FORM") {
+                                  element = element.parentElement;
+                                }
+                                if (element) {
+                                  element.onsubmit = (formEvent) => {
+                                    if (formEvent) {
+                                      formEvent.preventDefault();
+                                      formEvent.stopPropagation();
+                                    }
+                                    return false;
+                                  };
+                                }
+
+                                // Call the function with a small delay to break event chain
+                                setTimeout(() => {
+                                  handleSuspendUser(user);
+                                }, 10);
+
+                                return false;
+                              }}
+                              sx={{ padding: 0.5 }}
+                              onMouseDown={(e) => e.preventDefault()}
+                            >
+                              <BlockIcon fontSize="small" color="warning" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+
+                        <Tooltip
+                          title={
+                            user.role === "admin"
+                              ? "Remove Admin Privileges"
+                              : "Make Admin"
+                          }
+                        >
+                          <IconButton
+                            size="small"
+                            type="button"
+                            onClick={(e) => {
+                              if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (e.nativeEvent) {
+                                  e.nativeEvent.stopImmediatePropagation();
+                                }
+                              }
+
+                              // Find any parent form and prevent its submission
+                              let element = e.target;
+                              while (element && element.tagName !== "FORM") {
+                                element = element.parentElement;
+                              }
+                              if (element) {
+                                element.onsubmit = (formEvent) => {
+                                  if (formEvent) {
+                                    formEvent.preventDefault();
+                                    formEvent.stopPropagation();
+                                  }
+                                  return false;
+                                };
+                              }
+
+                              // Call the function with a small delay to break event chain
+                              setTimeout(() => {
+                                handleRoleChange(user);
+                              }, 10);
+
+                              return false;
+                            }}
+                            sx={{ padding: 0.5 }}
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
+                            {user.role === "admin" ? (
+                              <PeopleIcon fontSize="small" color="primary" />
+                            ) : (
+                              <AdminPanelSettingsIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Edit User">
+                          <IconButton
+                            size="small"
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleOpenEditUserDialog(user);
+                            }}
+                            sx={{ padding: 0.5 }}
+                            onMouseDown={(e) => e.preventDefault()}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </ListItem>
+                    <Divider component="li" />
+                  </React.Fragment>
+                ))
+              )}
+            </List>
+          </Paper>
+        </Box>
+      </TabPanel>
+
+      {/* Content Moderation Tab */}
+      <TabPanel value={tabValue} index={2}>
+        <Box sx={{ mb: 2 }}>
+          <Button
+            variant="outlined"
+            color={showSuspendedContent ? "warning" : "primary"}
+            onClick={toggleSuspendedContent}
+            startIcon={
+              showSuspendedContent ? <BlockIcon /> : <CheckCircleIcon />
+            }
+            key="toggle-suspended-content-button"
+          >
+            {showSuspendedContent
+              ? "Hide Suspended Content"
+              : "Show Suspended Content"}
+          </Button>
+          {showSuspendedContent && (
+            <Alert
+              severity="info"
+              sx={{ mt: 1 }}
+              key="suspended-content-info-alert"
+            >
+              Showing content from suspended users. Normally, this content is
+              hidden from the site.
+            </Alert>
+          )}
+        </Box>
+
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6} key="product-listings-section">
+            <Paper
+              sx={{
+                mb: 3,
+                width: "100%",
+                overflowX: "hidden",
+                maxWidth: "100%",
+              }}
+            >
+              <Box sx={{ p: 2, bgcolor: "primary.main", color: "white" }}>
+                <Typography variant="h6" key="product-listings-heading">
+                  Product Listings
+                </Typography>
+              </Box>
+              <List disablePadding>
+                {listings.length === 0 ? (
+                  <ListItem key="no-listings">
+                    <ListItemText
+                      primary={
+                        <React.Fragment key="no-listings-text">
+                          No listings found
+                        </React.Fragment>
+                      }
+                    />
+                  </ListItem>
+                ) : (
+                  listings
+                    .filter(
+                      (listing) =>
+                        showSuspendedContent || filterSuspendedContent(listing)
+                    )
+                    .map((listing) => (
+                      <React.Fragment key={listing.id}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            width: "100%",
+                            borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+                            alignItems: "flex-start",
+                            bgcolor:
+                              listing.status === "suspended"
+                                ? "rgba(255, 152, 0, 0.1)"
+                                : "transparent",
+                          }}
+                        >
+                          <ListItem
+                            sx={{
+                              py: 1.5,
+                              pr: 0,
+                              flex: "1 1 auto",
+                              alignItems: "flex-start",
+                              width: "calc(100% - 60px)",
+                            }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 36, mt: 0.5 }}>
+                              <ListIcon fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={
+                                <React.Fragment
+                                  key={`listing-title-${listing.id}`}
+                                >
+                                  {listing.title}
+                                  {listing.status === "suspended" && (
+                                    <Typography
+                                      key={`suspended-flag-${listing.id}`}
+                                      component="span"
+                                      variant="caption"
+                                      color="warning.main"
+                                      sx={{ ml: 1 }}
+                                    >
+                                      (SUSPENDED)
+                                    </Typography>
+                                  )}
+                                </React.Fragment>
+                              }
+                              secondary={
+                                <React.Fragment
+                                  key={`listing-details-${listing.id}`}
+                                >
+                                  <strong key={`seller-label-${listing.id}`}>
+                                    Seller:
+                                  </strong>{" "}
+                                  {listing.users?.firstName || "Unknown"}{" "}
+                                  {listing.users?.lastName || ""}{" "}
+                                  <br key={`br1-${listing.id}`} />
+                                  <strong key={`price-label-${listing.id}`}>
+                                    Price:
+                                  </strong>{" "}
+                                  ${listing.price} |{" "}
+                                  <strong key={`status-label-${listing.id}`}>
+                                    Status:
+                                  </strong>{" "}
+                                  {listing.status}{" "}
+                                  <br key={`br2-${listing.id}`} />
+                                  <strong key={`desc-label-${listing.id}`}>
+                                    Description:
+                                  </strong>{" "}
+                                  {listing.description?.substring(0, 100)}
+                                  {listing.description?.length > 100
+                                    ? "..."
+                                    : ""}
+                                </React.Fragment>
+                              }
+                            />
+                          </ListItem>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              flexDirection: "row",
+                              padding: "12px 8px",
+                              width: "60px",
+                              justifyContent: "center",
+                              alignItems: "flex-start",
+                              mt: 1,
+                              mr: 1,
+                            }}
+                          >
+                            <Tooltip title="Edit Listing">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenEditDialog(listing)}
+                                sx={{ padding: 0.5 }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete Listing">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteListing(listing.id)}
+                                sx={{ padding: 0.5, ml: 0.5 }}
+                              >
+                                <DeleteIcon fontSize="small" color="error" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </Box>
+                      </React.Fragment>
+                    ))
+                )}
+              </List>
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} md={6} key="community-posts-section">
+            <Paper
+              sx={{
+                mb: 3,
+                width: "100%",
+                overflowX: "hidden",
+                maxWidth: "100%",
+              }}
+            >
+              <Box sx={{ p: 2, bgcolor: "primary.main", color: "white" }}>
+                <Typography variant="h6" key="community-posts-heading">
+                  Community Board Posts
+                </Typography>
+              </Box>
+              <List disablePadding>
+                {openboardPosts.length === 0 ? (
+                  <ListItem key="no-posts">
+                    <ListItemText
+                      primary={
+                        <React.Fragment key="no-posts-text">
+                          No community posts found
+                        </React.Fragment>
+                      }
+                    />
+                  </ListItem>
+                ) : (
+                  openboardPosts
+                    .filter(
+                      (post) =>
+                        showSuspendedContent || filterSuspendedContent(post)
+                    )
+                    .map((post) => (
+                      <React.Fragment key={post.open_board_id}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            width: "100%",
+                            borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+                            alignItems: "flex-start",
+                            bgcolor:
+                              post.status === "suspended"
+                                ? "rgba(255, 152, 0, 0.1)"
+                                : "transparent",
+                          }}
+                        >
+                          <ListItem
+                            sx={{
+                              py: 1.5,
+                              pr: 0,
+                              flex: "1 1 auto",
+                              alignItems: "flex-start",
+                              width: "calc(100% - 40px)",
+                            }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 36, mt: 0.5 }}>
+                              <MessageIcon fontSize="small" />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={
+                                <React.Fragment
+                                  key={`post-title-${post.open_board_id}`}
+                                >
+                                  {post.title}
+                                  {post.status === "suspended" && (
+                                    <Typography
+                                      key={`suspended-flag-${post.open_board_id}`}
+                                      component="span"
+                                      variant="caption"
+                                      color="warning.main"
+                                      sx={{ ml: 1 }}
+                                    >
+                                      (SUSPENDED)
+                                    </Typography>
+                                  )}
+                                </React.Fragment>
+                              }
+                              secondary={
+                                <React.Fragment
+                                  key={`post-details-${post.open_board_id}`}
+                                >
+                                  <strong
+                                    key={`posted-by-label-${post.open_board_id}`}
+                                  >
+                                    Posted by:
+                                  </strong>{" "}
+                                  {userMap[post.creator_id]?.firstName ||
+                                    "Unknown"}{" "}
+                                  {userMap[post.creator_id]?.lastName || ""}{" "}
+                                  <br key={`br1-post-${post.open_board_id}`} />
+                                  <strong
+                                    key={`content-label-${post.open_board_id}`}
+                                  >
+                                    Content:
+                                  </strong>{" "}
+                                  {post.content?.substring(0, 100)}
+                                  {post.content?.length > 100 ? "..." : ""}{" "}
+                                  <br key={`br2-post-${post.open_board_id}`} />
+                                  <strong
+                                    key={`posted-on-label-${post.open_board_id}`}
+                                  >
+                                    Posted on:
+                                  </strong>{" "}
+                                  {new Date(post.created_at).toLocaleString()}
+                                </React.Fragment>
+                              }
+                            />
+                          </ListItem>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              padding: "12px 8px",
+                              width: "40px",
+                              justifyContent: "center",
+                              alignItems: "flex-start",
+                              mt: 1,
+                              mr: 1,
+                            }}
+                          >
+                            <Tooltip title="Delete Post">
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  handleDeleteOpenBoardPost(post.open_board_id)
+                                }
+                                sx={{ padding: 0.5 }}
+                              >
+                                <DeleteIcon fontSize="small" color="error" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </Box>
+                      </React.Fragment>
+                    ))
+                )}
+              </List>
+            </Paper>
+          </Grid>
+
+          {/* Reported Messages Section */}
+          <Grid item xs={12} key="reported-messages-section">
+            <Paper
+              sx={{ width: "100%", overflowX: "hidden", maxWidth: "100%" }}
+            >
+              <Box sx={{ p: 2, bgcolor: "primary.main", color: "white" }}>
+                <Typography variant="h6" key="reported-messages-heading">
+                  Reported Messages
+                </Typography>
+              </Box>
+              <List disablePadding>
+                {reportedMessages.length === 0 ? (
+                  <ListItem key="no-reports">
+                    <ListItemText
+                      primary={
+                        <React.Fragment key="no-reports-text">
+                          No reported messages found
+                        </React.Fragment>
+                      }
+                    />
+                  </ListItem>
+                ) : (
+                  reportedMessages.map((report) => (
+                    <React.Fragment key={report.id}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          width: "100%",
+                          borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+                          alignItems: "flex-start",
+                        }}
+                      >
+                        <ListItem
+                          sx={{
+                            py: 1.5,
+                            pr: 0,
+                            flex: "1 1 auto",
+                            alignItems: "flex-start",
+                            width: "calc(100% - 60px)",
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 36, mt: 0.5 }}>
+                            <ReportIcon fontSize="small" color="error" />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <React.Fragment
+                                key={`report-primary-${report.id}`}
+                              >
+                                {`Report: ${report.content || "Not specified"}`}
+                              </React.Fragment>
+                            }
+                            secondary={
+                              <React.Fragment
+                                key={`report-details-${report.id}`}
+                              >
+                                <strong key={`report-details-${report.id}`}>
+                                  {`Reported by: ${
+                                    report.reported_by || "Unknown"
+                                  }`}
+                                </strong>
+                                <br key={`br1-${report.id}`} />
+                                <strong key={`report-content-${report.id}`}>
+                                  {`Content: ${
+                                    report.content || "No content provided"
+                                  }`}
+                                </strong>
+                              </React.Fragment>
+                            }
+                          />
+                        </ListItem>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            padding: "12px 8px",
+                            width: "40px",
+                            justifyContent: "center",
+                            alignItems: "flex-start",
+                            mt: 1,
+                            mr: 1,
+                          }}
+                        >
+                          <Tooltip title="View Report">
+                            <IconButton
+                              size="small"
+                              onClick={() => viewReportedMessage(report.id)}
+                              sx={{ padding: 0.5 }}
+                            >
+                              <ReportIcon fontSize="small" color="primary" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Dismiss Report">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDismissReport(report.id)}
+                              sx={{ padding: 0.5, ml: 0.5 }}
+                            >
+                              <DeleteIcon fontSize="small" color="error" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </Box>
+                    </React.Fragment>
+                  ))
+                )}
+              </List>
+            </Paper>
+          </Grid>
+        </Grid>
+      </TabPanel>
+
+      {/* Analytics Tab */}
+      <TabPanel value={tabValue} index={4}>
+        <Box sx={{ mb: 2 }}>
+          <Alert severity="info" sx={{ mb: 2 }} key="analytics-tab-info-alert">
+            This feature is under development. You will be able to view detailed
+            analytics here.
+          </Alert>
+        </Box>
+      </TabPanel>
+
+      {/* Settings Tab */}
+      <TabPanel value={tabValue} index={5}>
+        <Box sx={{ mb: 2 }}>
+          <Alert severity="info" sx={{ mb: 2 }} key="settings-tab-info-alert">
+            This feature is under development. You will be able to configure
+            site settings here.
+          </Alert>
+        </Box>
+      </TabPanel>
+    </Container>
+  );
+};
+
+export default AdminDashboard;
