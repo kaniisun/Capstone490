@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../../supabaseClient";
 import "./messages.css";
-import SearchIcon from '@mui/icons-material/Search';
+import SearchIcon from "@mui/icons-material/Search";
+import Badge from "@mui/material/Badge";
+import MailIcon from "@mui/icons-material/Mail";
 
-const UserList = ({ setReceiver, currentReceiver }) => {
+const UserList = ({ setReceiver, currentReceiver, unreadCounts, currentUserID}) => {
   const [users, setUsers] = useState([]);
   const loggedInUserId = localStorage.getItem("userId");
   const [searchTerm, setSearchTerm] = useState("");
+  
 
-  // get users in db besides user thats logged in
+  // get users in db besides user that's logged in
   useEffect(() => {
     const fetchUsers = async () => {
       const { data, error } = await supabase
@@ -16,11 +19,10 @@ const UserList = ({ setReceiver, currentReceiver }) => {
         .select("userID, firstName")
         .neq("userID", loggedInUserId);
 
-      console.log("Logged in User ID:", loggedInUserId);
-
       if (!error) {
         setUsers(data);
-        console.log("Fetched users:", data);
+      } else {
+        console.error("Error fetching users:", error);
       }
     };
     fetchUsers();
@@ -32,7 +34,6 @@ const UserList = ({ setReceiver, currentReceiver }) => {
   );
 
   return (
-    // display users in db
     <div className="user-list">
       <h3>Chat with:</h3>
       {/* search input */}
@@ -46,14 +47,25 @@ const UserList = ({ setReceiver, currentReceiver }) => {
         />
       </div>
 
-      {/* search display */}
+      {/* user list with unread message badges */}
       {filteredUsers.map((user) => (
         <div
           key={user.userID}
-          className={`user-item ${currentReceiver?.userID === user.userID ? 'selected' : ''}`}
+          className={`user-item ${currentReceiver?.userID === user.userID ? "selected" : ""}`}
           onClick={() => setReceiver(user)}
         >
-          <p>{user.firstName}</p>
+          <p className="user-name-with-badge">
+            {user.firstName}
+            {unreadCounts?.[user.userID] > 0 && (
+              <Badge
+                badgeContent={unreadCounts[user.userID]}
+                color="error"
+                sx={{ ml: 1 }}
+              >
+                <MailIcon fontSize="small" />
+              </Badge>
+            )}
+          </p>
         </div>
       ))}
     </div>

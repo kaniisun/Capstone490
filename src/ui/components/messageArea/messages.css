@@ -422,3 +422,9 @@
 .reply-indicator button:hover {
   background-color: rgba(255, 183, 27, 0.2);
 }
+.user-name-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
