@@ -93,6 +93,7 @@
 - created_at (timestamp, default: now())
 - updated_at (timestamp, default: now())
 - reply_to (int4, foreign key -> open_board.open_board_id)
+- community (int4, foreign key -> communities.community_id)
 
 ### Table: messages
 
