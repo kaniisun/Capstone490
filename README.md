@@ -1,3 +1,33 @@
+# Spartan Marketplace 
+
+## Table of Contents
+* [General Info](#general-info)
+* [Technologies](#technologies)
+* [Setup](#setup)
+* [Marketplace Assitant](#marketplace-assitant)
+* [Project Status](#project-status)
+
+## General Info
+
+Spartan Marketplace is an exclusive online marketplace designed specifically for students at UNC Greensboro. Accessible only to users with a valid UNCG email address, this platform provides a secure and student-focused space for buying, selling, and engaging with the campus community. These all could be assisted with the help of our AI Chatbot, Marketplace Assitant.
+
+## Technologies
+
+* React
+* NodeJS
+* HTML
+* CSS
+* Javascript
+* Supabase
+* OpenAI
+
+## Setup
+
+* "npm install"
+* open two terminals
+* in the root directory terminal, do "npm start"
+* in one terminal, do "cd server", and then "nodemon server.js"
+
 # Marketplace Assistant
 
 A smart chat assistant for a college marketplace platform that helps users find products, list items for sale, and interact naturally with the marketplace.
@@ -82,3 +112,7 @@ Users can:
 ## 📄 License
 
 MIT
+
+## Project Status
+
+Project is: _Incomplete_
