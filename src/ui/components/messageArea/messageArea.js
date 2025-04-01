@@ -349,7 +349,7 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
           <div className="message-area-header">
             <h3>Chatting with {receiver.firstName}</h3>
             <button className="close-chat-btn" onClick={onCloseChat}>
-              ❌ Close Chat
+              ❌
             </button>
           </div>
           <div className="message-area-messages">

@@ -15,6 +15,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
 }
 
 .message-area-header h3 {
@@ -25,18 +26,22 @@
 }
 
 .message-area-header .close-chat-btn {
-  background-color: rgba(255, 183, 27, 0.9);
+  background-color: #0F2044;
   color: #0F2044;
   border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  padding: 8px; 
+  border-radius: 50%; 
+  font-size: 1.2rem; 
+  font-weight: bold;
+  width: 30px; 
+  height: 30px; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
   transition: all 0.2s ease;
 }
 
 .message-area-header .close-chat-btn:hover {
-  background-color: #FFB71B;
   transform: translateY(-1px);
 }
 
