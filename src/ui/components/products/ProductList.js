@@ -19,7 +19,7 @@ function ProductList({ filters }) {
       setError(null); //Clear any previous error messages
 
       //Base query to select all columns from products table
-      let query = supabase.from("products").select("*");
+      let query = supabase.from("products").select("*").eq("is_deleted", false);
 
       //Apply category filter
       if (filters.category) {

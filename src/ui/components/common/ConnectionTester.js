@@ -9,15 +9,15 @@ function ConnectionTester() {
   const testConnection = async () => {
     try {
       // Try a simple query to test the connection
-      const { data, error } = await supabase
+      const { data, count, error } = await supabase
         .from("users")
-        .select("count", { count: "exact", head: true });
+        .select("*", { count: "exact", head: true });
 
       if (error) {
         return { success: false, error };
       }
 
-      return { success: true, data };
+      return { success: true, data: { count } };
     } catch (err) {
       return { success: false, error: err };
     }

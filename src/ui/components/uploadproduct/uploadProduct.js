@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import "./uploadProduct.css";
+import {
+  getFormattedImageUrl,
+  fixImageContentType,
+} from "../ChatSearch/utils/imageUtils";
 
 // Material-UI imports
 import {
@@ -77,13 +81,16 @@ const UploadProduct = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    // Capitalize first letter for category and condition
-    if (name === "category" || name === "condition") {
+    // Only capitalize condition, but keep category as lowercase to match menu values
+    if (name === "condition") {
       const capitalizedValue = value
         .split(" ")
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(" ");
       setProduct({ ...product, [name]: capitalizedValue });
+    } else if (name === "category") {
+      // Ensure category value stays lowercase to match menu options
+      setProduct({ ...product, [name]: value.toLowerCase() });
     } else {
       setProduct({ ...product, [name]: value });
     }
@@ -121,19 +128,99 @@ const UploadProduct = () => {
       if (product.imageFile) {
         const fileExt = product.imageFile.name.split(".").pop();
         const fileName = `${userId}_${Date.now()}.${fileExt}`;
+        // Use the 'uploads' folder since that's where your images appear to be saving
         const filePath = `uploads/${fileName}`;
 
+        console.log("Uploading image with details:");
+        console.log("- File name:", product.imageFile.name);
+        console.log("- File type:", product.imageFile.type);
+        console.log("- File size:", product.imageFile.size, "bytes");
+        console.log("- Target path:", filePath);
+
+        // Extract MIME type from file or determine from extension
+        let contentType = product.imageFile.type;
+        if (!contentType || contentType === "application/octet-stream") {
+          // Fallback to extension-based content type
+          if (fileExt.toLowerCase() === "png") contentType = "image/png";
+          else if (fileExt.toLowerCase() === "gif") contentType = "image/gif";
+          else if (fileExt.toLowerCase() === "webp") contentType = "image/webp";
+          else if (fileExt.toLowerCase() === "svg")
+            contentType = "image/svg+xml";
+          else contentType = "image/jpeg"; // Default to JPEG
+
+          console.log(
+            "Content type not detected, using extension-based type:",
+            contentType
+          );
+        }
+
+        // Upload with correct content type and upsert option
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("product-images")
-          .upload(filePath, product.imageFile, { upsert: false });
+          .upload(filePath, product.imageFile, {
+            upsert: true,
+            contentType: contentType, // Explicitly set the MIME type
+          });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error("Upload error details:", uploadError);
+          throw uploadError;
+        }
 
+        console.log("Image uploaded successfully:", uploadData);
+
+        // Get the public URL using storage API
         const { data: publicUrlData } = supabase.storage
           .from("product-images")
           .getPublicUrl(filePath);
 
+        console.log("Retrieved public URL data:", publicUrlData);
+
+        if (!publicUrlData?.publicUrl) {
+          throw new Error("Failed to get public URL for uploaded image");
+        }
+
+        // Store the full public URL in the database
         imageUrl = publicUrlData.publicUrl;
+        console.log("Final image URL to be stored:", imageUrl);
+
+        // Verify the image is accessible by attempting to fetch it
+        try {
+          const checkResponse = await fetch(imageUrl, { method: "HEAD" });
+          console.log(
+            "Image URL check status:",
+            checkResponse.status,
+            "Content-Type:",
+            checkResponse.headers.get("content-type")
+          );
+
+          // If content type is wrong, fix it
+          if (
+            checkResponse.ok &&
+            checkResponse.headers.get("content-type") === "application/json"
+          ) {
+            console.log("Detected wrong content type. Attempting to fix...");
+
+            // Fix the content type using our utility function
+            const fixResult = await fixImageContentType(filePath);
+
+            if (fixResult.success && fixResult.url) {
+              console.log("Successfully fixed image content type.");
+              imageUrl = fixResult.url; // Use the fixed URL
+            } else {
+              console.warn(
+                "Could not fix image content type:",
+                fixResult.message
+              );
+            }
+          }
+
+          if (!checkResponse.ok) {
+            console.warn("The image URL might not be accessible:", imageUrl);
+          }
+        } catch (fetchError) {
+          console.warn("Error checking image URL:", fetchError);
+        }
       }
 
       const { data, error: productError } = await supabase
@@ -143,15 +230,16 @@ const UploadProduct = () => {
             userID: userId,
             name: product.name,
             description: product.description,
-            condition: product.condition,
-            category: product.category,
+            condition: product.condition.toLowerCase(),
+            category: product.category.toLowerCase(),
             price: parseFloat(product.price),
-            image: imageUrl,
+            image: imageUrl, // Store the full public URL
             status: product.status,
             is_bundle: product.is_bundle,
             flag: product.flag,
             created_at: new Date().toISOString(),
             modified_at: new Date().toISOString(),
+            is_deleted: false, // Explicitly set is_deleted to false for new products
           },
         ])
         .select();

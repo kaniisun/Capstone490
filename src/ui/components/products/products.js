@@ -26,6 +26,8 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 // Import favorite utilities
 import { isFavorite, toggleFavorite } from "../../../utils/favoriteUtils";
+// Import image utility function
+import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
 
 function Products() {
   const location = useLocation();
@@ -70,11 +72,13 @@ function Products() {
         isBundle: filters.isBundle,
       });
 
-      // Get all available products first
+      // Get all available, non-deleted, and approved products
       let { data: allProducts, error } = await supabase
         .from("products")
         .select("*")
-        .eq("status", "Available");
+        .eq("status", "Available")
+        .eq("is_deleted", false)
+        .eq("moderation_status", "approved");
 
       if (error) {
         console.error("Error fetching products:", error);
@@ -239,7 +243,10 @@ function Products() {
                           }
                         >
                           <img
-                            src={product.image || placeholderImage}
+                            src={
+                              getFormattedImageUrl(product.image) ||
+                              placeholderImage
+                            }
                             alt={product.name}
                             className="product-image"
                             onError={(e) => {

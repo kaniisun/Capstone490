@@ -98,11 +98,12 @@ export const getFavoriteProducts = async (supabase, favoriteIds) => {
   }
 
   try {
-    // Fetch products from Supabase using the favoriteIds
+    // Fetch products from Supabase using the favoriteIds, excluding deleted products
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .in("productID", favoriteIds);
+      .in("productID", favoriteIds)
+      .eq("is_deleted", false);
 
     if (error) {
       console.error("Error fetching favorite products:", error);

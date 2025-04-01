@@ -45,6 +45,8 @@ async function searchProducts(supabase, searchQuery) {
       let directQuery = supabase
         .from("products")
         .select("*")
+        .eq("is_deleted", false)
+        .eq("moderation_status", "approved")
         .or(searchConditions)
         .or("status.eq.available,status.eq.Available");
 
@@ -68,6 +70,8 @@ async function searchProducts(supabase, searchQuery) {
       let categoryQuery = supabase
         .from("products")
         .select("*")
+        .eq("is_deleted", false)
+        .eq("moderation_status", "approved")
         .or("status.eq.available,status.eq.Available");
 
       // Add term-category filters
@@ -95,6 +99,8 @@ async function searchProducts(supabase, searchQuery) {
       let fallbackQuery = supabase
         .from("products")
         .select("*")
+        .eq("is_deleted", false)
+        .eq("moderation_status", "approved")
         .or("status.eq.available,status.eq.Available");
 
       // Apply price filter if present

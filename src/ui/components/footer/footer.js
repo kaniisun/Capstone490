@@ -54,7 +54,9 @@ const Footer = () => {
         color: "white",
         py: 2,
         mt: "auto",
+        flexShrink: 0,
         borderTop: `3px solid ${theme.palette.secondary.main}`,
+        width: "100%",
       }}
     >
       <Container maxWidth="lg">

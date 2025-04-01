@@ -31,6 +31,7 @@ import {
   Favorite as FavoriteIcon,
   ViewList as ViewListIcon,
   Forum as ForumIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon,
 } from "@mui/icons-material";
 import "./header.css";
 
@@ -65,7 +66,7 @@ const Header = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, isEmailVerified, user, logout } = useAuth();
+  const { isAuthenticated, isEmailVerified, user, logout, isAdmin } = useAuth();
 
   const open = Boolean(anchorEl);
 
@@ -145,6 +146,8 @@ const Header = () => {
 
         {/* Right side - Profile Icon */}
         <Box sx={{ display: "flex", alignItems: "center", ml: "auto" }}>
+          {/* Remove Admin Link from header */}
+
           <Tooltip title={userInfo ? `Hi, ${userInfo.firstName}!` : "Account"}>
             <IconButton
               onClick={handleProfileMenuOpen}
@@ -187,7 +190,25 @@ const Header = () => {
                     fontWeight="medium"
                   >
                     Hi, {userInfo.firstName}!
+                    {isAdmin && (
+                      <Tooltip title="Administrator Account">
+                        <AdminPanelSettingsIcon
+                          fontSize="small"
+                          color="primary"
+                          sx={{ ml: 1, verticalAlign: "middle" }}
+                        />
+                      </Tooltip>
+                    )}
                   </Typography>
+                  {isAdmin && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block" }}
+                    >
+                      Administrator Account
+                    </Typography>
+                  )}
                 </div>
                 <Divider className="menu-divider" />
 
@@ -197,6 +218,43 @@ const Header = () => {
                   </ListItemIcon>
                   Home
                 </MenuItem>
+
+                {/* Admin Section - Only visible for admins */}
+                {isAuthenticated && isAdmin && (
+                  <>
+                    <Divider className="menu-divider" sx={{ my: 1 }} />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ px: 2, py: 0.5, display: "block" }}
+                    >
+                      ADMIN CONTROLS
+                    </Typography>
+
+                    <MenuItem
+                      onClick={() => handleNavigate("/admin")}
+                      className="menu-item"
+                      sx={{
+                        bgcolor: "rgba(25, 118, 210, 0.08)",
+                        "&:hover": {
+                          bgcolor: "rgba(25, 118, 210, 0.15)",
+                        },
+                        my: 0.5,
+                        borderRadius: 1,
+                      }}
+                    >
+                      <ListItemIcon className="menu-item-icon">
+                        <AdminPanelSettingsIcon
+                          fontSize="small"
+                          color="primary"
+                        />
+                      </ListItemIcon>
+                      <Typography color="primary" fontWeight="medium">
+                        Admin Dashboard
+                      </Typography>
+                    </MenuItem>
+                  </>
+                )}
 
                 <MenuItem
                   onClick={() => handleNavigate("/products")}

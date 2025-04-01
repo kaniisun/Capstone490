@@ -75,12 +75,20 @@ const ProductCard = ({
     ? "https://via.placeholder.com/150?text=No+Image"
     : getFormattedImageUrl(product.image);
 
+  // Add debug logging for image URL
+  console.log(`ProductCard for ${product.name}:`);
+  console.log(`- Original image URL: ${product.image}`);
+  console.log(`- Processed image URL: ${imageUrl}`);
+  console.log(`- Image error state: ${imageError}`);
+
   const handleImageError = () => {
+    console.log(`Image loading error for ${product.name}:`, product.image);
     setImageError(true);
     setImageLoading(false);
   };
 
   const handleImageLoad = () => {
+    console.log(`Image loaded successfully for ${product.name}:`, imageUrl);
     setImageLoading(false);
   };
 
