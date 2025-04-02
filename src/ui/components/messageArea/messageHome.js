@@ -4,7 +4,6 @@ import MessageArea from "./messageArea";
 import UserList from "./userList";
 import "./messages.css";
 import { useParams } from "react-router-dom";
-import { Grid, Box, Paper } from "@mui/material";
 
 const MessageHome = () => {
   const [user, setUser] = useState(null);
@@ -65,10 +64,7 @@ const MessageHome = () => {
       await supabase
         .from("messages")
         .update({ is_read: true })
-        .in(
-          "id",
-          unreadMessages.map((msg) => msg.id)
-        )
+        .in("id", unreadMessages.map((msg) => msg.id))
         .select("*");
 
       fetchUnreadCounts();
@@ -98,71 +94,32 @@ const MessageHome = () => {
   }, [user]);
 
   return (
-    <Box
-      sx={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#f4f6f8",
-      }}
-    >
-      <Paper
-        elevation={4}
-        sx={{
-          width: "100vw",
-          height: "100vh",
-          display: "flex",
-          borderRadius: 0,
-          overflow: "hidden",
-        }}
-      >
-        <Grid container sx={{ height: "100%" }}>
-          {/* User List */}
-          <Grid
-            item
-            xs={3}
-            sx={{
-              backgroundColor: "#fff",
-              borderRight: "2px solid #FFB71B",
-              overflowY: "auto",
-              height: "100%",
+    <div className="message-home">
+      {user ? (
+        <div className="message-home-chat-container">
+          <UserList
+            currentReceiver={receiver}
+            unreadCounts={unreadCounts}
+            currentUserID={user.userID}
+            setReceiver={(user) => {
+              setReceiver(user);
+              markMessagesAsRead(user.userID);
             }}
-          >
-            <UserList
-              currentReceiver={receiver}
-              setReceiver={setReceiver}
-              unreadCounts={unreadCounts}
-              currentUserID={user?.userID}
+          />
+          {receiver ? (
+            <MessageArea
+              user={user}
+              receiver={receiver}
+              onCloseChat={() => setReceiver(null)}
             />
-          </Grid>
-
-          {/* Message Area */}
-          <Grid item xs={9} sx={{ height: "100%" }}>
-            {receiver ? (
-              <MessageArea 
-              user={user} 
-              receiver={receiver} 
-              onCloseChat={() => setReceiver(null)} 
-            />            
-            ) : (
-              <Box
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#0F2044",
-                }}
-              >
-                <p>Select a user to start chatting.</p>
-              </Box>
-            )}
-          </Grid>
-        </Grid>
-      </Paper>
-    </Box>
+          ) : (
+            <div className="message-home-empty-chat">Select a user to start chatting</div>
+          )}
+        </div>
+      ) : (
+        <p>Loading...</p>
+      )}
+    </div>
   );
 };
 
