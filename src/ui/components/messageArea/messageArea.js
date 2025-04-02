@@ -385,14 +385,14 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
                     className="message-area-reply-btn"
                     onClick={() => handleReply(msg)}
                   >
-                    ↩️ Reply
+                    Reply
                   </button>
                   {msg.sender_id === userID && (
                     <button
                       className="message-area-delete-msg-btn"
                       onClick={() => deleteMessage(msg.id)}
                     >
-                      🗑️ Delete
+                      Delete
                     </button>
                   )}
                   {msg.sender_id !== userID && (
@@ -400,7 +400,7 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
                       className="message-area-report-msg-btn"
                       onClick={() => openReportPopup(msg)}
                     >
-                      🚨 Report
+                      Report
                     </button>
                   )}
                 </div>
@@ -484,7 +484,7 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
             width: "100%",
             borderRadius: 1,
             ...(snackbar.severity === "success" && {
-              bgcolor: "#0f2044", // UNCG Blue for success alerts
+              bgcolor: "#0f2044", 
             }),
           }}
         >
