@@ -131,11 +131,15 @@ const MessageHome = () => {
             }}
           >
             <UserList
-              currentReceiver={receiver}
-              setReceiver={setReceiver}
-              unreadCounts={unreadCounts}
-              currentUserID={user?.userID}
-            />
+                currentReceiver={receiver}
+                unreadCounts={unreadCounts}
+                currentUserID={user?.userID}
+                setReceiver={(user) => {
+                  setReceiver(user);              
+                  markMessagesAsRead(user.userID);
+                }}
+              />
+
           </Grid>
 
           {/* Message Area */}
