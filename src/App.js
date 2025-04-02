@@ -10,6 +10,8 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
+import { Provider } from "react-redux";
+import store from "./store";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -219,10 +221,12 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <ScrollToTop />
-      <AppContent />
-    </BrowserRouter>
+    <Provider store={store}>
+      <BrowserRouter>
+        <ScrollToTop />
+        <AppContent />
+      </BrowserRouter>
+    </Provider>
   );
 }
 

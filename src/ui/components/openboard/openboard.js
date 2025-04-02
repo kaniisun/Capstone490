@@ -1,62 +1,68 @@
+// @ts-nocheck
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { supabase } from "../../../supabaseClient";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
+import { fetchCommunities } from "../../../store/communityThunks";
+import { setCurrentCommunity } from "../../../store/communitySlice";
 import "./openboard.css";
 import {
-  Snackbar,
-  Alert,
-  Paper,
-  Typography,
   Button,
-  Card,
-  CardContent,
-  CardActions,
-  IconButton,
-  TextField,
-  Divider,
+  Typography,
   Box,
   Avatar,
-  Tooltip,
+  TextField,
   List,
   ListItem,
-  ListItemText,
-  ListItemAvatar,
-  ThemeProvider,
-  createTheme,
-  Menu,
-  MenuItem,
-  ListItemIcon,
+  Divider,
+  Paper,
+  IconButton,
+  Card,
+  CardContent,
   Dialog,
-  DialogTitle,
-  DialogContent,
   DialogActions,
-  Breadcrumbs,
-  Link,
+  DialogContent,
   DialogContentText,
-  InputAdornment,
+  DialogTitle,
+  Select,
+  MenuItem,
   FormControl,
   InputLabel,
-  Select,
-  CircularProgress,
+  ListItemText,
   ListItemButton,
+  ListItemIcon,
+  ToggleButtonGroup,
+  ToggleButton,
+  Menu,
+  CircularProgress,
+  Container,
+  createTheme,
+  ThemeProvider,
+  Slide,
+  useTheme,
+  Chip,
+  InputAdornment,
+  Tabs,
+  Tab,
+  Alert,
+  Snackbar,
+  Fab,
 } from "@mui/material";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
-import CommentIcon from "@mui/icons-material/Comment";
-import DeleteIcon from "@mui/icons-material/Delete";
-import FlagIcon from "@mui/icons-material/Flag";
-import AddIcon from "@mui/icons-material/Add";
-import CloseIcon from "@mui/icons-material/Close";
-import SortIcon from "@mui/icons-material/Sort";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import MessageIcon from "@mui/icons-material/Message";
+import SendIcon from "@mui/icons-material/Send";
+import ReplyIcon from "@mui/icons-material/Reply";
+import AddIcon from "@mui/icons-material/Add";
 import ShareIcon from "@mui/icons-material/Share";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import ImageIcon from "@mui/icons-material/Image";
-import LinkIcon from "@mui/icons-material/Link";
+import DeleteIcon from "@mui/icons-material/Delete";
+import FlagIcon from "@mui/icons-material/Flag";
+import FolderIcon from "@mui/icons-material/Folder";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import axios from "axios";
 
 // Create UNCG theme
@@ -111,21 +117,32 @@ const uncgTheme = createTheme({
 });
 
 const OpenBoard = () => {
+  // Redux setup
+  const dispatch = useDispatch();
+  const {
+    list: communitiesList,
+    currentCommunity,
+    loading: communitiesLoading,
+  } = useSelector(
+    (state) =>
+      state.communities || { list: [], currentCommunity: "all", loading: false }
+  );
+
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [userID, setUserID] = useState(localStorage.getItem("userId"));
   const [replyingTo, setReplyingTo] = useState(null);
 
-  // Community state (replacing selectedContent)
+  // Use the Redux community state
   const [communities, setCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState("all");
   const [communityDetails, setCommunityDetails] = useState({});
 
   const messagesEndRef = useRef(null);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth(); // Add isAdmin from the auth context
   const [usernames, setUsernames] = useState({});
   const [votes, setVotes] = useState({}); // Track votes for each message
-  const [refreshMessages, setRefreshMessages] = useState(false);
+  const [refreshMessages, setRefreshMessages] = useState(0);
 
   const [showReportPopup, setShowReportPopup] = useState(false);
   const [selectedReasons, setSelectedReasons] = useState([]);
@@ -141,7 +158,7 @@ const OpenBoard = () => {
     severity: "success",
   });
 
-  const [selectedSort, setSelectedSort] = useState("hot");
+  const [selectedSort, setSelectedSort] = useState("new"); // Default to "new" instead of "hot"
 
   const [reportData, setReportData] = useState({
     open: false,
@@ -160,7 +177,10 @@ const OpenBoard = () => {
   const [comments, setComments] = useState([]);
   const [commentReplies, setCommentReplies] = useState({});
   const [newComment, setNewComment] = useState("");
+  const [replyCommentText, setReplyCommentText] = useState(""); // New state for reply text
   const [replyingToComment, setReplyingToComment] = useState(null);
+  const [replyingToCommentId, setReplyingToCommentId] = useState(null);
+  const [commentVotes, setCommentVotes] = useState({});
 
   // Sidebar states
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -179,12 +199,18 @@ const OpenBoard = () => {
   const [openNewPostDialog, setOpenNewPostDialog] = useState(false);
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
+  const [newPostCommunity, setNewPostCommunity] = useState("");
+  const [createPostLoading, setCreatePostLoading] = useState(false);
   const [openNewCommunityDialog, setOpenNewCommunityDialog] = useState(false);
   const [openThreadDialog, setOpenThreadDialog] = useState(false);
   const [selectedThread, setSelectedThread] = useState(null);
   const [threadComments, setThreadComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [auth, setAuth] = useState({ currentUser: { id: userID } });
+
+  // Voting system state variables
+  const [threadVotes, setThreadVotes] = useState({});
+  const [loadingVotes, setLoadingVotes] = useState(false);
 
   const navigate = useNavigate();
 
@@ -227,112 +253,568 @@ const OpenBoard = () => {
     }
   }, []);
 
-  // Fetch communities from the communities table
-  const fetchCommunities = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from("communities")
-        .select("*")
-        .order("created_at", { ascending: true });
+  // Update local state when Redux state changes
+  useEffect(() => {
+    if (communitiesList.length > 0) {
+      setCommunities(communitiesList);
 
-      if (error) {
-        console.error("Error fetching communities:", error);
-      } else if (data) {
-        // Process the communities
-        const processedCommunities = data.map((item) => ({
-          name: item.name,
-          community_id: item.community_id,
-          creator_id: item.creator_id,
-          created_at: item.created_at,
-          description: item.description,
-        }));
-
-        // Add default "all" community
-        const allCommunities = [
-          {
-            name: "all",
-            description: "All posts from all communities",
-            isDefault: true,
-          },
-          ...processedCommunities,
-        ];
-
-        setCommunities(allCommunities);
-
-        // Create details mapping
-        const details = {};
-        processedCommunities.forEach((community) => {
+      // Create details mapping for communities
+      const details = {};
+      communitiesList.forEach((community) => {
+        if (community.name !== "all") {
           details[community.name] = {
             community_id: community.community_id,
             creator_id: community.creator_id,
             created_at: community.created_at,
             description: community.description,
           };
-        });
-        setCommunityDetails(details);
+        }
+      });
 
-        // Fetch usernames for community creators
-        const userIds = processedCommunities
-          .map((community) => community.creator_id)
-          .filter(Boolean);
-        fetchUsernames(userIds);
-      }
-    } catch (err) {
-      console.error("Exception in fetchCommunities:", err);
+      // Add details for "all" view
+      details["all"] = {
+        description: "A combined view of posts from all communities",
+        isView: true,
+      };
+      setCommunityDetails(details);
     }
-  }, [fetchUsernames]);
+  }, [communitiesList]);
 
+  // Update local state when Redux current community changes
   useEffect(() => {
-    fetchCommunities();
-  }, [fetchCommunities]);
+    if (currentCommunity && currentCommunity !== selectedCommunity) {
+      setSelectedCommunity(currentCommunity);
+    }
+  }, [currentCommunity]);
+
+  // Update Redux when local state changes
+  useEffect(() => {
+    if (selectedCommunity !== currentCommunity) {
+      dispatch(setCurrentCommunity(selectedCommunity));
+    }
+  }, [selectedCommunity, dispatch, currentCommunity]);
+
+  // Fetch communities on component mount
+  useEffect(() => {
+    // Fetch communities on component mount
+    const loadCommunities = async () => {
+      await dispatch(fetchCommunities());
+    };
+    loadCommunities();
+  }, [dispatch]);
+
+  // Function to fetch votes for threads
+  const fetchThreadVotes = useCallback(
+    async (threadIds) => {
+      if (!auth.currentUser || !threadIds.length) return;
+
+      try {
+        setLoadingVotes(true);
+        console.log("Fetching votes for threads:", threadIds);
+
+    const { data, error } = await supabase
+          .from("user_votes")
+          .select("target_id, vote_value")
+          .eq("user_id", auth.currentUser.id)
+          .eq("target_type", "thread")
+          .in("target_id", threadIds.map(String));
+
+    if (error) {
+          console.error("Error fetching thread vote data:", error);
+          return;
+        }
+
+        // Convert to object for easier lookup
+        const votes = {};
+        data.forEach((vote) => {
+          votes[vote.target_id] = vote.vote_value;
+        });
+
+        console.log("Retrieved thread votes:", votes);
+        setThreadVotes(votes);
+      } catch (err) {
+        console.error("Exception in fetchThreadVotes:", err);
+      } finally {
+        setLoadingVotes(false);
+      }
+    },
+    [auth.currentUser]
+  );
+
+  // Function to fetch votes for comments
+  const fetchCommentVotes = useCallback(
+    async (commentIds) => {
+      if (!auth.currentUser || !commentIds.length) return;
+
+      try {
+        console.log("Fetching votes for comments:", commentIds);
+
+        const { data, error } = await supabase
+          .from("user_votes")
+          .select("target_id, vote_value")
+          .eq("user_id", auth.currentUser.id)
+          .eq("target_type", "comment")
+          .in("target_id", commentIds.map(String));
+
+        if (error) {
+          console.error("Error fetching comment vote data:", error);
+          return;
+        }
+
+        // Convert to object for easier lookup
+        const votes = {};
+        data.forEach((vote) => {
+          votes[vote.target_id] = vote.vote_value;
+        });
+
+        console.log("Retrieved comment votes:", votes);
+        setCommentVotes(votes);
+      } catch (err) {
+        console.error("Exception in fetchCommentVotes:", err);
+      }
+    },
+    [auth.currentUser]
+  );
+
+  // Function to handle thread votes
+  const handleThreadVote = async (threadId, voteValue) => {
+    if (!auth.currentUser) {
+      setOpenLoginDialog(true);
+      return;
+    }
+
+    try {
+      // Determine the new vote value based on current vote
+      const currentVote = threadVotes[threadId] || 0;
+      let newVoteValue;
+
+      // If clicking the same vote button, toggle it off
+      if (currentVote === voteValue) {
+        newVoteValue = 0;
+      }
+      // If clicking a different vote button, switch to that vote
+      else {
+        newVoteValue = voteValue;
+      }
+
+      console.log(
+        `Voting on thread ${threadId}: ${currentVote} -> ${newVoteValue}`
+      );
+
+      // Calculate vote difference for score update
+      const scoreDiff = newVoteValue - currentVote;
+
+      // Find the current thread to get its current score
+      const currentThread = messages.find(
+        (msg) => msg.open_board_id === threadId
+      );
+      if (!currentThread) {
+        console.error("Thread not found in local state");
+        return;
+      }
+
+      // Get current score, defaulting to 0 if undefined
+      const currentScore = currentThread.score || 0;
+
+      // Calculate new score, but don't let it go below 0 (Reddit style)
+      let newScore = currentScore + scoreDiff;
+      if (newScore < 0) {
+        // Adjust the score difference to ensure we don't go below 0
+        const adjustedScoreDiff = -currentScore;
+        newScore = 0;
+        console.log(
+          `Score would go negative. Adjusting to 0. Original diff: ${scoreDiff}, Adjusted diff: ${adjustedScoreDiff}`
+        );
+      }
+
+      console.log(
+        `Updating score: ${currentScore} + ${scoreDiff} = ${newScore}`
+      );
+
+      // Optimistically update UI
+      setThreadVotes((prev) => ({
+        ...prev,
+        [threadId]: newVoteValue,
+      }));
+
+      // Find the thread to update its score
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.open_board_id === threadId) {
+            return {
+              ...msg,
+              score: newScore, // Store score (never below 0)
+            };
+          }
+          return msg;
+        })
+      );
+
+      // Update in the database (upsert pattern)
+      const { error: voteError } = await supabase.from("user_votes").upsert(
+        {
+          user_id: auth.currentUser.id,
+          target_type: "thread",
+          target_id: threadId.toString(),
+          vote_value: newVoteValue,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,target_type,target_id",
+        }
+      );
+
+      if (voteError) {
+        console.error("Error saving thread vote:", voteError);
+        // Revert optimistic updates and show error
+        handleVoteError(threadId, currentVote, scoreDiff);
+        return;
+      }
+
+      // Update the thread's score in the database with direct value
+      const { error: updateError } = await supabase
+        .from("open_board")
+        .update({ score: newScore })
+        .eq("open_board_id", threadId);
+
+      if (updateError) {
+        console.error("Error updating thread score:", updateError);
+        // Revert optimistic updates and show error
+        handleVoteError(threadId, currentVote, scoreDiff);
+        return;
+      }
+
+      // Success notification
+      setSnackbar({
+        open: true,
+        message: "Vote saved successfully!",
+        severity: "success",
+      });
+    } catch (err) {
+      console.error("Exception in handleThreadVote:", err);
+      setSnackbar({
+        open: true,
+        message: "An error occurred. Please try again.",
+        severity: "error",
+      });
+    }
+  };
+
+  // Helper function to handle vote errors and revert optimistic updates
+  const handleVoteError = (threadId, originalVote, scoreDiff) => {
+    // Revert the optimistic vote update
+    setThreadVotes((prev) => ({
+      ...prev,
+      [threadId]: originalVote,
+    }));
+
+    // Revert the score update
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.open_board_id === threadId) {
+          return {
+            ...msg,
+            score: (msg.score || 0) - scoreDiff,
+          };
+        }
+        return msg;
+      })
+    );
+
+    // Show error notification
+    setSnackbar({
+      open: true,
+      message: "Failed to save your vote. Please try again.",
+      severity: "error",
+    });
+  };
+
+  // Function to handle comment votes
+  const handleCommentVote = async (commentId, voteValue) => {
+    if (!auth.currentUser) {
+      setOpenLoginDialog(true);
+      return;
+    }
+
+    try {
+      // Determine the new vote value based on current vote
+      const currentVote = commentVotes[commentId] || 0;
+      let newVoteValue;
+
+      // If clicking the same vote button, toggle it off
+      if (currentVote === voteValue) {
+        newVoteValue = 0;
+      }
+      // If clicking a different vote button, switch to that vote
+      else {
+        newVoteValue = voteValue;
+      }
+
+      console.log(
+        `Voting on comment ${commentId}: ${currentVote} -> ${newVoteValue}`
+      );
+
+      // Calculate vote difference for score update
+      const scoreDiff = newVoteValue - currentVote;
+
+      // Find the current comment to get its current score
+      let currentComment = null;
+
+      // More robust recursive function to find and update a comment in a nested structure
+      const findAndUpdateComment = (commentsArray, commentId, updateFn) => {
+        if (
+          !commentsArray ||
+          !Array.isArray(commentsArray) ||
+          commentsArray.length === 0
+        )
+          return false;
+
+        for (let i = 0; i < commentsArray.length; i++) {
+          const comment = commentsArray[i];
+          if (comment.comment_id === commentId) {
+            // Found the comment - apply the update function and return true
+            updateFn(comment);
+            return true;
+          }
+
+          // Check for replies in commentReplies structure
+          const replies = commentReplies[comment.comment_id] || [];
+          if (replies.length > 0) {
+            const found = findAndUpdateComment(replies, commentId, updateFn);
+            if (found) return true;
+          }
+        }
+        return false;
+      };
+
+      // First try to find the comment in thread comments
+      let commentFound = false;
+
+      // Look in expandedThreadComments first
+      commentFound = findAndUpdateComment(
+        expandedThreadComments,
+        commentId,
+        (comment) => {
+          currentComment = comment;
+        }
+      );
+
+      // If not found in expandedThreadComments, look in threadComments
+      if (!commentFound) {
+        commentFound = findAndUpdateComment(
+          threadComments,
+          commentId,
+          (comment) => {
+            currentComment = comment;
+          }
+        );
+      }
+
+      // Fallback to direct find if not found in nested structures
+      if (!currentComment) {
+        currentComment =
+          threadComments.find((c) => c.comment_id === commentId) ||
+          (commentReplies &&
+            Object.values(commentReplies)
+              .flat()
+              .find((c) => c.comment_id === commentId));
+      }
+
+      if (!currentComment) {
+        console.error(`Comment ${commentId} not found in any state`);
+        setSnackbar({
+          open: true,
+          message: "Error: Comment not found",
+          severity: "error",
+        });
+        return;
+      }
+
+      // Get current score, defaulting to 0 if undefined
+      const currentScore = currentComment.score || 0;
+
+      // Calculate new score with Reddit style (never below 0)
+      let newScore = currentScore + scoreDiff;
+      if (newScore < 0) {
+        console.log(`Comment score would go negative. Adjusting to 0.`);
+        newScore = 0;
+      }
+
+      console.log(
+        `Updating comment score: ${currentScore} + ${scoreDiff} = ${newScore}`
+      );
+
+      // Optimistically update UI - update vote state
+      setCommentVotes((prev) => ({
+        ...prev,
+        [commentId]: newVoteValue,
+      }));
+
+      // Make a direct update to the comment's score for immediate UI feedback
+      currentComment.score = newScore;
+
+      // Update in the database (upsert pattern)
+      const { error: voteError } = await supabase.from("user_votes").upsert(
+        {
+          user_id: auth.currentUser.id,
+          target_type: "comment",
+          target_id: commentId.toString(),
+          vote_value: newVoteValue,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,target_type,target_id",
+        }
+      );
+
+      if (voteError) {
+        console.error("Error saving comment vote:", voteError);
+        // Revert the optimistic update
+        setCommentVotes((prev) => ({
+          ...prev,
+          [commentId]: currentVote,
+        }));
+
+        // Revert the score
+        currentComment.score = currentScore;
+
+        // Show error notification
+        setSnackbar({
+          open: true,
+          message: "Failed to save your vote. Please try again.",
+          severity: "error",
+        });
+        return;
+      }
+
+      // Update the comment's score in the database with direct value
+      const { error: updateError } = await supabase
+        .from("board_comments")
+        .update({ score: newScore })
+        .eq("comment_id", commentId);
+
+      if (updateError) {
+        console.error("Error updating comment score:", updateError);
+        // Revert the optimistic update
+        setCommentVotes((prev) => ({
+          ...prev,
+          [commentId]: currentVote,
+        }));
+
+        // Revert the score
+        currentComment.score = currentScore;
+
+        // Show error notification
+        setSnackbar({
+          open: true,
+          message: "Failed to update comment score. Please try again.",
+          severity: "error",
+        });
+        return;
+      }
+
+      // Force a refresh of state to ensure UI updates
+      // Create new references for React to detect changes
+      if (expandedThreadComments.length > 0) {
+        setExpandedThreadComments([...expandedThreadComments]);
+      }
+
+      if (threadComments.length > 0) {
+        setThreadComments([...threadComments]);
+      }
+
+      // Also update commentReplies if needed
+      if (Object.keys(commentReplies).length > 0) {
+        setCommentReplies({ ...commentReplies });
+      }
+
+      console.log(`Comment vote and score updated successfully`);
+
+      // Success notification
+      setSnackbar({
+        open: true,
+        message: "Vote saved successfully!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error voting on comment:", error);
+      setSnackbar({
+        open: true,
+        message: "Error recording your vote. Please try again.",
+        severity: "error",
+      });
+    }
+  };
 
   // Modify fetchMessages to fetch posts by community
   const fetchMessages = useCallback(async () => {
     try {
+      setLoading(true); // Show loading state
       let query = supabase
         .from("open_board")
-        .select("*")
-        .eq("status", "active") // Only show active posts
+        .select("*, comment_count, score") // Also request score field
+        .in("status", ["active", "deleted"]) // Include deleted posts
         .order("created_at", { ascending: false }); // Newest first
 
-      // Temporarily comment out the community filtering until there are posts with community values
-      /*
+      // Filter by community if a specific one is selected
       if (selectedCommunity !== "all") {
-        // Filter by community if a specific one is selected
-        query = query.eq("community", selectedCommunity);
-      } else {
-        // For "all" view, only show posts from communities, not direct messages
-        query = query.not("community", "is", null);
+        // Find the community ID from the selected community name
+        const communityObj = communities.find(
+          (c) => c.name === selectedCommunity
+        );
+        if (communityObj && communityObj.community_id) {
+          // Filter by community ID
+          query = query.eq("community", communityObj.community_id);
+        }
       }
-      */
+
+      // Apply sorting if needed
+      if (selectedSort === "top") {
+        query = query
+          .order("score", { ascending: false })
+          .order("created_at", { ascending: false });
+      }
 
       const { data, error } = await query;
 
       if (error) {
         console.error("Error fetching posts:", error.message);
       } else if (data) {
+        console.log(
+          "Fetched posts with comment counts and scores:",
+          data.map((post) => ({
+            id: post.open_board_id,
+            title: post.title,
+            comment_count: post.comment_count || 0,
+            score: post.score || 0,
+          }))
+        );
+
         setMessages(data);
 
-        // Initialize vote counts (just for UI, not persisted to database)
-        const initialVotes = {};
-        data.forEach((post) => {
-          initialVotes[post.open_board_id] = initialVotes[
-            post.open_board_id
-          ] || {
-            count: Math.floor(Math.random() * 50), // Random vote count for demo
-            userVote: 0,
-          };
-        });
-        setVotes(initialVotes);
+        // Fetch votes for the current user
+        if (auth.currentUser && data.length > 0) {
+          const threadIds = data.map((post) => post.open_board_id);
+          fetchThreadVotes(threadIds);
+        }
 
         // Fetch usernames for all posts
         const userIds = data.map((post) => post.creator_id).filter(Boolean);
         fetchUsernames(userIds);
       }
+      setLoading(false); // Hide loading state
     } catch (err) {
       console.error("Exception in fetchMessages:", err);
+      setLoading(false); // Hide loading state in case of error
     }
-  }, [selectedCommunity, fetchUsernames]);
+  }, [
+    selectedCommunity,
+    communities,
+    fetchUsernames,
+    selectedSort,
+    fetchThreadVotes,
+    auth.currentUser,
+  ]);
 
   useEffect(() => {
     fetchMessages();
@@ -380,9 +862,10 @@ const OpenBoard = () => {
     };
   }, [fetchMessages, selectedCommunity, refreshMessages]);
 
-  // Handle content change
+  // Handle content change - update to use Redux
   const handleContentChange = (e) => {
     setSelectedCommunity(e.target.value);
+    dispatch(setCurrentCommunity(e.target.value));
   };
 
   // Modify createNewContent to create a separate content entry
@@ -648,29 +1131,61 @@ const OpenBoard = () => {
     }
   };
 
-  // Delete message
+  // Delete message (soft delete implementation)
   const deleteMessage = async (messageId) => {
     try {
-      const { error } = await supabase
-        .from("open_board")
-        .delete()
-        .eq("open_board_id", messageId)
-        .eq("creator_id", userID); // Add creator check
+      // Check if user is the author or an admin
+      const message = messages.find((msg) => msg.open_board_id === messageId);
 
-      if (error) {
-        console.error("Error deleting message:", error);
+      if (!message) {
         setSnackbar({
           open: true,
-          message: "Failed to delete message",
+          message: "Post not found",
+          severity: "error",
+        });
+        return;
+      }
+
+      const isAuthor = message.creator_id === userID;
+
+      if (!isAuthor && !isAdmin) {
+        setSnackbar({
+          open: true,
+          message: "You can only delete your own posts",
+          severity: "error",
+        });
+        return;
+      }
+
+      // Implement soft deletion by updating status to 'deleted'
+      const { error } = await supabase
+        .from("open_board")
+        .update({
+          status: "deleted",
+          content: "[deleted]",
+          title: message.title, // Keep the original title
+        })
+        .eq("open_board_id", messageId);
+
+      if (error) {
+        console.error("Error deleting post:", error);
+        setSnackbar({
+          open: true,
+          message: "Failed to delete post",
           severity: "error",
         });
       } else {
+        // Update message in the UI to show [deleted]
         setMessages((prevMessages) =>
-          prevMessages.filter((msg) => msg.open_board_id !== messageId)
+          prevMessages.map((msg) =>
+            msg.open_board_id === messageId
+              ? { ...msg, status: "deleted", content: "[deleted]" }
+              : msg
+          )
         );
         setSnackbar({
           open: true,
-          message: "Message deleted successfully",
+          message: "Post deleted successfully",
           severity: "success",
         });
       }
@@ -678,7 +1193,7 @@ const OpenBoard = () => {
       console.error("Exception in deleteMessage:", err);
       setSnackbar({
         open: true,
-        message: "Error deleting message",
+        message: "Error deleting post",
         severity: "error",
       });
     }
@@ -835,7 +1350,8 @@ const OpenBoard = () => {
 
     // If the message has a comment_count field, use it
     if (message && message.comment_count !== undefined) {
-      return message.comment_count;
+      // Always return a non-negative count
+      return Math.max(0, message.comment_count);
     }
 
     // Fallback to counting replies in the messages array
@@ -844,7 +1360,41 @@ const OpenBoard = () => {
 
   const handleSortChange = (sort) => {
     setSelectedSort(sort);
-    // Here you would implement actual sorting logic
+
+    if (messages.length > 0) {
+      let sortedMessages = [...messages];
+
+      if (sort === "top") {
+        // Sort by score (highest first)
+        sortedMessages.sort((a, b) => (b.score || 0) - (a.score || 0));
+      } else if (sort === "new") {
+        // Sort by created_at (newest first)
+        sortedMessages.sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+      }
+
+      setMessages(sortedMessages);
+    }
+  };
+
+  // Function to sort comments
+  const sortComments = (sortType) => {
+    if (expandedThreadComments.length > 0) {
+      let sortedComments = [...expandedThreadComments];
+
+      if (sortType === "top") {
+        // Sort by score (highest first)
+        sortedComments.sort((a, b) => (b.score || 0) - (a.score || 0));
+      } else if (sortType === "new") {
+        // Sort by created_at (newest first)
+        sortedComments.sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+      }
+
+      setExpandedThreadComments(sortedComments);
+    }
   };
 
   const openReplyInput = (messageId) => {
@@ -879,7 +1429,6 @@ const OpenBoard = () => {
   // Add expandedThreadId to state
   const [expandedThreadId, setExpandedThreadId] = useState(null);
   const [expandedThreadComments, setExpandedThreadComments] = useState([]);
-  const [replyingToCommentId, setReplyingToCommentId] = useState(null);
 
   // Function to toggle thread expansion
   const toggleThreadExpansion = async (thread) => {
@@ -898,10 +1447,12 @@ const OpenBoard = () => {
   // Function to fetch thread comments
   const fetchThreadComments = async (threadId) => {
     try {
+      console.log(`Fetching thread comments for post ${threadId}`);
+
       // Fetch comments for this thread
       const { data, error } = await supabase
         .from("board_comments")
-        .select("*")
+        .select("*, score") // Also request score field
         .eq("post_id", threadId)
         .order("created_at", { ascending: true });
 
@@ -909,14 +1460,21 @@ const OpenBoard = () => {
         console.error("Error fetching comments:", error);
         setExpandedThreadComments([]);
       } else {
+        console.log(`Fetched ${data?.length || 0} comments for thread`);
         setExpandedThreadComments(data || []);
 
         // Fetch usernames for comment authors
         const userIds = data.map((comment) => comment.user_id).filter(Boolean);
         fetchUsernames(userIds);
 
-        // Fetch replies for each comment
-        const commentIds = data.map((comment) => comment.id);
+        // Fetch votes for comments
+        if (auth.currentUser && data.length > 0) {
+          const commentIds = data.map((comment) => comment.comment_id);
+          fetchCommentVotes(commentIds);
+        }
+
+        // Fetch replies for each comment - use comment_id, not id
+        const commentIds = data.map((comment) => comment.comment_id);
         await fetchCommentReplies(commentIds);
       }
     } catch (err) {
@@ -930,9 +1488,14 @@ const OpenBoard = () => {
     if (!commentIds || commentIds.length === 0) return;
 
     try {
+      console.log(
+        `Fetching replies for ${commentIds.length} comments:`,
+        commentIds
+      );
+
       const { data, error } = await supabase
         .from("board_comments")
-        .select("*")
+        .select("*, score") // Also request score field
         .in("reply_to", commentIds)
         .order("created_at", { ascending: true });
 
@@ -942,24 +1505,40 @@ const OpenBoard = () => {
       }
 
       if (data && data.length > 0) {
+        console.log(`Found ${data.length} replies to comments:`, data);
+
         // Organize replies by parent comment
         const replies = {};
         data.forEach((reply) => {
+          console.log(`Processing reply to comment ${reply.reply_to}:`, reply);
           if (!replies[reply.reply_to]) {
             replies[reply.reply_to] = [];
           }
           replies[reply.reply_to].push(reply);
         });
 
-        setCommentReplies(replies);
+        console.log("Organized comment replies:", replies);
+        setCommentReplies((prevReplies) => {
+          const updatedReplies = { ...prevReplies, ...replies };
+          console.log("Updated commentReplies state:", updatedReplies);
+          return updatedReplies;
+        });
 
         // Fetch usernames for reply authors
         const replyUserIds = data.map((reply) => reply.user_id).filter(Boolean);
         fetchUsernames(replyUserIds);
 
-        // Recursively fetch replies to these replies
-        const replyIds = data.map((reply) => reply.id);
+        // Fetch votes for replies
+        if (auth.currentUser && data.length > 0) {
+          const replyIds = data.map((reply) => reply.comment_id);
+          fetchCommentVotes(replyIds);
+        }
+
+        // Recursively fetch replies to these replies - use comment_id, not id
+        const replyIds = data.map((reply) => reply.comment_id);
         await fetchCommentReplies(replyIds);
+      } else {
+        console.log("No replies found for these comments");
       }
     } catch (err) {
       console.error("Exception in fetchCommentReplies:", err);
@@ -978,6 +1557,7 @@ const OpenBoard = () => {
     }
 
     try {
+      // First insert the new comment
       const { data, error } = await supabase.from("board_comments").insert([
         {
           post_id: threadId,
@@ -993,7 +1573,40 @@ const OpenBoard = () => {
         setErrorMessage(`Error posting comment: ${error.message}`);
         setOpenErrorDialog(true);
       } else {
+        // Clear the comment input
         setNewComment("");
+
+        // Get the current post to get its comment count
+        const { data: postData, error: postError } = await supabase
+          .from("open_board")
+          .select("comment_count")
+          .eq("open_board_id", threadId)
+          .single();
+
+        if (postError) {
+          console.error(
+            "Error fetching post for comment count update:",
+            postError
+          );
+        } else {
+          // Calculate new comment count
+          const currentCount = postData.comment_count || 0;
+          const newCount = currentCount + 1;
+
+          // Update the comment count in the database
+          const { error: updateError } = await supabase
+            .from("open_board")
+            .update({ comment_count: newCount })
+            .eq("open_board_id", threadId);
+
+          if (updateError) {
+            console.error("Error updating comment count:", updateError);
+          } else {
+            console.log(
+              `Updated comment count for post ${threadId} to ${newCount}`
+            );
+          }
+        }
 
         // Refresh comments for this thread
         await fetchThreadComments(threadId);
@@ -1027,28 +1640,71 @@ const OpenBoard = () => {
       return;
     }
 
-    if (!newComment.trim()) {
+    if (!replyCommentText.trim()) {
       return;
     }
 
     try {
-      const { data, error } = await supabase.from("board_comments").insert([
-        {
-          post_id: threadId,
-          user_id: auth.currentUser.id,
-          content: newComment,
-          created_at: new Date().toISOString(),
-          reply_to: commentId, // This makes it a reply to a specific comment
-        },
-      ]);
+      console.log(
+        `Submitting reply to comment ${commentId} in thread ${threadId}`
+      );
+
+      const commentData = {
+        post_id: threadId,
+        user_id: auth.currentUser.id,
+        content: replyCommentText,
+        created_at: new Date().toISOString(),
+        reply_to: commentId, // This makes it a reply to a specific comment
+      };
+
+      console.log("Comment data being submitted:", commentData);
+
+      // Insert the comment reply
+      const { data, error } = await supabase
+        .from("board_comments")
+        .insert([commentData]);
 
       if (error) {
         console.error("Error submitting reply:", error);
+        console.error("Error details:", JSON.stringify(error));
         setErrorMessage(`Error posting reply: ${error.message}`);
         setOpenErrorDialog(true);
       } else {
-        setNewComment("");
+        console.log("Reply submitted successfully:", data);
+        setReplyCommentText("");
         setReplyingToCommentId(null);
+
+        // Get the current post to get its comment count
+        const { data: postData, error: postError } = await supabase
+          .from("open_board")
+          .select("comment_count")
+          .eq("open_board_id", threadId)
+          .single();
+
+        if (postError) {
+          console.error(
+            "Error fetching post for comment count update:",
+            postError
+          );
+        } else {
+          // Calculate new comment count
+          const currentCount = postData.comment_count || 0;
+          const newCount = currentCount + 1;
+
+          // Update the comment count in the database
+          const { error: updateError } = await supabase
+            .from("open_board")
+            .update({ comment_count: newCount })
+            .eq("open_board_id", threadId);
+
+          if (updateError) {
+            console.error("Error updating comment count:", updateError);
+          } else {
+            console.log(
+              `Updated comment count for post ${threadId} to ${newCount}`
+            );
+          }
+        }
 
         // Refresh comments for this thread
         await fetchThreadComments(threadId);
@@ -1077,105 +1733,304 @@ const OpenBoard = () => {
 
   // Recursive function to render comments and their replies
   const renderComment = (comment, depth = 0, threadId) => {
-    const replies = commentReplies[comment.id] || [];
+    console.log(`Rendering comment at depth ${depth}:`, comment);
+    console.log(`Current commentReplies state:`, commentReplies);
 
-    return (
+    const replies = commentReplies[comment.comment_id] || [];
+    console.log(
+      `Found ${replies.length} replies for comment ${comment.comment_id}:`,
+      replies
+    );
+
+    // Get current vote for this comment
+    const userVote = commentVotes[comment.comment_id] || 0;
+
+  return (
       <Box
-        key={comment.id}
+        key={comment.comment_id}
         sx={{
-          mt: 2,
-          ml: depth * 2,
-          pl: 2,
-          borderLeft: depth > 0 ? `2px solid rgba(0,0,0,0.1)` : "none",
+          mt: depth === 0 ? 2 : 1,
+          ml: depth > 0 ? `${depth * 20}px` : 0,
+          position: "relative",
+          "&::before":
+            depth > 0
+              ? {
+                  content: '""',
+                  position: "absolute",
+                  left: "-12px",
+                  top: 0,
+                  bottom: 0,
+                  width: "2px",
+                  bgcolor: "rgba(0, 0, 0, 0.1)",
+                  borderRadius: "2px",
+                }
+              : {},
         }}
       >
         <Paper
           elevation={0}
           sx={{
             p: 2,
-            backgroundColor:
-              depth % 2 === 0 ? "rgba(0,0,0,0.02)" : "rgba(0,0,0,0.01)",
+            bgcolor: depth % 2 === 0 ? "rgba(0,0,0,0.02)" : "rgba(0,0,0,0.01)",
             borderRadius: 1,
+            position: "relative",
+            "&:hover": {
+              bgcolor:
+                depth % 2 === 0 ? "rgba(0,0,0,0.04)" : "rgba(0,0,0,0.03)",
+            },
           }}
         >
           {/* Comment metadata */}
-          <Typography variant="caption" sx={{ display: "block", mb: 1 }}>
-            u/{usernames[comment.user_id] || "Anonymous"} •{" "}
+          <Typography
+            variant="caption"
+            sx={{ display: "block", mb: 1, color: "text.secondary" }}
+          >
+            <Box
+              component="span"
+              sx={{ fontWeight: "medium", color: "primary.main" }}
+            >
+              u/{usernames[comment.user_id] || "Anonymous"}
+            </Box>
+            {" • "}
             {formatDateTime(comment.created_at)}
           </Typography>
 
           {/* Comment content */}
-          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", mb: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              whiteSpace: "pre-wrap",
+              mb: 1,
+              color: "text.primary",
+              wordBreak: "break-word",
+            }}
+          >
             {comment.content}
           </Typography>
 
           {/* Comment actions */}
-          <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
-            <Button
-              size="small"
-              startIcon={<ArrowUpwardIcon fontSize="small" />}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              mt: 1,
+              gap: 2,
+              overflow: "hidden",
+              flexWrap: "nowrap", // Prevent buttons from wrapping
+            }}
+          >
+            {/* Voting controls */}
+            <Box
               sx={{
-                minWidth: "auto",
-                p: 0.5,
-                color: "text.secondary",
-                "&:hover": { backgroundColor: "transparent", color: "orange" },
+                display: "flex",
+                alignItems: "center",
+                mr: 0, // Reset right margin
+                flexShrink: 0,
+                justifyContent: "flex-start",
               }}
             >
-              Upvote
-            </Button>
+              <IconButton
+                size="small"
+                onClick={() => handleCommentVote(comment.comment_id, 1)}
+                color={
+                  commentVotes[comment.comment_id] === 1 ? "primary" : "default"
+                }
+                sx={{
+                  p: 0.5,
+                  ...(commentVotes[comment.comment_id] === 1 && {
+                    bgcolor: "rgba(15, 32, 68, 0.08)",
+                  }),
+                }}
+              >
+                <ArrowUpwardIcon fontSize="small" />
+              </IconButton>
 
+              <Typography
+                variant="body2"
+                sx={{
+                  mx: 0.5,
+                  fontWeight: "medium",
+                  color:
+                    commentVotes[comment.comment_id] === 1
+                      ? "primary.main"
+                      : commentVotes[comment.comment_id] === -1
+                      ? "error.main"
+                      : "text.primary",
+                }}
+              >
+                {comment.score || 0}
+              </Typography>
+
+              <IconButton
+                size="small"
+                onClick={() => handleCommentVote(comment.comment_id, -1)}
+                color={
+                  commentVotes[comment.comment_id] === -1 ? "error" : "default"
+                }
+                sx={{
+                  p: 0.5,
+                  ...(commentVotes[comment.comment_id] === -1 && {
+                    bgcolor: "rgba(160, 12, 48, 0.08)",
+                  }),
+                }}
+              >
+                <ArrowDownwardIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            {/* Reply button */}
             <Button
               size="small"
-              startIcon={<ArrowDownwardIcon fontSize="small" />}
+              startIcon={<ReplyIcon fontSize="small" />}
+              onClick={() => setReplyingToCommentId(comment.comment_id)}
               sx={{
                 minWidth: "auto",
-                p: 0.5,
-                color: "text.secondary",
-                "&:hover": { backgroundColor: "transparent", color: "#9494FF" },
-              }}
-            >
-              Downvote
-            </Button>
-
-            <Button
-              size="small"
-              onClick={() => setReplyingToCommentId(comment.id)}
-              sx={{
-                minWidth: "auto",
-                p: 0.5,
+                maxWidth: "fit-content",
+                flexShrink: 0,
+                px: 1,
+                ml: 8, // Increase left margin to move it further right
                 color: "text.secondary",
                 fontSize: "0.8rem",
                 textTransform: "none",
                 "&:hover": {
-                  backgroundColor: "transparent",
-                  color: "primary.main",
+                  backgroundColor: "rgba(0, 0, 0, 0.04)",
+                  width: "auto",
                 },
               }}
             >
               Reply
             </Button>
+
+            {/* Delete button - only shown for the creator or admin */}
+            {auth.currentUser &&
+              (comment.user_id === auth.currentUser.id || isAdmin) && (
+                <Button
+                  startIcon={<DeleteIcon fontSize="small" />}
+                  size="small"
+                  color="error"
+                  sx={{
+                    textTransform: "none",
+                    minWidth: "auto",
+                    maxWidth: "fit-content",
+                    flexShrink: 0,
+                    px: 1,
+                    fontSize: "0.8rem",
+                    "&:hover": {
+                      backgroundColor: "rgba(255, 0, 0, 0.04)",
+                      width: "auto",
+                    },
+                  }}
+                  onClick={() => {
+                    setCommentToDelete(comment.comment_id);
+                    setOpenDeleteCommentDialog(true);
+                  }}
+                >
+                  Delete
+                </Button>
+              )}
+
+            {/* More options for the comment */}
+            <IconButton
+              size="small"
+              sx={{
+                ml: "auto",
+                p: 0.5,
+                width: "32px",
+                height: "32px",
+                flexShrink: 0,
+                flexGrow: 0,
+                boxSizing: "border-box",
+                borderRadius: "50%",
+                "&:hover": {
+                  backgroundColor: "rgba(0, 0, 0, 0.04)",
+                  maxWidth: "32px",
+                },
+              }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                handleCommentMenuOpen(e, comment.comment_id);
+              }}
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
           </Box>
 
+          {/* Menu for additional comment actions */}
+          <Menu
+            anchorEl={commentMenuAnchorEl}
+            open={
+              Boolean(commentMenuAnchorEl) &&
+              activeCommentId === comment.comment_id
+            }
+            onClose={handleCommentMenuClose}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "right",
+            }}
+            transformOrigin={{
+              vertical: "top",
+              horizontal: "right",
+            }}
+            sx={{
+              "& .MuiPaper-root": {
+                width: "auto",
+                minWidth: "150px",
+                maxWidth: "200px",
+              },
+            }}
+          >
+            {auth.currentUser && comment.user_id !== auth.currentUser.id && (
+              <MenuItem
+                onClick={() => {
+                  setCommentToReport(comment);
+                  setOpenReportCommentDialog(true);
+                  handleCommentMenuClose();
+                }}
+              >
+                <ListItemIcon>
+                  <FlagIcon fontSize="small" color="error" />
+                </ListItemIcon>
+                <ListItemText>Report</ListItemText>
+              </MenuItem>
+            )}
+          </Menu>
+
           {/* Reply form */}
-          {replyingToCommentId === comment.id && (
-            <Box sx={{ mt: 2 }}>
+          {replyingToCommentId === comment.comment_id && (
+            <Box
+              sx={{
+                mt: 2,
+                pl: 2,
+                borderLeft: "2px solid",
+                borderColor: "primary.main",
+              }}
+            >
               <TextField
                 fullWidth
                 size="small"
                 multiline
                 rows={3}
                 placeholder="Write your reply..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                sx={{ mb: 1 }}
+                value={replyCommentText}
+                onChange={(e) => setReplyCommentText(e.target.value)}
+                sx={{
+                  mb: 1,
+                  bgcolor: "background.paper",
+                  "& .MuiOutlinedInput-root": {
+                    "&:hover fieldset": {
+                      borderColor: "primary.main",
+                    },
+                  },
+                }}
               />
               <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
                 <Button
                   size="small"
                   onClick={() => {
                     setReplyingToCommentId(null);
-                    setNewComment("");
+                    setReplyCommentText("");
                   }}
+                  sx={{ color: "text.secondary" }}
                 >
                   Cancel
                 </Button>
@@ -1183,8 +2038,16 @@ const OpenBoard = () => {
                   size="small"
                   variant="contained"
                   disableElevation
-                  disabled={!newComment.trim()}
-                  onClick={() => submitCommentReply(comment.id, threadId)}
+                  disabled={!replyCommentText.trim()}
+                  onClick={() =>
+                    submitCommentReply(comment.comment_id, threadId)
+                  }
+                  sx={{
+                    bgcolor: "primary.main",
+                    "&:hover": {
+                      bgcolor: "primary.dark",
+                    },
+                  }}
                 >
                   Reply
                 </Button>
@@ -1195,7 +2058,7 @@ const OpenBoard = () => {
 
         {/* Render all replies recursively */}
         {replies.length > 0 && (
-          <Box>
+          <Box sx={{ position: "relative" }}>
             {replies.map((reply) => renderComment(reply, depth + 1, threadId))}
           </Box>
         )}
@@ -1203,123 +2066,455 @@ const OpenBoard = () => {
     );
   };
 
-  // Function to create a new community
-  const createNewCommunity = async () => {
+  // Function to open thread view with comments
+  const openThread = async (thread) => {
+    setSelectedThread(thread);
+
     try {
-      if (!auth.currentUser) {
-        setOpenLoginDialog(true);
-        return;
-      }
+      console.log(`Opening thread view for post ${thread.open_board_id}`);
 
-      // We don't need to check newCommunityName here since we already check localName
-      // in the handleCreateCommunity function before calling createNewCommunity
-
-      // Check if a community with this name already exists
-      const { data: existingCommunities, error: checkError } = await supabase
-        .from("communities")
-        .select("community_id")
-        .eq("name", newCommunityName.trim());
-
-      if (checkError) {
-        console.error("Error checking existing communities:", checkError);
-        setErrorMessage(`Error: ${checkError.message}`);
-        setOpenErrorDialog(true);
-        return;
-      }
-
-      if (existingCommunities && existingCommunities.length > 0) {
-        setErrorMessage("A community with this name already exists");
-        setOpenErrorDialog(true);
-        return;
-      }
-
-      // Insert the new community
+      // Fetch comments for this thread
       const { data, error } = await supabase
-        .from("communities")
-        .insert([
-          {
-            name: newCommunityName.trim(),
-            description:
-              newCommunityDescription.trim() ||
-              `Welcome to ${newCommunityName}!`,
-            creator_id: auth.currentUser.id,
-            created_at: new Date().toISOString(),
-            status: "active",
-          },
-        ])
-        .select();
+        .from("board_comments")
+        .select("*")
+        .eq("post_id", thread.open_board_id)
+        .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("Error creating community:", error);
-        setErrorMessage(`Error creating community: ${error.message}`);
-        setOpenErrorDialog(true);
+        console.error("Error fetching comments:", error);
+        setThreadComments([]);
       } else {
-        setOpenNewCommunityDialog(false);
-        setNewCommunityName("");
-        setNewCommunityDescription("");
-        setSnackbar({
-          open: true,
-          message: "Community created successfully!",
-          severity: "success",
-        });
+        console.log(`Fetched ${data.length} comments for thread`);
+        setThreadComments(data || []);
 
-        // Refresh the communities list
-        fetchCommunities();
+        // Fetch usernames for comment authors
+        const userIds = data.map((comment) => comment.user_id).filter(Boolean);
+        fetchUsernames(userIds);
 
-        // Select the newly created community
-        if (data && data[0]) {
-          setSelectedCommunity(data[0].name);
+        // Also fetch replies for nested display
+        const commentIds = data.map((comment) => comment.comment_id);
+        if (commentIds.length > 0) {
+          console.log(`Fetching replies for ${commentIds.length} comments`);
+          // Get replies to show nested comments
+          const { data: repliesData, error: repliesError } = await supabase
+            .from("board_comments")
+            .select("*")
+            .in("reply_to", commentIds)
+            .order("created_at", { ascending: true });
+
+          if (!repliesError && repliesData && repliesData.length > 0) {
+            console.log(
+              `Found ${repliesData.length} replies to comments:`,
+              repliesData
+            );
+
+            // Add replies to commentReplies state
+            const replies = {};
+            repliesData.forEach((reply) => {
+              console.log(
+                `Processing reply to comment ${reply.reply_to}:`,
+                reply
+              );
+              if (!replies[reply.reply_to]) {
+                replies[reply.reply_to] = [];
+              }
+              replies[reply.reply_to].push(reply);
+            });
+
+            console.log("Organized comment replies:", replies);
+            setCommentReplies((prevReplies) => {
+              const updatedReplies = { ...prevReplies, ...replies };
+              console.log("Updated commentReplies state:", updatedReplies);
+              return updatedReplies;
+            });
+
+            // Fetch usernames for reply authors
+            const replyUserIds = repliesData
+              .map((reply) => reply.user_id)
+              .filter(Boolean);
+            fetchUsernames(replyUserIds);
+          } else {
+            console.log("No replies found for these comments");
+          }
         }
       }
+
+      setOpenThreadDialog(true);
     } catch (err) {
-      console.error("Exception in createNewCommunity:", err);
+      console.error("Exception in openThread:", err);
+      setThreadComments([]);
+      setOpenThreadDialog(true);
+    }
+  };
+
+  // Function to add a new post
+  const addMessage = async (title, content) => {
+    try {
+      if (!title.trim()) {
+        setSnackbar({
+          open: true,
+          message: "Please enter a title for your post",
+          severity: "error",
+        });
+        return;
+      }
+
+      if (!content.trim()) {
+        setSnackbar({
+          open: true,
+          message: "Please enter some content for your post",
+          severity: "error",
+        });
+        return;
+      }
+
+      if (!newPostCommunity) {
+        setSnackbar({
+          open: true,
+          message: "Please select a community for your post",
+          severity: "error",
+        });
+        return;
+      }
+
+      setCreatePostLoading(true);
+
+      // Find the community ID from the selected community name
+      const communityObj = communities.find((c) => c.name === newPostCommunity);
+      const communityId = communityObj ? communityObj.community_id : null;
+
+      if (!communityId) {
+        setSnackbar({
+          open: true,
+          message: "Invalid community selected",
+          severity: "error",
+        });
+        setCreatePostLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.from("open_board").insert([
+        {
+          title: title,
+          content: content,
+          creator_id: user.id,
+          community: communityId, // Use community ID, not name
+          status: "active",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) {
+        console.error("Error creating post:", error);
+        setSnackbar({
+          open: true,
+          message: "Error creating post: " + error.message,
+          severity: "error",
+        });
+      } else {
+        console.log("New post created:", data);
+        // Clear form and close dialog
+        setNewPostTitle("");
+        setNewPostContent("");
+        setNewPostCommunity("");
+        setOpenNewPostDialog(false);
+        // Refresh the feed
+        fetchMessages();
+        setSnackbar({
+          open: true,
+          message: "Post created successfully!",
+          severity: "success",
+        });
+      }
+      setCreatePostLoading(false);
+    } catch (error) {
+      console.error("Exception in addMessage:", error);
+      setSnackbar({
+        open: true,
+        message: "Error creating post: " + error.message,
+        severity: "error",
+      });
+      setCreatePostLoading(false);
+    }
+  };
+
+  // Function to submit a report
+  const submitReport = async () => {
+    if (!reportReason.trim()) {
+      setErrorMessage("Please provide a reason for reporting this post.");
+      setOpenErrorDialog(true);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.from("reports").insert([
+        {
+          reporter_id: userID,
+          reported_id: messageToReport.creator_id,
+          reported_item_id: messageToReport,
+          report_type: "post",
+          status: "open",
+          report: reportReason,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) {
+        console.error("Error submitting report:", error);
+        setErrorMessage(`Error submitting report: ${error.message}`);
+        setOpenErrorDialog(true);
+      } else {
+        setOpenReportDialog(false);
+        setReportReason("");
+        setSnackbar({
+          open: true,
+          message: "Report submitted successfully.",
+          severity: "success",
+        });
+      }
+    } catch (err) {
+      console.error("Exception in submitReport:", err);
       setErrorMessage(`An unexpected error occurred: ${err.message}`);
       setOpenErrorDialog(true);
     }
   };
 
-  // New Community Dialog Component
-  const NewCommunityDialog = () => {
-    // Use local state within the dialog component to avoid rerendering issues
-    const [localName, setLocalName] = useState(newCommunityName);
-    const [localDescription, setLocalDescription] = useState(
-      newCommunityDescription
-    );
-    const [localError, setLocalError] = useState("");
+  // Function to confirm deletion of a post
+  const confirmDelete = async () => {
+    try {
+      // Check if user is the author or an admin
+      const message = messages.find(
+        (msg) => msg.open_board_id === messageToDelete
+      );
 
-    // Handle closing with cleanup
+      if (!message) {
+        setErrorMessage("Post not found");
+        setOpenErrorDialog(true);
+        return;
+      }
+
+      const isAuthor = message.creator_id === userID;
+
+      if (!isAuthor && !isAdmin) {
+        setErrorMessage("You can only delete your own posts");
+        setOpenErrorDialog(true);
+        return;
+      }
+
+      // Implement soft deletion by updating status to 'deleted'
+      const { error } = await supabase
+        .from("open_board")
+        .update({
+          status: "deleted",
+          content: "[deleted]",
+          title: message.title, // Keep the original title
+        })
+        .eq("open_board_id", messageToDelete);
+
+      if (error) {
+        console.error("Error deleting post:", error);
+        setErrorMessage(`Error deleting post: ${error.message}`);
+        setOpenErrorDialog(true);
+      } else {
+        setOpenDeleteDialog(false);
+
+        // Update messages in UI to show [deleted]
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.open_board_id === messageToDelete
+              ? { ...m, status: "deleted", content: "[deleted]" }
+              : m
+          )
+        );
+
+        setSnackbar({
+          open: true,
+          message: "Post deleted successfully.",
+          severity: "success",
+        });
+      }
+    } catch (err) {
+      console.error("Exception in confirmDelete:", err);
+      setErrorMessage(`An unexpected error occurred: ${err.message}`);
+      setOpenErrorDialog(true);
+    }
+  };
+
+  // Add a function to handle opening the New Post dialog
+  const handleOpenNewPostDialog = () => {
+    // If a specific community is selected, use it for the new post
+    if (selectedCommunity && selectedCommunity !== "all") {
+      setNewPostCommunity(selectedCommunity);
+    } else {
+      // Default to first available community if none selected
+      const firstCommunity = communities.length > 0 ? communities[0].name : "";
+      setNewPostCommunity(firstCommunity);
+    }
+    setOpenNewPostDialog(true);
+  };
+
+  // Helper function to get community name from ID
+  const getCommunityName = (communityId) => {
+    if (!communityId) return "Unknown";
+
+    // Find the community object with matching community_id
+    const community = communities.find((c) => c.community_id === communityId);
+
+    // Return the name if found, otherwise just return the ID
+    return community ? community.name : communityId;
+  };
+
+  // Add back the internal NewCommunityDialog component
+  const NewCommunityDialog = () => {
+    // Use local state to avoid re-rendering the entire parent component on every keystroke
+    const [localName, setLocalName] = useState("");
+    const [localDescription, setLocalDescription] = useState("");
+    const [localError, setLocalError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Initialize local state when dialog opens
+    useEffect(() => {
+      if (openNewCommunityDialog) {
+        setLocalName("");
+        setLocalDescription("");
+        setLocalError("");
+      }
+    }, [openNewCommunityDialog]);
+
     const handleClose = () => {
-      setLocalError("");
       setOpenNewCommunityDialog(false);
     };
 
     // Handle creating community with local state
-    const handleCreateCommunity = () => {
-      // Validate locally first
+    const handleCreateCommunity = async () => {
+      // Validate
       if (!localName.trim()) {
         setLocalError("Please provide a name for your community");
         return;
       }
 
-      // Clear any previous error
-      setLocalError("");
+      setIsSubmitting(true);
 
-      // Update parent state
-      setNewCommunityName(localName);
-      setNewCommunityDescription(localDescription);
+      try {
+        // Check if a community with this name already exists
+        const { data: existingCommunities, error: checkError } = await supabase
+          .from("communities")
+          .select("community_id")
+          .eq("name", localName.trim());
 
-      // Call create function
-      createNewCommunity();
-    };
+        if (checkError) {
+          console.error("Error checking existing communities:", checkError);
+          setLocalError(`Error: ${checkError.message}`);
+          setIsSubmitting(false);
+          return;
+        }
 
-    // Reset local state when dialog opens
-    useEffect(() => {
-      if (openNewCommunityDialog) {
-        setLocalName(newCommunityName);
-        setLocalDescription(newCommunityDescription);
-        setLocalError(""); // Clear any previous error
+        if (existingCommunities && existingCommunities.length > 0) {
+          setLocalError("A community with this name already exists");
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Insert the new community
+        const { data, error } = await supabase
+          .from("communities")
+          .insert([
+            {
+              name: localName.trim(),
+              description:
+                localDescription.trim() || `Welcome to ${localName.trim()}!`,
+              creator_id: userID,
+              created_at: new Date().toISOString(),
+              status: "active",
+            },
+          ])
+          .select();
+
+        if (error) {
+          console.error("Error creating community:", error);
+          setLocalError(`Error creating community: ${error.message}`);
+        } else {
+          // Close dialog
+          setOpenNewCommunityDialog(false);
+
+          // Success message
+          setSnackbar({
+            open: true,
+            message: "Community created successfully!",
+            severity: "success",
+          });
+
+          // Important: Add a small delay to ensure database has updated
+          setTimeout(async () => {
+            // First fetch the updated communities
+            try {
+              const { data: refreshedCommunities, error: refreshError } =
+                await supabase
+                  .from("communities")
+                  .select("*")
+                  .order("created_at", { ascending: true });
+
+              if (!refreshError && refreshedCommunities) {
+                // Process the communities
+                const processedCommunities = refreshedCommunities.map(
+                  (item) => ({
+                    name: item.name,
+                    community_id: item.community_id,
+                    creator_id: item.creator_id,
+                    created_at: item.created_at,
+                    description: item.description,
+                  })
+                );
+
+                // Add "all" as a special view
+                const allCommunities = [
+                  {
+                    name: "all",
+                    description: "All posts from all communities",
+                    isDefault: true,
+                    isView: true,
+                  },
+                  ...processedCommunities,
+                ];
+
+                setCommunities(allCommunities);
+
+                // Create details mapping
+                const details = {};
+                processedCommunities.forEach((community) => {
+                  details[community.name] = {
+                    community_id: community.community_id,
+                    creator_id: community.creator_id,
+                    created_at: community.created_at,
+                    description: community.description,
+                  };
+                });
+
+                // Add details for "all" view
+                details["all"] = {
+                  description: "A combined view of posts from all communities",
+                  isView: true,
+                };
+                setCommunityDetails(details);
+
+                // Navigate to the new community
+                if (data && data[0]) {
+                  console.log("Setting community to:", data[0].name);
+                  setSelectedCommunity(data[0].name);
+                }
+              }
+            } catch (err) {
+              console.error("Error refreshing communities:", err);
+            }
+          }, 500);
+        }
+      } catch (err) {
+        console.error("Exception in handleCreateCommunity:", err);
+        setLocalError(`An unexpected error occurred: ${err.message}`);
+      } finally {
+        setIsSubmitting(false);
       }
-    }, [openNewCommunityDialog, newCommunityName, newCommunityDescription]);
+    };
 
     return (
       <Dialog
@@ -1374,7 +2569,12 @@ const OpenBoard = () => {
             onClick={handleCreateCommunity}
             color="primary"
             variant="contained"
-            disabled={!localName.trim()}
+            disabled={isSubmitting || !localName.trim()}
+            startIcon={
+              isSubmitting ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : null
+            }
             sx={{
               borderRadius: 28,
               px: 3,
@@ -1392,158 +2592,127 @@ const OpenBoard = () => {
     );
   };
 
-  // Function to open thread view with comments
-  const openThread = async (thread) => {
-    setSelectedThread(thread);
+  // Add state for dropdown menu
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const [activePostId, setActivePostId] = useState(null);
+  const [commentMenuAnchorEl, setCommentMenuAnchorEl] = useState(null);
+  const [activeCommentId, setActiveCommentId] = useState(null);
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  const [openDeleteCommentDialog, setOpenDeleteCommentDialog] = useState(false);
+  const [commentToReport, setCommentToReport] = useState(null);
+  const [openReportCommentDialog, setOpenReportCommentDialog] = useState(false);
 
-    try {
-      // Fetch comments for this thread
-      const { data, error } = await supabase
-        .from("board_comments")
-        .select("*")
-        .eq("post_id", thread.open_board_id)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching comments:", error);
-        setThreadComments([]);
-      } else {
-        setThreadComments(data || []);
-
-        // Fetch usernames for comment authors
-        const userIds = data.map((comment) => comment.user_id).filter(Boolean);
-        fetchUsernames(userIds);
-      }
-
-      setOpenThreadDialog(true);
-    } catch (err) {
-      console.error("Exception in openThread:", err);
-      setThreadComments([]);
-      setOpenThreadDialog(true);
-    }
+  // Function to handle opening the post action menu
+  const handleMenuOpen = (event, postId) => {
+    setMenuAnchorEl(event.currentTarget);
+    setActivePostId(postId);
   };
 
-  // Function to add a new message or post
-  const addMessage = async (title, content) => {
-    try {
-      if (!auth.currentUser) {
-        setOpenLoginDialog(true);
-        return;
-      }
-
-      if (!title || !content) {
-        setErrorMessage("Please provide both title and content for your post");
-        setOpenErrorDialog(true);
-        return;
-      }
-
-      // Find community_id from the communities array based on selectedCommunity name
-      let communityId = null;
-      if (selectedCommunity !== "all") {
-        const selectedCommunityObj = communities.find(
-          (c) => c.name === selectedCommunity
-        );
-        if (selectedCommunityObj) {
-          communityId = selectedCommunityObj.community_id;
-        }
-      }
-
-      const { data, error } = await supabase.from("open_board").insert([
-        {
-          title: title,
-          content: content,
-          creator_id: auth.currentUser.id,
-          created_at: new Date().toISOString(),
-          status: "active",
-          community: communityId, // Use the community_id, not the name
-        },
-      ]);
-
-      if (error) {
-        console.error("Error adding post:", error.message);
-        setErrorMessage(`Error creating post: ${error.message}`);
-        setOpenErrorDialog(true);
-      } else {
-        setNewPostTitle("");
-        setNewPostContent("");
-        setOpenNewPostDialog(false);
-        setRefreshMessages((prev) => !prev);
-      }
-    } catch (err) {
-      console.error("Exception in addMessage:", err);
-      setErrorMessage(`An unexpected error occurred: ${err.message}`);
-      setOpenErrorDialog(true);
-    }
+  // Function to handle closing the post action menu
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+    setActivePostId(null);
   };
 
-  // Function to submit a report
-  const submitReport = async () => {
-    if (!reportReason.trim()) {
-      setErrorMessage("Please provide a reason for reporting this post.");
-      setOpenErrorDialog(true);
+  // Function to handle opening the comment action menu
+  const handleCommentMenuOpen = (event, commentId) => {
+    setCommentMenuAnchorEl(event.currentTarget);
+    setActiveCommentId(commentId);
+  };
+
+  // Function to handle closing the comment action menu
+  const handleCommentMenuClose = () => {
+    setCommentMenuAnchorEl(null);
+    setActiveCommentId(null);
+  };
+
+  // Function to handle comment deletion
+  const handleDeleteComment = async (commentId) => {
+    if (!auth.currentUser || !commentId) {
       return;
     }
 
     try {
-      const { data, error } = await supabase.from("reports").insert([
-        {
-          reporter_id: userID,
-          reported_id: messageToReport.creator_id,
-          reported_item_id: messageToReport,
-          report_type: "post",
-          status: "open",
-          report: reportReason,
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const { error } = await supabase
+        .from("comments")
+        .update({ status: "deleted", content: "[deleted]" })
+        .eq("comment_id", commentId)
+        .eq("user_id", auth.currentUser.id);
 
-      if (error) {
-        console.error("Error submitting report:", error);
-        setErrorMessage(`Error submitting report: ${error.message}`);
-        setOpenErrorDialog(true);
-      } else {
-        setOpenReportDialog(false);
-        setReportReason("");
-        setSnackbar({
-          open: true,
-          message: "Report submitted successfully.",
-          severity: "success",
-        });
-      }
-    } catch (err) {
-      console.error("Exception in submitReport:", err);
-      setErrorMessage(`An unexpected error occurred: ${err.message}`);
-      setOpenErrorDialog(true);
+      if (error) throw error;
+
+      // Update local state to reflect the deletion
+      setComments((prevComments) =>
+        prevComments.map((comment) =>
+          comment.comment_id === commentId
+            ? { ...comment, status: "deleted", content: "[deleted]" }
+            : comment
+        )
+      );
+
+      // Also update expandedThreadComments if we're in that view
+      setExpandedThreadComments((prev) =>
+        prev.map((comment) =>
+          comment.comment_id === commentId
+            ? { ...comment, status: "deleted", content: "[deleted]" }
+            : comment
+        )
+      );
+
+      // Close the dialog
+      setOpenDeleteCommentDialog(false);
+
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: "Comment deleted successfully",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to delete comment. Please try again.",
+        severity: "error",
+      });
     }
   };
 
-  // Function to confirm deletion of a post
-  const confirmDelete = async () => {
-    try {
-      const { error } = await supabase
-        .from("open_board")
-        .delete()
-        .eq("open_board_id", messageToDelete);
+  // Function to handle comment reporting
+  const handleReportComment = async (comment) => {
+    if (!auth.currentUser || !comment) {
+      setOpenLoginDialog(true);
+      return;
+    }
 
-      if (error) {
-        console.error("Error deleting post:", error);
-        setErrorMessage(`Error deleting post: ${error.message}`);
-        setOpenErrorDialog(true);
-      } else {
-        setOpenDeleteDialog(false);
-        setMessages((prev) =>
-          prev.filter((m) => m.open_board_id !== messageToDelete)
-        );
-        setSnackbar({
-          open: true,
-          message: "Post deleted successfully.",
-          severity: "success",
-        });
-      }
-    } catch (err) {
-      console.error("Exception in confirmDelete:", err);
-      setErrorMessage(`An unexpected error occurred: ${err.message}`);
-      setOpenErrorDialog(true);
+    try {
+      const { error } = await supabase.from("reports").insert({
+        user_id: auth.currentUser.id,
+        target_id: comment.comment_id,
+        target_type: "comment",
+        reason: reportReason,
+        status: "pending",
+      });
+
+      if (error) throw error;
+
+      // Close the dialog and reset reason
+      setOpenReportCommentDialog(false);
+      setReportReason("");
+
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: "Report submitted successfully",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error reporting comment:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to submit report. Please try again.",
+        severity: "error",
+      });
     }
   };
 
@@ -1631,8 +2800,9 @@ const OpenBoard = () => {
           <DialogTitle>Confirm Delete</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              Are you sure you want to delete this post? This action cannot be
-              undone.
+              Are you sure you want to delete this post? The content will be
+              hidden and replaced with "[deleted]", but the post will remain
+              visible.
             </DialogContentText>
           </DialogContent>
           <DialogActions>
@@ -1649,17 +2819,21 @@ const OpenBoard = () => {
         <Dialog
           open={openNewPostDialog}
           onClose={() => setOpenNewPostDialog(false)}
-          maxWidth="md"
           fullWidth
+          maxWidth="md"
         >
-          <DialogTitle>Create New Post</DialogTitle>
+          <DialogTitle>
+            <Typography variant="h6" fontWeight="medium">
+              Create a new post
+            </Typography>
+          </DialogTitle>
           <DialogContent>
             <TextField
               autoFocus
               margin="dense"
               label="Title"
-              type="text"
               fullWidth
+              variant="outlined"
               value={newPostTitle}
               onChange={(e) => setNewPostTitle(e.target.value)}
               sx={{ mb: 2 }}
@@ -1667,43 +2841,71 @@ const OpenBoard = () => {
             <TextField
               margin="dense"
               label="Content"
-              type="text"
               fullWidth
               multiline
               rows={6}
+              variant="outlined"
               value={newPostContent}
               onChange={(e) => setNewPostContent(e.target.value)}
             />
-            <FormControl fullWidth margin="normal">
-              <InputLabel id="community-select-label">Community</InputLabel>
+            <FormControl fullWidth sx={{ mb: 3, mt: 2 }}>
+              <InputLabel id="post-community-select-label">
+                Community
+              </InputLabel>
               <Select
-                labelId="community-select-label"
-                value={selectedCommunity}
-                onChange={(e) => setSelectedCommunity(e.target.value)}
+                labelId="post-community-select-label"
+                value={newPostCommunity}
+                onChange={(e) => setNewPostCommunity(e.target.value)}
                 label="Community"
+                sx={{ borderRadius: 1 }}
               >
                 {communities.map((community) => (
-                  <MenuItem key={community.name} value={community.name}>
+                  <MenuItem key={community.community_id} value={community.name}>
+                    <ListItemIcon>
+                      <FolderIcon fontSize="small" />
+                    </ListItemIcon>
                     s/{community.name}
                   </MenuItem>
                 ))}
               </Select>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mt: 1 }}
+              >
+                Posts must be created in a specific community
+              </Typography>
             </FormControl>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenNewPostDialog(false)} color="primary">
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button
+              onClick={() => setOpenNewPostDialog(false)}
+              color="inherit"
+              sx={{
+                borderRadius: 28,
+                px: 2,
+                mr: 1,
+                height: "36px",
+                textTransform: "none",
+              }}
+            >
               Cancel
             </Button>
             <Button
               onClick={() => addMessage(newPostTitle, newPostContent)}
-              color="primary"
               variant="contained"
+              disabled={createPostLoading}
+              startIcon={
+                createPostLoading ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : (
+                  <SendIcon />
+                )
+              }
               sx={{
                 borderRadius: 28,
-                px: 1.5,
-                width: "auto",
-                minWidth: "100px",
-                maxWidth: "130px",
+                px: 2,
+                height: "36px",
                 textTransform: "none",
                 boxShadow: 2,
                 "&:hover": {
@@ -1733,6 +2935,18 @@ const OpenBoard = () => {
             <>
               <DialogTitle>
                 <Box component="div">
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "primary.main",
+                        fontWeight: "bold",
+                        mr: 1,
+                      }}
+                    >
+                      s/{getCommunityName(selectedThread.community)}
+                    </Typography>
+                  </Box>
                   <Typography variant="h6">{selectedThread.title}</Typography>
                   <Typography variant="caption" display="block" sx={{ mt: 1 }}>
                     Posted by u/
@@ -1744,7 +2958,14 @@ const OpenBoard = () => {
               <DialogContent dividers>
                 <Typography
                   variant="body1"
-                  sx={{ whiteSpace: "pre-wrap", mb: 3 }}
+                  sx={{
+                    whiteSpace: "pre-wrap",
+                    mb: 3,
+                    ...(selectedThread.status === "deleted" && {
+                      fontStyle: "italic",
+                      color: "text.disabled",
+                    }),
+                  }}
                 >
                   {selectedThread.content}
                 </Typography>
@@ -1774,6 +2995,16 @@ const OpenBoard = () => {
                         submitThreadComment(selectedThread.open_board_id)
                       }
                       disabled={!newComment.trim()}
+                      sx={{
+                        borderRadius: 28,
+                        px: 2,
+                        height: "36px",
+                        textTransform: "none",
+                        boxShadow: 2,
+                        "&:hover": {
+                          boxShadow: 3,
+                        },
+                      }}
                     >
                       Comment
                     </Button>
@@ -1802,22 +3033,23 @@ const OpenBoard = () => {
 
                 {/* Comments list */}
                 {threadComments.length > 0 ? (
-                  threadComments.map((comment) => (
-                    <Paper
-                      key={comment.id}
-                      elevation={0}
-                      sx={{ p: 2, mb: 2, bgcolor: "rgba(0,0,0,0.02)" }}
-                    >
-                      <Typography
-                        variant="caption"
-                        sx={{ display: "block", mb: 1 }}
-                      >
-                        u/{usernames[comment.user_id] || "Anonymous"} •{" "}
-                        {formatTimestamp(comment.created_at)}
-                      </Typography>
-                      <Typography variant="body2">{comment.content}</Typography>
-                    </Paper>
-                  ))
+                  (() => {
+                    console.log("Rendering thread comments:", threadComments);
+                    return (
+                      <Box>
+                        {threadComments
+                          .filter((comment) => !comment.reply_to) // Only top-level comments
+                          .map((comment) => {
+                            console.log("Rendering comment:", comment);
+                            return renderComment(
+                              comment,
+                              0,
+                              selectedThread.open_board_id
+                            );
+                          })}
+                      </Box>
+                    );
+                  })()
                 ) : (
                   <Typography
                     variant="body2"
@@ -1829,7 +3061,15 @@ const OpenBoard = () => {
                 )}
               </DialogContent>
               <DialogActions>
-                <Button onClick={() => setOpenThreadDialog(false)}>
+                <Button
+                  onClick={() => setOpenThreadDialog(false)}
+                  sx={{
+                    borderRadius: 28,
+                    px: 2,
+                    height: "36px",
+                    textTransform: "none",
+                  }}
+                >
                   Close
                 </Button>
               </DialogActions>
@@ -1865,6 +3105,7 @@ const OpenBoard = () => {
               sx={{
                 mb: 2,
                 borderRadius: 28,
+                height: "36px",
                 textTransform: "none",
                 "&:hover": {
                   boxShadow: 1,
@@ -1900,9 +3141,25 @@ const OpenBoard = () => {
                               selectedCommunity === community.name
                                 ? "bold"
                                 : "normal",
+                            fontStyle:
+                              community.name === "all" ? "italic" : "normal", // Italicize "all" to indicate it's special
                           }}
                         >
                           s/{community.name}
+                          {community.name === "all" && (
+                            <Typography
+                              component="span"
+                              variant="caption"
+                              sx={{
+                                ml: 1,
+                                color: "text.secondary",
+                                fontSize: "0.75rem",
+                                display: "inline-block",
+                              }}
+                            >
+                              (view)
+                            </Typography>
+                          )}
                         </Typography>
                       }
                     />
@@ -1936,34 +3193,63 @@ const OpenBoard = () => {
                 sx={{
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center",
+                  alignItems: "flex-start", // Change to flex-start for proper alignment with description
+                  mb: 1,
                 }}
               >
-                <Typography
-                  variant="h5"
-                  component="h1"
-                  sx={{ fontWeight: "bold" }}
-                >
-                  {selectedCommunity === "all"
-                    ? "All Communities"
-                    : `s/${selectedCommunity}`}
-                </Typography>
+                <Box>
+                  <Typography
+                    variant="h5"
+                    component="h1"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    {selectedCommunity === "all"
+                      ? "All Communities"
+                      : `s/${selectedCommunity}`}
+                  </Typography>
+
+                  {selectedCommunity === "all" && (
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "text.secondary", mt: 0.5 }}
+                    >
+                      s/all is a view that displays posts from all communities.
+                    </Typography>
+                  )}
+
+                  {selectedCommunity !== "all" &&
+                    communityDetails[selectedCommunity] && (
+                      <Typography
+                        variant="body2"
+                        sx={{ mt: 0.5, color: "text.secondary" }}
+                      >
+                        {communityDetails[selectedCommunity].description}
+                      </Typography>
+                    )}
+                </Box>
+
                 <Button
                   variant="contained"
                   color="primary"
                   size="medium"
                   startIcon={<AddIcon />}
-                  onClick={() => setOpenNewPostDialog(true)}
+                  onClick={() => handleOpenNewPostDialog()}
+                  disabled={selectedCommunity === "all"}
                   sx={{
                     borderRadius: 28,
                     px: 1.5,
                     width: "auto",
                     minWidth: "100px",
                     maxWidth: "130px",
+                    height: "36px",
                     textTransform: "none",
                     boxShadow: 2,
+                    mt: 0.5, // Add margin top to align with heading
+                    transition: "all 0.2s ease-in-out",
+                    bgcolor: "#0F2044", // UNCG Navy for consistency
                     "&:hover": {
                       boxShadow: 3,
+                      bgcolor: "#1a305e", // Slightly lighter on hover
                     },
                   }}
                 >
@@ -1971,19 +3257,40 @@ const OpenBoard = () => {
                 </Button>
               </Box>
 
-              {selectedCommunity !== "all" &&
-                communityDetails[selectedCommunity] && (
-                  <Typography
-                    variant="body2"
-                    sx={{ mt: 1, color: "text.secondary" }}
-                  >
-                    {communityDetails[selectedCommunity].description}
-                  </Typography>
-                )}
+              {selectedCommunity === "all" && (
+                <Typography
+                  variant="caption"
+                  sx={{ color: "text.secondary", mb: 1, display: "block" }}
+                >
+                  To create a new post, select a specific community.
+                </Typography>
+              )}
             </Paper>
 
             {/* Posts Feed with Inline Thread Expansion */}
             <Box sx={{ mb: 4 }}>
+              {/* Sort controls */}
+              <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+                <ToggleButtonGroup
+                  value={selectedSort}
+                  exclusive
+                  onChange={(e, newSort) => {
+                    if (newSort !== null) {
+                      handleSortChange(newSort);
+                    }
+                  }}
+                  size="small"
+                  aria-label="sort posts"
+                >
+                  <ToggleButton value="new" aria-label="sort by new">
+                    New
+                  </ToggleButton>
+                  <ToggleButton value="top" aria-label="sort by top">
+                    Top
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+
               {loading ? (
                 <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                   <CircularProgress />
@@ -2009,51 +3316,6 @@ const OpenBoard = () => {
                       }}
                     >
                       <Box sx={{ display: "flex" }}>
-                        {/* Voting Section */}
-                        <Box
-                          sx={{
-                            width: 40,
-                            backgroundColor: "rgba(0,0,0,0.02)",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            pt: 2,
-                          }}
-                        >
-                          <IconButton
-                            size="small"
-                            onClick={() => handleVote(message.open_board_id, 1)}
-                            sx={{
-                              color:
-                                votes[message.open_board_id]?.userVote === 1
-                                  ? "orange"
-                                  : "inherit",
-                            }}
-                          >
-                            <ArrowUpwardIcon fontSize="small" />
-                          </IconButton>
-                          <Typography
-                            variant="body2"
-                            sx={{ fontWeight: "medium", my: 0.5 }}
-                          >
-                            {votes[message.open_board_id]?.count || 0}
-                          </Typography>
-                          <IconButton
-                            size="small"
-                            onClick={() =>
-                              handleVote(message.open_board_id, -1)
-                            }
-                            sx={{
-                              color:
-                                votes[message.open_board_id]?.userVote === -1
-                                  ? "#9494FF"
-                                  : "inherit",
-                            }}
-                          >
-                            <ArrowDownwardIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-
                         {/* Content Section */}
                         <CardContent
                           sx={{
@@ -2077,7 +3339,9 @@ const OpenBoard = () => {
                               variant="caption"
                               underline="hover"
                               onClick={() =>
-                                setSelectedCommunity(message.community)
+                                setSelectedCommunity(
+                                  getCommunityName(message.community)
+                                )
                               }
                               sx={{
                                 mr: 1,
@@ -2085,12 +3349,12 @@ const OpenBoard = () => {
                                 color: "primary.main",
                               }}
                             >
-                              s/{message.community}
+                              s/{getCommunityName(message.community)}
                             </Link>
                             Posted by u/
                             {usernames[message.creator_id] ||
                               "Anonymous"} •{" "}
-                            {formatDateTime(message.created_at)}
+                  {formatDateTime(message.created_at)}
                           </Typography>
 
                           {/* Post Title (clickable to toggle thread) */}
@@ -2123,6 +3387,10 @@ const OpenBoard = () => {
                                 WebkitBoxOrient: "vertical",
                                 mb: 1,
                                 whiteSpace: "pre-wrap",
+                                ...(message.status === "deleted" && {
+                                  fontStyle: "italic",
+                                  color: "text.disabled",
+                                }),
                               }}
                             >
                               {message.content}
@@ -2130,25 +3398,124 @@ const OpenBoard = () => {
                           )}
 
                           {/* Action Buttons */}
-                          <Box sx={{ display: "flex", gap: 1 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              mt: 1,
+                              width: "100%",
+                              overflow: "hidden",
+                              gap: 2, // Increase gap between buttons
+                              flexWrap: "nowrap", // Prevent buttons from wrapping
+                            }}
+                          >
+                            {/* Voting controls */}
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                mr: 0, // Reset right margin
+                                flexShrink: 0,
+                                justifyContent: "flex-start",
+                              }}
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  handleThreadVote(message.open_board_id, 1)
+                                }
+                                color={
+                                  threadVotes[message.open_board_id] === 1
+                                    ? "primary"
+                                    : "default"
+                                }
+                                sx={{
+                                  p: 0.5,
+                                  ...(threadVotes[message.open_board_id] ===
+                                    1 && {
+                                    bgcolor: "rgba(15, 32, 68, 0.08)",
+                                  }),
+                                }}
+                              >
+                                <ArrowUpwardIcon fontSize="small" />
+                              </IconButton>
+
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  mx: 0.5,
+                                  fontWeight: "medium",
+                                  color:
+                                    threadVotes[message.open_board_id] === 1
+                                      ? "primary.main"
+                                      : threadVotes[message.open_board_id] ===
+                                        -1
+                                      ? "error.main"
+                                      : "text.primary",
+                                }}
+                              >
+                                {message.score || 0}
+                              </Typography>
+
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  handleThreadVote(message.open_board_id, -1)
+                                }
+                                color={
+                                  threadVotes[message.open_board_id] === -1
+                                    ? "error"
+                                    : "default"
+                                }
+                                sx={{
+                                  p: 0.5,
+                                  ...(threadVotes[message.open_board_id] ===
+                                    -1 && {
+                                    bgcolor: "rgba(160, 12, 48, 0.08)",
+                                  }),
+                                }}
+                              >
+                                <ArrowDownwardIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+
+                            {/* Comments button */}
                             <Button
                               startIcon={<MessageIcon />}
                               size="small"
                               sx={{
                                 textTransform: "none",
                                 color: "text.secondary",
+                                minWidth: "auto",
+                                maxWidth: "fit-content",
+                                flexShrink: 0,
+                                px: 1,
+                                ml: 8, // Increase left margin even more to move it further right
+                                "&:hover": {
+                                  backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                  width: "auto",
+                                },
                               }}
                               onClick={() => toggleThreadExpansion(message)}
                             >
                               {getCommentCount(message.open_board_id)} Comments
                             </Button>
 
+                            {/* Share button */}
                             <Button
                               startIcon={<ShareIcon />}
                               size="small"
                               sx={{
                                 textTransform: "none",
                                 color: "text.secondary",
+                                minWidth: "auto",
+                                maxWidth: "fit-content",
+                                flexShrink: 0,
+                                px: 1,
+                                "&:hover": {
+                                  backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                  width: "auto",
+                                },
                               }}
                               onClick={() => {
                                 /* Share functionality */
@@ -2157,52 +3524,112 @@ const OpenBoard = () => {
                               Share
                             </Button>
 
-                            <Button
-                              startIcon={<BookmarkIcon />}
-                              size="small"
-                              sx={{
-                                textTransform: "none",
-                                color: "text.secondary",
-                              }}
-                              onClick={() => {
-                                /* Save functionality */
-                              }}
-                            >
-                              Save
-                            </Button>
-
+                            {/* Delete button - only shown for the creator or admin */}
                             {auth.currentUser &&
-                              message.creator_id === auth.currentUser.id && (
+                              (message.creator_id === auth.currentUser.id ||
+                                isAdmin) && (
                                 <Button
                                   startIcon={<DeleteIcon />}
                                   size="small"
                                   color="error"
-                                  sx={{ textTransform: "none", ml: "auto" }}
+                                  sx={{
+                                    textTransform: "none",
+                                    minWidth: "auto",
+                                    maxWidth: "fit-content",
+                                    flexShrink: 0,
+                                    px: 1,
+                                    "&:hover": {
+                                      backgroundColor: "rgba(255, 0, 0, 0.04)",
+                                      width: "auto",
+                                    },
+                                  }}
                                   onClick={() => {
                                     setMessageToDelete(message.open_board_id);
                                     setOpenDeleteDialog(true);
                                   }}
-                                >
-                                  Delete
+                    >
+                      Delete
                                 </Button>
                               )}
 
+                            {/* More options menu button */}
+                            <IconButton
+                              size="small"
+                              sx={{
+                                ml: "auto",
+                                p: 0.5,
+                                width: "32px",
+                                height: "32px",
+                                flexShrink: 0,
+                                flexGrow: 0,
+                                boxSizing: "border-box",
+                                borderRadius: "50%",
+                                "&:hover": {
+                                  backgroundColor: "rgba(0, 0, 0, 0.04)",
+                                  maxWidth: "32px",
+                                },
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMenuOpen(e, message.open_board_id);
+                              }}
+                            >
+                              <MoreVertIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+
+                          {/* Menu for additional actions */}
+                          <Menu
+                            anchorEl={menuAnchorEl}
+                            open={
+                              Boolean(menuAnchorEl) &&
+                              activePostId === message.open_board_id
+                            }
+                            onClose={handleMenuClose}
+                            anchorOrigin={{
+                              vertical: "bottom",
+                              horizontal: "right",
+                            }}
+                            transformOrigin={{
+                              vertical: "top",
+                              horizontal: "right",
+                            }}
+                            sx={{
+                              "& .MuiPaper-root": {
+                                width: "auto",
+                                minWidth: "150px",
+                                maxWidth: "200px",
+                              },
+                            }}
+                          >
+                            <MenuItem
+                              onClick={() => {
+                                /* Save functionality */
+                                handleMenuClose();
+                              }}
+                            >
+                              <ListItemIcon>
+                                <BookmarkIcon fontSize="small" />
+                              </ListItemIcon>
+                              <ListItemText>Save</ListItemText>
+                            </MenuItem>
+
                             {auth.currentUser &&
                               message.creator_id !== auth.currentUser.id && (
-                                <Button
-                                  startIcon={<FlagIcon />}
-                                  size="small"
-                                  color="error"
-                                  sx={{ textTransform: "none", ml: "auto" }}
+                                <MenuItem
                                   onClick={() => {
-                                    setMessageToReport(message.open_board_id);
+                                    setMessageToReport(message);
                                     setOpenReportDialog(true);
+                                    handleMenuClose();
                                   }}
                                 >
-                                  Report
-                                </Button>
+                                  <ListItemIcon>
+                                    <FlagIcon fontSize="small" color="error" />
+                                  </ListItemIcon>
+                                  <ListItemText>Report</ListItemText>
+                                </MenuItem>
                               )}
-                          </Box>
+                          </Menu>
                         </CardContent>
                       </Box>
                     </Card>
@@ -2221,10 +3648,33 @@ const OpenBoard = () => {
                           backgroundColor: "rgba(0,0,0,0.01)",
                         }}
                       >
+                        {/* Community info for context */}
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 1 }}
+                        >
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "primary.main",
+                              fontWeight: "bold",
+                              mr: 1,
+                            }}
+                          >
+                            s/{getCommunityName(message.community)}
+                          </Typography>
+                        </Box>
+
                         {/* Full post content when expanded */}
                         <Typography
                           variant="body1"
-                          sx={{ whiteSpace: "pre-wrap", mb: 3 }}
+                          sx={{
+                            whiteSpace: "pre-wrap",
+                            mb: 3,
+                            ...(message.status === "deleted" && {
+                              fontStyle: "italic",
+                              color: "text.disabled",
+                            }),
+                          }}
                         >
                           {message.content}
                         </Typography>
@@ -2252,8 +3702,13 @@ const OpenBoard = () => {
                               }
                               sx={{
                                 borderRadius: 28,
-                                px: 3,
+                                px: 2,
+                                height: "36px",
                                 textTransform: "none",
+                                boxShadow: 2,
+                                "&:hover": {
+                                  boxShadow: 3,
+                                },
                               }}
                             >
                               Comment
@@ -2274,7 +3729,13 @@ const OpenBoard = () => {
                               color="primary"
                               size="small"
                               onClick={() => navigate("/auth")}
-                              sx={{ mt: 1 }}
+                              sx={{
+                                mt: 1,
+                                borderRadius: 28,
+                                px: 2,
+                                height: "36px",
+                                textTransform: "none",
+                              }}
                             >
                               Log In
                             </Button>
@@ -2282,21 +3743,73 @@ const OpenBoard = () => {
                         )}
 
                         {/* Comments section */}
-                        <Typography
-                          variant="h6"
-                          sx={{ mb: 2, fontWeight: "medium" }}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            mb: 2,
+                          }}
                         >
-                          Comments
-                        </Typography>
+                          <Typography
+                            variant="h6"
+                            sx={{ fontWeight: "medium" }}
+                          >
+                            Comments
+                          </Typography>
+
+                          {expandedThreadComments.length > 1 && (
+                            <ToggleButtonGroup
+                              size="small"
+                              value={null}
+                              exclusive
+                              onChange={(e, value) => {
+                                if (value) sortComments(value);
+                              }}
+                              aria-label="sort comments"
+                            >
+                              <ToggleButton
+                                value="new"
+                                aria-label="sort by new"
+                                size="small"
+                              >
+                                New
+                              </ToggleButton>
+                              <ToggleButton
+                                value="top"
+                                aria-label="sort by top"
+                                size="small"
+                              >
+                                Top
+                              </ToggleButton>
+                            </ToggleButtonGroup>
+                          )}
+                        </Box>
 
                         {expandedThreadComments.length > 0 ? (
-                          <Box>
-                            {expandedThreadComments
-                              .filter((comment) => !comment.reply_to) // Only top-level comments
-                              .map((comment) =>
-                                renderComment(comment, 0, message.open_board_id)
-                              )}
-                          </Box>
+                          (() => {
+                            console.log(
+                              "Rendering expanded thread comments:",
+                              expandedThreadComments
+                            );
+                            return (
+                              <Box>
+                                {expandedThreadComments
+                                  .filter((comment) => !comment.reply_to) // Only top-level comments
+                                  .map((comment) => {
+                                    console.log(
+                                      "Rendering expanded comment:",
+                                      comment
+                                    );
+                                    return renderComment(
+                                      comment,
+                                      0,
+                                      message.open_board_id
+                                    );
+                                  })}
+                              </Box>
+                            );
+                          })()
                         ) : (
                           <Typography
                             variant="body2"
@@ -2313,44 +3826,73 @@ const OpenBoard = () => {
                 ))
               ) : (
                 <Paper sx={{ p: 4, textAlign: "center" }}>
-                  <Typography variant="body1" color="textSecondary">
+                  <Typography
+                    variant="body1"
+                    color="textSecondary"
+                    sx={{ mb: 2 }}
+                  >
                     {selectedCommunity === "all"
-                      ? "No posts available in any community yet. Be the first to create a post!"
-                      : `No posts in s/${selectedCommunity} yet. Be the first to create a post!`}
+                      ? "No posts available in any community yet. s/all shows posts from all communities."
+                      : `This is a brand new community! No posts in s/${selectedCommunity} yet.`}
                   </Typography>
+
+                  {selectedCommunity !== "all" && (
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      sx={{ mb: 3 }}
+                    >
+                      Be the first to create a post and start the conversation!
+                    </Typography>
+                  )}
+
                   <Button
                     variant="contained"
                     color="primary"
                     startIcon={<AddIcon />}
-                    onClick={() => setOpenNewPostDialog(true)}
+                    onClick={() => handleOpenNewPostDialog()}
+                    disabled={selectedCommunity === "all"}
                     sx={{
                       mt: 2,
                       borderRadius: 28,
                       px: 2,
+                      height: "36px",
                       textTransform: "none",
                       boxShadow: 2,
+                      transition: "all 0.2s ease-in-out",
+                      bgcolor: "#0F2044", // UNCG Navy for consistency
                       "&:hover": {
                         boxShadow: 3,
+                        bgcolor: "#1a305e", // Slightly lighter on hover
                       },
                     }}
                   >
-                    Create Post
+                    Create First Post
                   </Button>
+                  {selectedCommunity === "all" && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mt: 1 }}
+                    >
+                      Select a specific community to create a post
+                    </Typography>
+                  )}
                 </Paper>
               )}
             </Box>
           </Box>
         </Box>
 
-        {/* Add Snackbar at the end of the return */}
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={5000}
+      {/* Add Snackbar at the end of the return */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
           onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        >
-          <Alert
-            onClose={handleCloseSnackbar}
             severity={
               snackbar.severity === "success"
                 ? "success"
@@ -2360,19 +3902,19 @@ const OpenBoard = () => {
                 ? "warning"
                 : "info"
             }
-            variant="filled"
-            sx={{
-              width: "100%",
-              borderRadius: 1,
-              ...(snackbar.severity === "success" && {
+          variant="filled"
+          sx={{
+            width: "100%",
+            borderRadius: 1,
+            ...(snackbar.severity === "success" && {
                 bgcolor: "#FFB71B", // UNCG Gold for success alerts
                 color: "#0F2044", // UNCG Navy for text
-              }),
-            }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
+            }),
+          }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
         {/* Reply Dialog */}
         <Dialog
@@ -2438,6 +3980,10 @@ const OpenBoard = () => {
               onClick={closeReplyInput}
               sx={{
                 color: "text.secondary",
+                height: "36px",
+                borderRadius: 28,
+                px: 2,
+                textTransform: "none",
                 "&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
               }}
             >
@@ -2457,7 +4003,15 @@ const OpenBoard = () => {
               disabled={replyMessage.trim() === ""}
               sx={{
                 bgcolor: "primary.main",
-                "&:hover": { bgcolor: "primary.dark" },
+                height: "36px",
+                borderRadius: 28,
+                px: 2,
+                textTransform: "none",
+                boxShadow: 2,
+                "&:hover": {
+                  bgcolor: "primary.dark",
+                  boxShadow: 3,
+                },
               }}
             >
               Reply
@@ -2491,15 +4045,140 @@ const OpenBoard = () => {
             </ListItemIcon>
             Report
           </MenuItem>
-          {moreOptionsMessage && moreOptionsMessage.creator_id === userID && (
-            <MenuItem onClick={handleDeleteClick} sx={{ color: "error.main" }}>
-              <ListItemIcon>
-                <DeleteIcon fontSize="small" sx={{ color: "error.main" }} />
-              </ListItemIcon>
-              Delete
-            </MenuItem>
-          )}
+          {moreOptionsMessage &&
+            (moreOptionsMessage.creator_id === userID || isAdmin) && (
+              <MenuItem
+                onClick={handleDeleteClick}
+                sx={{ color: "error.main" }}
+              >
+                <ListItemIcon>
+                  <DeleteIcon fontSize="small" sx={{ color: "error.main" }} />
+                </ListItemIcon>
+                Delete
+              </MenuItem>
+            )}
         </Menu>
+
+        {/* Delete Comment Dialog */}
+        <Dialog
+          open={openDeleteCommentDialog}
+          onClose={() => setOpenDeleteCommentDialog(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>Delete Comment</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to delete this comment? This action cannot
+              be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenDeleteCommentDialog(false)}
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleDeleteComment(commentToDelete)}
+              color="error"
+              variant="contained"
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Report Comment Dialog */}
+        <Dialog
+          open={openReportCommentDialog}
+          onClose={() => setOpenReportCommentDialog(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>Report Comment</DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ mb: 2 }}>
+              Please select a reason for reporting this comment:
+            </DialogContentText>
+            <FormControl fullWidth>
+              <Select
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                displayEmpty
+              >
+                <MenuItem value="" disabled>
+                  Select a reason
+                </MenuItem>
+                <MenuItem value="spam">Spam</MenuItem>
+                <MenuItem value="harassment">Harassment</MenuItem>
+                <MenuItem value="misinformation">Misinformation</MenuItem>
+                <MenuItem value="hate_speech">Hate speech</MenuItem>
+                <MenuItem value="other">Other</MenuItem>
+              </Select>
+            </FormControl>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setOpenReportCommentDialog(false)}
+              color="primary"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleReportComment(commentToReport)}
+              color="primary"
+              variant="contained"
+              disabled={!reportReason}
+            >
+              Submit Report
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Floating Action Button for New Post on mobile */}
+        <Fab
+          color="primary"
+          aria-label="add"
+          onClick={() => handleOpenNewPostDialog()}
+          disabled={selectedCommunity === "all"}
+          sx={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            display: { xs: "flex", sm: "none" }, // Only show on mobile
+            alignItems: "center",
+            justifyContent: "flex-start",
+            bgcolor: "#0F2044", // UNCG Navy
+            color: "white",
+            transition: "all 0.2s ease-in-out",
+            "&:hover": {
+              bgcolor: "#1a305e", // Slightly lighter on hover
+              transform: "translateY(-2px)",
+              boxShadow:
+                "0px 5px 8px -1px rgba(0,0,0,0.2), 0px 8px 12px 0px rgba(0,0,0,0.14), 0px 3px 20px 0px rgba(0,0,0,0.12)",
+            },
+            zIndex: 1300, // Ensure it's above other elements
+            "& .MuiSvgIcon-root": {
+              marginRight: "8px",
+            },
+            px: 3,
+            py: 1.5,
+            borderRadius: 28,
+            minWidth: "140px",
+            boxShadow:
+              "0px 3px 5px -1px rgba(0,0,0,0.2), 0px 6px 10px 0px rgba(0,0,0,0.14), 0px 1px 18px 0px rgba(0,0,0,0.12)",
+          }}
+        >
+          <AddIcon />
+          <Typography
+            variant="button"
+            sx={{ ml: 1, fontSize: "0.9rem", fontWeight: 500 }}
+          >
+            New Post
+          </Typography>
+        </Fab>
       </Box>
     </ThemeProvider>
   );

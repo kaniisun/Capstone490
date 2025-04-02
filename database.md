@@ -94,6 +94,7 @@
 - updated_at (timestamp, default: now())
 - reply_to (int4, foreign key -> open_board.open_board_id)
 - community (int4, foreign key -> communities.community_id)
+- score (int4, default: 0) - Net vote score (upvotes minus downvotes)
 
 ### Table: messages
 
@@ -105,3 +106,37 @@
 - reply_to (uuid, foreign key -> messages.id)
 - status (text, default: 'active')
 - updated_at (timestamp, default: now())
+
+Table: communities
+
+- community_id (int4, Primary Key)
+- name (varchar)
+- description (text)
+- creator_id (uuid)
+- created_at (timestamp, default: now())
+- updated_at (timestamp, default: now())
+- status (varchar, default: 'active')
+- is_private (bool, default: false)
+
+Table: board_comments
+
+- comment_id (uuid, Primary Key, default: uuid_generate_v4())
+- post_id (int4)
+- user_id (uuid)
+- content (text)
+- created_at (timestamp, default: now())
+- updated_at (timestamp, default: now())
+- status (varchar, default: 'active')
+- reply_to (uuid, nullable) // for nested replies
+- score (int4, default: 0) - Net vote score (upvotes minus downvotes)
+
+### Table: user_votes (New)
+
+- vote_id (uuid, Primary Key, default: uuid_generate_v4())
+- user_id (uuid, foreign key -> users.userID)
+- target_type (varchar) - Either 'thread' or 'comment'
+- target_id (varchar) - ID of the thread or comment
+- vote_value (int4) - 1 for upvote, -1 for downvote, 0 for no vote
+- created_at (timestamp, default: now())
+- updated_at (timestamp, default: now())
+- UNIQUE constraint on (user_id, target_type, target_id)
