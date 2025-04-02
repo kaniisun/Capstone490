@@ -8,26 +8,21 @@ import { useParams } from "react-router-dom";
 const MessageHome = () => {
   const [user, setUser] = useState(null);
   const [receiver, setReceiver] = useState(null);
+  const [unreadCounts, setUnreadCounts] = useState({});
   const { userId } = useParams();
 
-  console.log("MessageHome rendered with userId:", userId);
-
-  // get auth user
   useEffect(() => {
     const getUser = async () => {
-      console.log("Fetching current user...");
       const { data, error } = await supabase.auth.getUser();
       if (!error && data?.user) {
         const userID = data.user.id;
-        console.log("Auth user ID:", userID);
-        const { data: userData, error: userError } = await supabase
+        const { data: userData } = await supabase
           .from("users")
           .select("*")
           .eq("userID", userID)
           .single();
 
-        if (!userError) {
-          console.log("Fetched user data:", userData);
+        if (userData) {
           setUser(userData);
           localStorage.setItem("userId", userData.userID);
         }
@@ -37,42 +32,86 @@ const MessageHome = () => {
     getUser();
   }, []);
 
-  // If userId is provided in URL, fetch and set receiver
-  useEffect(() => {
-    const fetchReceiver = async () => {
-      console.log("Fetching receiver with userId:", userId);
-      if (userId) {
-        const { data, error } = await supabase
-          .from("users")
-          .select("*")
-          .eq("userID", userId)
-          .single();
+  const fetchUnreadCounts = async () => {
+    if (!user) return;
 
-        if (!error && data) {
-          console.log("Fetched receiver data:", data);
-          setReceiver(data);
-        } else {
-          console.error("Error fetching receiver:", error);
-        }
-      }
-    };
+    const { data, error } = await supabase
+      .from("messages")
+      .select("sender_id")
+      .eq("receiver_id", user.userID)
+      .eq("is_read", false);
 
-    fetchReceiver();
-  }, [userId]);
-  
-  // close chat
-  const handleCloseChat = () => {
-    setReceiver(null); 
+    if (!error && data) {
+      const counts = {};
+      data.forEach((msg) => {
+        counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1;
+      });
+      setUnreadCounts(counts);
+    }
   };
 
+  const markMessagesAsRead = async (sender_id) => {
+    if (!user || !sender_id) return;
+
+    const { data: unreadMessages } = await supabase
+      .from("messages")
+      .select("id")
+      .eq("receiver_id", user.userID)
+      .eq("sender_id", sender_id)
+      .eq("is_read", false);
+
+    if (unreadMessages?.length) {
+      await supabase
+        .from("messages")
+        .update({ is_read: true })
+        .in("id", unreadMessages.map((msg) => msg.id))
+        .select("*");
+
+      fetchUnreadCounts();
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCounts();
+
+      const subscription = supabase
+        .channel("unread-message-updates")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "messages",
+            filter: `receiver_id=eq.${user.userID}`,
+          },
+          fetchUnreadCounts
+        )
+        .subscribe();
+
+      return () => supabase.removeChannel(subscription);
+    }
+  }, [user]);
+
   return (
-    // display
     <div className="message-home">
       {user ? (
         <div className="message-home-chat-container">
-          <UserList setReceiver={setReceiver} currentReceiver={receiver} />
+          <UserList
+            currentReceiver={receiver}
+            unreadCounts={unreadCounts}
+            currentUserID={user.userID}
+            setReceiver={(user) => {
+              setReceiver(user);
+              markMessagesAsRead(user.userID);
+            }}
+          />
           {receiver ? (
-            <MessageArea user={user} receiver={receiver} onCloseChat={handleCloseChat} />
+            <MessageArea
+              user={user}
+              receiver={receiver}
+              onCloseChat={() => setReceiver(null)}
+            />
           ) : (
             <div className="message-home-empty-chat">Select a user to start chatting</div>
           )}
