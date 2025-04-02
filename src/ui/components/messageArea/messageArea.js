@@ -369,10 +369,10 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
                   {msg.reply_to && (
                     <div className="reply-reference">
                       replying to:{" "}
-                      {(() => {
-                        const repliedMsg = messages.find((m) => m.id === msg.reply_to);
-                        return repliedMsg ? repliedMsg.content.substring(0, 50) + "..." : "[original message unavailable]";
-                      })()}
+                      {messages
+                        .find((m) => m.id === msg.reply_to)
+                        ?.content.substring(0, 50)}
+                      ...
                     </div>
                   )}
                   <p>{msg.content}</p>
