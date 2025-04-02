@@ -1,41 +1,39 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../../supabaseClient";
 import "./messages.css";
-import SearchIcon from '@mui/icons-material/Search';
+import SearchIcon from "@mui/icons-material/Search";
+import Badge from "@mui/material/Badge";
+import MailIcon from "@mui/icons-material/Mail";
 
-const UserList = ({ setReceiver, currentReceiver }) => {
+const UserList = ({
+  setReceiver,
+  currentReceiver,
+  unreadCounts,
+  currentUserID,
+}) => {
   const [users, setUsers] = useState([]);
-  const loggedInUserId = localStorage.getItem("userId");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // get users in db besides user thats logged in
   useEffect(() => {
     const fetchUsers = async () => {
       const { data, error } = await supabase
         .from("users")
         .select("userID, firstName")
-        .neq("userID", loggedInUserId);
+        .neq("userID", currentUserID);
 
-      console.log("Logged in User ID:", loggedInUserId);
-
-      if (!error) {
-        setUsers(data);
-        console.log("Fetched users:", data);
-      }
+      if (!error && data) setUsers(data);
     };
-    fetchUsers();
-  }, [loggedInUserId]);
 
-  // user search filter
+    fetchUsers();
+  }, [currentUserID]);
+
   const filteredUsers = users.filter((user) =>
     user.firstName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    // display users in db
     <div className="user-list">
       <h3>Chat with:</h3>
-      {/* search input */}
       <div className="user-search-box">
         <input
           type="text"
@@ -46,14 +44,24 @@ const UserList = ({ setReceiver, currentReceiver }) => {
         />
       </div>
 
-      {/* search display */}
       {filteredUsers.map((user) => (
         <div
           key={user.userID}
-          className={`user-item ${currentReceiver?.userID === user.userID ? 'selected' : ''}`}
+          className={`user-item ${currentReceiver?.userID === user.userID ? "selected" : ""}`}
           onClick={() => setReceiver(user)}
         >
-          <p>{user.firstName}</p>
+          <p className="user-name-with-badge">
+            {user.firstName}
+            {unreadCounts?.[user.userID] > 0 && (
+              <Badge
+                badgeContent={unreadCounts[user.userID]}
+                color="error"
+                sx={{ ml: 1 }}
+              >
+                <MailIcon fontSize="small" />
+              </Badge>
+            )}
+          </p>
         </div>
       ))}
     </div>

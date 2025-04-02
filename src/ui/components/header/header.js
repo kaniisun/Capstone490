@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
+import { supabase } from "../../../supabaseClient";
+
 import {
   AppBar,
   Avatar,
@@ -67,8 +69,55 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, isEmailVerified, user, logout, isAdmin } = useAuth();
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   const open = Boolean(anchorEl);
+  const getUnreadMessageCount = async (userId) => {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('id', { count: 'exact' })
+      .eq('receiver_id', userId)
+      .eq('is_read', false);
+  
+    if (error) {
+      console.error('Error fetching unread messages:', error);
+      return 0;
+    }
+  
+    return data.length;
+  };
+
+  useEffect(() => {
+    if (!user) return;
+  
+    const fetchUnread = async () => {
+      const count = await getUnreadMessageCount(user.id);
+      setUnreadMessagesCount(count);
+    };
+  
+    fetchUnread();
+  
+    const subscription = supabase
+      .channel("messages-channel")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "messages",
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        () => {
+          fetchUnread();
+        }
+      )
+      .subscribe();
+  
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [user]);
+
 
   useEffect(() => {
     const updateUserInfo = () => {
@@ -271,12 +320,24 @@ const Header = () => {
                   className="menu-item"
                 >
                   <ListItemIcon className="menu-item-icon">
-                    <ChatIcon fontSize="small" />
+                    {unreadMessagesCount > 0 ? (
+                      <Badge
+                        badgeContent={unreadMessagesCount}
+                        color="secondary"
+                        className="notification-badge"
+                      >
+                        <ChatIcon fontSize="small" />
+                      </Badge>
+                    ) : (
+                      <ChatIcon fontSize="small" />
+                    )}
                   </ListItemIcon>
                   Messages
                 </MenuItem>
 
-                <MenuItem
+              
+
+                {/* <MenuItem
                   onClick={() => handleNavigate("/notifications")}
                   className="menu-item"
                 >
@@ -290,7 +351,7 @@ const Header = () => {
                     </Badge>
                   </ListItemIcon>
                   Notifications
-                </MenuItem>
+                </MenuItem> */}
 
                 <MenuItem
                   onClick={() => handleNavigate("/orderhistory")}
