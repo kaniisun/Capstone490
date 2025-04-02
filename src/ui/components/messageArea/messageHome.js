@@ -11,22 +11,18 @@ const MessageHome = () => {
   const [unreadCounts, setUnreadCounts] = useState({});
   const { userId } = useParams();
 
-  console.log("MessageHome rendered with userId:", userId);
-
-  // Get authenticated user
   useEffect(() => {
     const getUser = async () => {
-      console.log("Fetching current user...");
       const { data, error } = await supabase.auth.getUser();
       if (!error && data?.user) {
         const userID = data.user.id;
-        const { data: userData, error: userError } = await supabase
+        const { data: userData } = await supabase
           .from("users")
           .select("*")
           .eq("userID", userID)
           .single();
 
-        if (!userError) {
+        if (userData) {
           setUser(userData);
           localStorage.setItem("userId", userData.userID);
         }
@@ -36,9 +32,6 @@ const MessageHome = () => {
     getUser();
   }, []);
 
-
-
-  // Fetch unread message counts grouped by sender_id
   const fetchUnreadCounts = async () => {
     if (!user) return;
 
@@ -48,40 +41,36 @@ const MessageHome = () => {
       .eq("receiver_id", user.userID)
       .eq("is_read", false);
 
-    if (error) {
-      console.error("Error fetching unread messages:", error);
-      return;
+    if (!error && data) {
+      const counts = {};
+      data.forEach((msg) => {
+        counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1;
+      });
+      setUnreadCounts(counts);
     }
-
-    const counts = {};
-    data.forEach((msg) => {
-      counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1;
-    });
-
-    console.log("Updated unreadCounts:", counts);
-    setUnreadCounts(counts);
   };
 
-  // Mark messages as read when a user is selected
   const markMessagesAsRead = async (sender_id) => {
     if (!user || !sender_id) return;
 
-    const { data, error } = await supabase
+    const { data: unreadMessages } = await supabase
       .from("messages")
-      .update({ is_read: true })
+      .select("id")
       .eq("receiver_id", user.userID)
       .eq("sender_id", sender_id)
-      .select(); 
+      .eq("is_read", false);
 
-    if (error) {
-      console.error("Error marking messages as read:", error);
-    } else {
-      console.log("Marked messages as read:", data);
-      fetchUnreadCounts(); // refresh badge counts
+    if (unreadMessages?.length) {
+      await supabase
+        .from("messages")
+        .update({ is_read: true })
+        .in("id", unreadMessages.map((msg) => msg.id))
+        .select("*");
+
+      fetchUnreadCounts();
     }
   };
 
-  // Subscribe to message updates
   useEffect(() => {
     if (user) {
       fetchUnreadCounts();
@@ -96,21 +85,13 @@ const MessageHome = () => {
             table: "messages",
             filter: `receiver_id=eq.${user.userID}`,
           },
-          () => {
-            fetchUnreadCounts();
-          }
+          fetchUnreadCounts
         )
         .subscribe();
 
-      return () => {
-        supabase.removeChannel(subscription);
-      };
+      return () => supabase.removeChannel(subscription);
     }
   }, [user]);
-
-  const handleCloseChat = () => {
-    setReceiver(null);
-  };
 
   return (
     <div className="message-home">
@@ -120,21 +101,19 @@ const MessageHome = () => {
             currentReceiver={receiver}
             unreadCounts={unreadCounts}
             currentUserID={user.userID}
-            setReceiver={(selectedUser) => {
-              setReceiver(selectedUser);
-              markMessagesAsRead(selectedUser.id); // call with sender_id
+            setReceiver={(user) => {
+              setReceiver(user);
+              markMessagesAsRead(user.userID);
             }}
           />
           {receiver ? (
             <MessageArea
               user={user}
               receiver={receiver}
-              onCloseChat={handleCloseChat}
+              onCloseChat={() => setReceiver(null)}
             />
           ) : (
-            <div className="message-home-empty-chat">
-              Select a user to start chatting
-            </div>
+            <div className="message-home-empty-chat">Select a user to start chatting</div>
           )}
         </div>
       ) : (

@@ -5,30 +5,28 @@ import SearchIcon from "@mui/icons-material/Search";
 import Badge from "@mui/material/Badge";
 import MailIcon from "@mui/icons-material/Mail";
 
-const UserList = ({ setReceiver, currentReceiver, unreadCounts, currentUserID}) => {
+const UserList = ({
+  setReceiver,
+  currentReceiver,
+  unreadCounts,
+  currentUserID,
+}) => {
   const [users, setUsers] = useState([]);
-  const loggedInUserId = localStorage.getItem("userId");
   const [searchTerm, setSearchTerm] = useState("");
-  
 
-  // get users in db besides user that's logged in
   useEffect(() => {
     const fetchUsers = async () => {
       const { data, error } = await supabase
         .from("users")
         .select("userID, firstName")
-        .neq("userID", loggedInUserId);
+        .neq("userID", currentUserID);
 
-      if (!error) {
-        setUsers(data);
-      } else {
-        console.error("Error fetching users:", error);
-      }
+      if (!error && data) setUsers(data);
     };
-    fetchUsers();
-  }, [loggedInUserId]);
 
-  // user search filter
+    fetchUsers();
+  }, [currentUserID]);
+
   const filteredUsers = users.filter((user) =>
     user.firstName.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -36,7 +34,6 @@ const UserList = ({ setReceiver, currentReceiver, unreadCounts, currentUserID}) 
   return (
     <div className="user-list">
       <h3>Chat with:</h3>
-      {/* search input */}
       <div className="user-search-box">
         <input
           type="text"
@@ -47,7 +44,6 @@ const UserList = ({ setReceiver, currentReceiver, unreadCounts, currentUserID}) 
         />
       </div>
 
-      {/* user list with unread message badges */}
       {filteredUsers.map((user) => (
         <div
           key={user.userID}
