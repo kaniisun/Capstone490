@@ -34,7 +34,7 @@ import ProductCard from "./components/ProductCard";
 const API_URL =
   process.env.NODE_ENV === "development"
     ? "http://localhost:3001/api/chat"
-    : "/api/chat"; // Production URL
+    : "https://marketplace-backend.onrender.com/api/chat"; // Production URL
 
 export default function ChatInterface() {
   const theme = useTheme();

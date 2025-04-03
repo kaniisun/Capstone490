@@ -160,31 +160,34 @@
 }
 
 .message-area-reply-btn {
-  background-color: #FFB71B;
+  background-color: #ffffff;
   color: #0F2044;
   font-weight: 600;
 }
 
 .message-area-reply-btn:hover {
-  background-color: #ffc44c;
+  background-color: #ffffff;
+  color: #8799c0;
 }
 
 .message-area-delete-msg-btn {
-  background-color: #fee2e2;
+  background-color: #ffffff;
   color: #dc2626;
 }
 
 .message-area-delete-msg-btn:hover {
-  background-color: #fecaca;
+  background-color: #ffffff;
+  color: #df9090;
 }
 
 .message-area-report-msg-btn {
-  background-color: #0F2044;
-  color: #ffffff;
+  background-color: #ffffff;
+  color: #dc2626;
 }
 
 .message-area-report-msg-btn:hover {
-  background-color: #1a3366;
+  background-color: #ffffff;
+  color: #df9090;
 }
 
 .reply-reference {
@@ -422,3 +425,9 @@
 .reply-indicator button:hover {
   background-color: rgba(255, 183, 27, 0.2);
 }
+.user-name-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
