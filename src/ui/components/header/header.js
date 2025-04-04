@@ -70,6 +70,7 @@ const Header = () => {
   const location = useLocation();
   const { isAuthenticated, isEmailVerified, user, logout, isAdmin } = useAuth();
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   const open = Boolean(anchorEl);
   const getUnreadMessageCount = async (userId) => {
@@ -141,6 +142,45 @@ const Header = () => {
     const timeoutId = setTimeout(updateUserInfo, 50);
     return () => clearTimeout(timeoutId);
   }, [isAuthenticated, user, location]);
+  useEffect(() => {
+      const fetchNotificationCount = async () => {
+        if (!user) return;
+        
+        try {
+          const { data, error } = await supabase
+            .from('notifications')
+            .select('id', { count: 'exact' })
+            .eq('userid', user.id)
+            .eq('isread', false);
+  
+          if (error) throw error;
+          setNotificationCount(data.length);
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+        }
+      };
+  
+      const subscription = supabase
+        .channel('notifications')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `userid=eq.${user?.id}`
+        }, () => {
+          fetchNotificationCount();
+        })
+        .subscribe();
+  
+      if (isAuthenticated) {
+        fetchNotificationCount();
+      }
+  
+      return () => {
+        subscription.unsubscribe();
+      };
+    }, [user, isAuthenticated]);
+  
 
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -186,7 +226,7 @@ const Header = () => {
     <AppBar position="sticky" className="header-container">
       <div className="header-toolbar">
         {/* Left side - Logo */}
-        <Box sx={{ display: { xs: "none", md: "flex" } }}>
+        <Box className="logo-box">
           <TempLogo
             isAuthenticated={isAuthenticated}
             isEmailVerified={isEmailVerified}
@@ -194,7 +234,7 @@ const Header = () => {
         </Box>
 
         {/* Right side - Profile Icon */}
-        <Box sx={{ display: "flex", alignItems: "center", ml: "auto" }}>
+        <Box className="profile-box">
           {/* Remove Admin Link from header */}
 
           <Tooltip title={userInfo ? `Hi, ${userInfo.firstName}!` : "Account"}>
@@ -223,12 +263,13 @@ const Header = () => {
             open={open}
             onClose={handleMenuClose}
             onClick={handleMenuClose}
-            PaperProps={{
-              className: "profile-menu-paper",
-              elevation: 3,
+            slotProps={{
+              paper: {
+                className: "profile-menu-paper",
+                elevation: 3,
+              }
             }}
-            transformOrigin={{ horizontal: "right", vertical: "top" }}
-            anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+            className="profile-menu"
           >
             {userInfo ? (
               <div>
@@ -244,7 +285,7 @@ const Header = () => {
                         <AdminPanelSettingsIcon
                           fontSize="small"
                           color="primary"
-                          sx={{ ml: 1, verticalAlign: "middle" }}
+                          className="admin-icon"
                         />
                       </Tooltip>
                     )}
@@ -253,7 +294,7 @@ const Header = () => {
                     <Typography
                       variant="caption"
                       color="text.secondary"
-                      sx={{ display: "block" }}
+                      className="admin-text"
                     >
                       Administrator Account
                     </Typography>
@@ -271,26 +312,18 @@ const Header = () => {
                 {/* Admin Section - Only visible for admins */}
                 {isAuthenticated && isAdmin && (
                   <>
-                    <Divider className="menu-divider" sx={{ my: 1 }} />
+                    <Divider className="admin-divider" />
                     <Typography
                       variant="caption"
                       color="text.secondary"
-                      sx={{ px: 2, py: 0.5, display: "block" }}
+                      className="admin-controls-text"
                     >
                       ADMIN CONTROLS
                     </Typography>
 
                     <MenuItem
                       onClick={() => handleNavigate("/admin")}
-                      className="menu-item"
-                      sx={{
-                        bgcolor: "rgba(25, 118, 210, 0.08)",
-                        "&:hover": {
-                          bgcolor: "rgba(25, 118, 210, 0.15)",
-                        },
-                        my: 0.5,
-                        borderRadius: 1,
-                      }}
+                      className="menu-item admin-menu-item"
                     >
                       <ListItemIcon className="menu-item-icon">
                         <AdminPanelSettingsIcon
@@ -358,7 +391,9 @@ const Header = () => {
                   className="menu-item"
                 >
                   <ListItemIcon className="menu-item-icon">
+                  <Badge badgeContent={notificationCount} color="error" className="notification-badge">
                     <ShippingIcon fontSize="small" />
+                    </Badge>
                   </ListItemIcon>
                   Orders
                 </MenuItem>

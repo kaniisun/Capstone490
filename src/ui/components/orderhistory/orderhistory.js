@@ -2,60 +2,325 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from "../../../contexts/AuthContext";
 import { supabase } from "../../../supabaseClient";
 import './orderhistory.css';
+import { useLocation } from 'react-router-dom';
 
 const OrderHistory = () => {
-  // Sample data for ordered and sold items with images
-  const [orderedItems, setOrderedItems] = useState([
-    { id: 1, name: 'Item A', price: 50, quantity: 2, imageUrl: 'https://via.placeholder.com/50' },
-    { id: 2, name: 'Item B', price: 30, quantity: 1, imageUrl: 'https://via.placeholder.com/50' },
-    { id: 3, name: 'Item C', price: 100, quantity: 3, imageUrl: 'https://via.placeholder.com/50' }
-  ]);
-  
-  
+  const location = useLocation();
+  const orderData = location.state?.orderData;
+  const { user } = useAuth();
 
-  // Updated purchase confirmations state to match checkout data structure
+  // State for orders and items
   const [purchaseConfirmations, setPurchaseConfirmations] = useState([]);
   const [saleConfirmations, setSaleConfirmations] = useState([]);
+  const [soldItems, setSoldItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
 
   // State to track which view to show
-  const [activeView, setActiveView] = useState('purchased');
+  const [activeView, setActiveView] = useState('purchase-confirmations');
 
   // Add state to track expanded confirmations
   const [expandedConfirmations, setExpandedConfirmations] = useState({});
 
-  // Calculate total spent and total made
-  const totalSpent = orderedItems.reduce((total, item) => total + item.price * item.quantity, 0);
-
-
-  const [soldItems, setSoldItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
-
-  // Function to load purchase confirmations from localStorage
+  // Handle incoming order data
   useEffect(() => {
-    const fetchSoldItems = async () => {
+    if (orderData) {
+      setPurchaseConfirmations(prev => [orderData, ...prev]);
+      // Clear the location state to prevent duplicate entries on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [orderData]);
+
+  // Fetch orders, sold items, and notifications
+  useEffect(() => {
+    const fetchData = async () => {
       if (!user) return;
-  
+      setLoading(true);
+
       try {
-        const { data, error } = await supabase
-          .from("products")
-          .select("*")
-          .eq("status", "Sold")
-          .eq("userID", user.id);
-  
-        if (error) throw error;
-        setSoldItems(data || []);
+        console.log('Fetching data for user:', user.id);
+
+        // Fetch orders where user is buyer
+        const { data: buyerOrders, error: buyerError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (
+              *,
+              products (
+                name,
+                price,
+                image,
+                users:userID (
+                  firstName,
+                  lastName
+                )
+              )
+            )
+          `)
+          .eq('buyerid', user.id)
+          .order('created_at', { ascending: false });
+
+        if (buyerError) {
+          console.error('Error fetching buyer orders:', buyerError);
+          throw buyerError;
+        }
+        console.log('Fetched buyer orders:', buyerOrders);
+
+        // Transform buyer orders into purchase confirmations
+        const purchaseConfs = buyerOrders.map(order => ({
+          orderId: order.orderid,
+          orderDate: new Date(order.created_at).toLocaleDateString(),
+          seller: {
+            name: `${order.order_items[0]?.products?.users?.firstName || ''} ${order.order_items[0]?.products?.users?.lastName || ''}`.trim() || 'Seller',
+            email: 'N/A',
+            phone: 'N/A'
+          },
+          shipping: {
+            fullName: order.order_items[0]?.products?.name || 'Product',
+            address: order.meetingaddress,
+            city: order.meetingcity,
+            state: order.meetingstate,
+            zipCode: order.meetingzipcode,
+            phone: order.meetingphone,
+            date: order.meetingdate,
+            time: order.meetingtime
+          },
+          payment: {
+            method: order.paymentmethod,
+            status: order.paymentstatus,
+            zellePhone: order.zellephone
+          },
+          items: order.order_items.map(item => ({
+            name: item.products?.name || 'Product',
+            price: item.priceatpurchase,
+            quantity: item.quantity,
+            productid: item.productid
+          })),
+          summary: {
+            subtotal: order.totalamount,
+            shipping: 0,
+            total: order.totalamount
+          },
+          status: order.status
+        }));
+
+        setPurchaseConfirmations(purchaseConfs);
+
+        // Fetch orders where user is seller
+        const { data: sellerOrders, error: sellerError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (
+              *,
+              products (
+                name,
+                price,
+                image
+              )
+            )
+          `)
+          .eq('sellerid', user.id)
+          .order('created_at', { ascending: false });
+
+        if (sellerError) {
+          console.error('Error fetching seller orders:', sellerError);
+          throw sellerError;
+        }
+        console.log('Fetched seller orders:', sellerOrders);
+
+        // Fetch buyer names for seller orders
+        const buyerIds = sellerOrders.map(order => order.buyerid);
+        const { data: buyerData, error: buyerNamesError } = await supabase
+          .from('users')
+          .select('userID, firstName, lastName')
+          .in('userID', buyerIds);
+
+        if (buyerNamesError) {
+          console.error('Error fetching buyer names:', buyerNamesError);
+          throw buyerNamesError;
+        }
+
+        // Create a map of buyer IDs to their names
+        const buyerNameMap = {};
+        buyerData.forEach(buyer => {
+          buyerNameMap[buyer.userID] = `${buyer.firstName} ${buyer.lastName}`;
+        });
+
+        // Transform seller orders into sale confirmations
+        const saleConfs = sellerOrders.map(order => ({
+          orderId: order.orderid,
+          orderDate: new Date(order.created_at).toLocaleDateString(),
+          buyer: {
+            id: order.buyerid,
+            name: buyerNameMap[order.buyerid] || 'Buyer',
+            email: 'N/A',
+            phone: 'N/A'
+          },
+          shipping: {
+            fullName: order.order_items[0]?.products?.name || 'Product',
+            address: order.meetingaddress,
+            city: order.meetingcity,
+            state: order.meetingstate,
+            zipCode: order.meetingzipcode,
+            phone: order.meetingphone,
+            date: order.meetingdate,
+            time: order.meetingtime
+          },
+          payment: {
+            method: order.paymentmethod,
+            status: order.paymentstatus,
+            zellePhone: order.zellephone
+          },
+          items: order.order_items.map(item => ({
+            name: item.products?.name || 'Product',
+            price: item.priceatpurchase,
+            quantity: item.quantity,
+            productid: item.productid
+          })),
+          summary: {
+            subtotal: order.totalamount,
+            shipping: 0,
+            total: order.totalamount
+          },
+          status: order.status
+        }));
+
+        setSaleConfirmations(saleConfs);
+
+        // Fetch sold items
+        const { data: soldProducts, error: soldError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('status', 'sold')
+          .eq('userID', user.id);
+
+        if (soldError) {
+          console.error('Error fetching sold products:', soldError);
+          throw soldError;
+        }
+        console.log('Fetched sold products:', soldProducts);
+        setSoldItems(soldProducts || []);
+
+        // Fetch notifications
+        console.log('Fetching notifications for user:', user.id);
+        const { data: notificationData, error: notificationError } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('userid', user.id)
+          .eq('isread', false)
+          .order('created_at', { ascending: false });
+
+        if (notificationError) {
+          console.error('Error fetching notifications:', notificationError);
+          throw notificationError;
+        }
+        console.log('Fetched notifications:', notificationData);
+        setNotifications(notificationData || []);
+
       } catch (error) {
-        console.error("Error fetching sold items:", error.message);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
-  
-    fetchSoldItems();
-  }, [user]);
-  
 
+    fetchData();
+  }, [user]);
+
+  // Handle seller confirmation
+  const handleSellerConfirm = async (orderId, action) => {
+    try {
+      console.log(`Starting seller ${action} process for order:`, orderId);
+
+      // Update order status based on action
+      const newStatus = action === 'confirm' ? 'confirmed' : 'rejected';
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({
+          status: newStatus
+        })
+        .eq('orderid', orderId);
+
+      if (orderError) {
+        console.error('Error updating order status:', orderError);
+        throw orderError;
+      }
+      console.log('Order status updated successfully');
+
+      // Find the order to get product details
+      const order = saleConfirmations.find(o => o.orderId === orderId);
+      if (!order) {
+        throw new Error('Order not found in sale confirmations');
+      }
+
+      // If seller confirms the order, update product status to "Sold"
+      if (action === 'confirm') {
+        // Get all product IDs from the order items
+        const productIds = order.items.map(item => item.productid);
+
+        // Update each product's status to "Sold"
+        for (const productId of productIds) {
+          const { error: productError } = await supabase
+            .from('products')
+            .update({ status: 'Sold', modified_at: new Date().toISOString() })
+            .eq('productID', productId);
+
+          if (productError) {
+            console.error('Error updating product status:', productError);
+            throw productError;
+          }
+        }
+        console.log('Product status updated to Sold successfully');
+      }
+
+      // Create notification for buyer
+      const notificationData = {
+        userid: order.buyer.id,
+        type: action === 'confirm' ? 'order_confirmed' : 'order_rejected',
+        title: action === 'confirm' ? 'Order Confirmed' : 'Order Rejected',
+        message: action === 'confirm'
+          ? `Your order has been confirmed by the seller. Meeting details: ${order.shipping.address}, ${order.shipping.city}, ${order.shipping.state} ${order.shipping.zipCode} on ${order.shipping.date} at ${order.shipping.time}`
+          : `Your order has been rejected by the seller.`,
+        orderid: orderId,
+        isread: false
+      };
+
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert([notificationData]);
+
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError);
+        throw notificationError;
+      }
+      console.log('Notification created successfully');
+
+      // Refresh the data
+      window.location.reload();
+    } catch (error) {
+      console.error(`Error in seller ${action} process:`, error);
+      alert(`Failed to ${action} order. Please try again.`);
+    }
+  };
+
+  // Mark notification as read 
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ isread: true })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      // Remove the notification from the list as read
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
 
   // Toggle expanded state for a confirmation
   const toggleConfirmationView = (orderId) => {
@@ -74,8 +339,9 @@ const OrderHistory = () => {
           <div className="confirmation-header-content">
             <h4>{type === 'purchase' ? 'Purchase' : 'Sale'} #{confirmation.orderId}</h4>
             <p className="confirmation-date">Date: {confirmation.orderDate}</p>
+            <p className="order-status">Status: {confirmation.status}</p>
           </div>
-          <button 
+          <button
             className="view-toggle-btn"
             onClick={() => toggleConfirmationView(confirmation.orderId)}
           >
@@ -84,7 +350,6 @@ const OrderHistory = () => {
         </div>
 
         <div className={`confirmation-content ${isExpanded ? 'expanded' : ''}`}>
-          {/* Always show basic information */}
           <div className="confirmation-basic-info">
             <div className="items-summary">
               <p className="items-count">{confirmation.items.length} item(s)</p>
@@ -97,22 +362,38 @@ const OrderHistory = () => {
             </p>
           </div>
 
-          {/* Show detailed information only when expanded */}
+          {/* confirmation buttons for pending orders  */}
+          {type === 'sale' && confirmation.status === 'pending_seller_confirmation' && (
+            <div className="confirmation-actions">
+              <button
+                className="confirm-order-btn"
+                onClick={() => handleSellerConfirm(confirmation.orderId, 'confirm')}
+              >
+                Confirm Order
+              </button>
+              <button
+                className="reject-order-btn"
+                onClick={() => handleSellerConfirm(confirmation.orderId, 'reject')}
+              >
+                Reject Order
+              </button>
+            </div>
+          )}
+
+          {/* Expanded details */}
           {isExpanded && (
             <div className="confirmation-details-expanded">
               {type === 'purchase' && confirmation.seller && (
                 <div className="confirmation-seller">
                   <h5>Seller Information:</h5>
                   <p>{confirmation.seller.name}</p>
-                  <p>Email: {confirmation.seller.email}</p>
-                  <p>Phone: {confirmation.seller.phone}</p>
                 </div>
               )}
 
-              {type === 'sale' && confirmation.shipping && (
+              {type === 'sale' && confirmation.buyer && (
                 <div className="confirmation-buyer">
                   <h5>Buyer Information:</h5>
-                  <p>{confirmation.shipping.fullName}</p>
+                  <p>{confirmation.buyer.name}</p>
                   <p>{confirmation.shipping.address}</p>
                   <p>{confirmation.shipping.city}, {confirmation.shipping.state} {confirmation.shipping.zipCode}</p>
                   <p>Phone: {confirmation.shipping.phone}</p>
@@ -132,18 +413,11 @@ const OrderHistory = () => {
                     </div>
                   ))}
                 </div>
-                <div className="confirmation-total">
-                  <span>Total:</span>
-                  <span>${confirmation.summary.total.toFixed(2)}</span>
-                </div>
               </div>
 
               <div className="confirmation-payment">
                 <h5>Payment Details:</h5>
                 <p>Method: {confirmation.payment.method}</p>
-                <p>Status: <span className={`status-${confirmation.payment.status.toLowerCase()}`}>
-                  {confirmation.payment.status}
-                </span></p>
                 {confirmation.payment.zellePhone && (
                   <p>Zelle Phone: {confirmation.payment.zellePhone}</p>
                 )}
@@ -158,28 +432,39 @@ const OrderHistory = () => {
   return (
     <div className="order-history-container">
       <h2>Order History</h2>
-      
+
+      {/* Notifications Section */}
+      {notifications.length > 0 && (
+        <div className="notifications-section">
+          <h3>Notifications</h3>
+          <div className="notifications-list">
+            {notifications.map(notification => (
+              <div key={notification.id} className="notification-item">
+                <div className="notification-content">
+                  <h4>{notification.title}</h4>
+                  <p>{notification.message}</p>
+                </div>
+                <button
+                  className="mark-read-btn"
+                  onClick={() => markNotificationAsRead(notification.id)}
+                >
+                  Mark as Read
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="view-toggle">
-        <button 
-          className={activeView === 'purchased' ? 'active' : ''} 
-          onClick={() => setActiveView('purchased')}
-        >
-          Purchased Items
-        </button>
-        <button 
-          className={activeView === 'purchase-confirmations' ? 'active' : ''} 
+        <button
+          className={activeView === 'purchase-confirmations' ? 'active' : ''}
           onClick={() => setActiveView('purchase-confirmations')}
         >
           Purchase Confirmations
         </button>
-        <button 
-          className={activeView === 'sold' ? 'active' : ''} 
-          onClick={() => setActiveView('sold')}
-        >
-          Sold Items
-        </button>
-        <button 
-          className={activeView === 'sale-confirmations' ? 'active' : ''} 
+        <button
+          className={activeView === 'sale-confirmations' ? 'active' : ''}
           onClick={() => setActiveView('sale-confirmations')}
         >
           Sale Confirmations
@@ -187,43 +472,14 @@ const OrderHistory = () => {
       </div>
 
       <div className="content-section">
-        {activeView === 'purchased' && (
-          <div className="order-section fade-in">
-            <h3>Purchased Items</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Item Image</th>
-                  <th>Item Name</th>
-                  <th>Price</th>
-                  <th>Quantity</th>
-                  <th>Total Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderedItems.map(item => (
-                  <tr key={item.id}>
-                    <td><img src={item.image} alt={item.name} className="item-image" /></td>
-                    <td>{item.name}</td>
-                    <td>${item.price}</td>
-                    <td>{item.quantity}</td>
-                    <td>${item.price * item.quantity}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="total-spent">
-              <strong>Total Spent: </strong>${totalSpent}
-            </div>
-          </div>
-        )}
-
         {activeView === 'purchase-confirmations' && (
           <div className="order-section fade-in">
             <h3>Purchase Confirmations</h3>
             <div className="confirmations-container">
-              {purchaseConfirmations.length > 0 ? (
-                purchaseConfirmations.map(confirmation => 
+              {loading ? (
+                <p>Loading orders...</p>
+              ) : purchaseConfirmations.length > 0 ? (
+                purchaseConfirmations.map(confirmation =>
                   renderConfirmationDetails(confirmation, 'purchase')
                 )
               ) : (
@@ -233,52 +489,14 @@ const OrderHistory = () => {
           </div>
         )}
 
-{activeView === 'sold' && (
-  <div className="order-section fade-in">
-    <h3>Sold Items</h3>
-    {loading ? (
-      <p>Loading sold items...</p>
-    ) : soldItems.length > 0 ? (
-      <>
-        <table>
-          <thead>
-            <tr>
-              <th>Item Image</th>
-              <th>Item Name</th>
-              <th>Price</th>
-              <th>Date</th>
-
-            </tr>
-          </thead>
-          <tbody>
-            {soldItems.map(item => (
-              <tr key={item.id}>
-                <td><img src={item.image || "https://via.placeholder.com/50"} alt={item.name} className="item-image" /></td>
-                <td>{item.name}</td>
-                <td>${item.price.toFixed(2)}</td>
-                <td>{new Date(item.modified_at).toLocaleDateString("en-US")}</td>
-                </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="total-earned">
-          <strong>Total Earnings: </strong>$
-          {soldItems.reduce((total, item) => total + item.price, 0).toFixed(2)}
-        </div>
-      </>
-    ) : (
-      <p>No sold items found.</p>
-    )}
-  </div>
-)}
-
-
         {activeView === 'sale-confirmations' && (
           <div className="order-section fade-in">
             <h3>Sale Confirmations</h3>
             <div className="confirmations-container">
-              {saleConfirmations.length > 0 ? (
-                saleConfirmations.map(confirmation => 
+              {loading ? (
+                <p>Loading orders...</p>
+              ) : saleConfirmations.length > 0 ? (
+                saleConfirmations.map(confirmation =>
                   renderConfirmationDetails(confirmation, 'sale')
                 )
               ) : (

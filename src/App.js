@@ -21,7 +21,6 @@ import Footer from "./ui/components/footer/footer";
 import Home from "./ui/components/home/home";
 import { Detail } from "./ui/components/detail/detail";
 import Products from "./ui/components/products/products";
-import { Cart } from "./ui/components/cart/cart";
 import SearchResults from "./ui/components/search/SearchResults";
 import SignUp from "./ui/components/registration/SignUp";
 import Account from "./ui/components/account/account";
@@ -42,11 +41,10 @@ import AdminRoute from "./ui/components/auth/AdminRoute";
 import FixVerification from "./ui/components/auth/FixVerification";
 import EmailVerificationCheck from "./ui/components/auth/EmailVerificationCheck";
 import OrderHistory from "./ui/components/orderhistory/orderhistory";
-import Checkout from "./ui/components/checkout/checkout";
-import OrderConfirmation from "./ui/components/orderconfirmation/orderconfirmation";
 import OpenBoard from "./ui/components/openboard/openboard";
 import AdminDashboard from "./ui/components/admin/AdminDashboard";
 import AdminSetup from "./ui/components/admin/AdminSetup";
+import Confirmation from "./ui/components/confirmation/confirmation";
 
 function AppContent() {
   const location = useLocation();
@@ -100,23 +98,10 @@ function AppContent() {
                 <Route path="/verify-email" element={<VerifyEmail />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/product/:id" element={<Detail />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route
-                  path="/orderconfirmation"
-                  element={<OrderConfirmation />}
-                />
                 <Route path="/search-results" element={<SearchResults />} />
                 <Route path="/orderhistory" element={<OrderHistory />} />
 
                 {/* Protected routes */}
-                <Route
-                  path="/cart"
-                  element={
-                    <ProtectedRoute>
-                      <Cart />
-                    </ProtectedRoute>
-                  }
-                />
                 <Route
                   path="/favorites"
                   element={
@@ -202,6 +187,15 @@ function AppContent() {
                 <Route path="/connection-test" element={<ConnectionTester />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/update-password" element={<UpdatePassword />} />
+                 {/* New confirmation route */}
+                 <Route
+                  path="/confirmation"
+                  element={
+                    <ProtectedRoute>
+                      <Confirmation />
+                    </ProtectedRoute>
+                  }
+                />
               </Routes>
             </main>
             <Footer />

@@ -741,32 +741,32 @@
 
 .detail-success-message {
   position: fixed;
-  bottom: 15px;
-  right: 15px;
-  background-color: #0f2044;
+  bottom: 16px;
+  right: 16px;
+  background-color: #4caf50;
   color: white;
   padding: 8px 16px;
   border-radius: 4px;
-  box-shadow: 0 3px 6px rgba(15, 32, 68, 0.1);
+  font-size: 0.85rem;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.9rem;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease;
   z-index: 1000;
-  animation: detailSlideIn 0.3s ease forwards;
 }
 
 .detail-success-message svg {
-  font-size: 1rem;
+  font-size: 0.85rem;
 }
 
-@keyframes detailSlideIn {
+@keyframes slideIn {
   from {
-    transform: translateY(100%);
+    transform: translateX(100%);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
+    transform: translateX(0);
     opacity: 1;
   }
 }
