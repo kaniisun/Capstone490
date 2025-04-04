@@ -170,6 +170,50 @@ export const Detail = () => {
     setFavorited(newFavoritedState);
   };
 
+  const handleConfirmPurchase = async () => {
+    if (!userId) {
+      navigate("/login");
+      return;
+    }
+
+    console.log('Starting confirmation process...');
+    console.log('Product data:', product);
+
+    try {
+      // Prepare product data for confirmation
+      const confirmationData = {
+        ...product,
+        sellerID: product.userID,
+        sellerName: `${product.users.firstName} ${product.users.lastName}`,
+        sellerEmail: 'N/A',
+        sellerPhone: 'N/A'
+      };
+
+      console.log('Navigating to confirmation with data:', confirmationData);
+
+      // Navigate to confirmation page with product data
+      navigate('/confirmation', {
+        state: {
+          product: confirmationData
+        }
+      });
+    } catch (error) {
+      console.error('Error in handleConfirmPurchase:', error);
+      // Still try to navigate even if there's an error
+      navigate('/confirmation', {
+        state: {
+          product: {
+            ...product,
+            sellerID: product.userID,
+            sellerName: `${product.users.firstName} ${product.users.lastName}`,
+            sellerEmail: 'N/A',
+            sellerPhone: 'N/A'
+          }
+        }
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="detail-container">
@@ -245,16 +289,15 @@ export const Detail = () => {
             </div>
 
             <div className="detail-actions">
-              <button className="detail-cart-button" onClick={handleAddToCart}>
+              <button className="detail-cart-button" onClick={handleConfirmPurchase}>
                 <FontAwesomeIcon icon={faCartShopping} />
-                Add to Cart
+                Confirm Purchase
               </button>
 
               {/* Add Favorite button */}
               <button
-                className={`detail-favorite-button ${
-                  favorited ? "favorited" : ""
-                }`}
+                className={`detail-favorite-button ${favorited ? "favorited" : ""
+                  }`}
                 onClick={handleToggleFavorite}
                 aria-label={
                   favorited ? "Remove from favorites" : "Add to favorites"
