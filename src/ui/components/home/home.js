@@ -13,120 +13,85 @@ export const Home = () => {
   const [loading, setLoading] = useState(true);
   const [showVerificationSuccess, setShowVerificationSuccess] = useState(false);
   const [userName, setUserName] = useState("");
-  const [showVerificationFixNotification, setShowVerificationFixNotification] =
-    useState(false);
+  const [showVerificationFixNotification, setShowVerificationFixNotification] = useState(false);
+  const [showFirstTimePopup, setShowFirstTimePopup] = useState(false); // 👈 new state
+
+
   const navigate = useNavigate();
   const location = useLocation();
   const { user, checkEmailVerification } = useAuth();
 
-  // Enhanced scroll reset - using multiple approaches to ensure it works
-  useEffect(() => {
-    // Immediately scroll to top
-    window.scrollTo(0, 0);
+  // Scroll to top logic
+  // Scroll to top on initial page load only
+useEffect(() => {
+  window.scrollTo(0, 0);
+}, []);
 
-    // Also scroll after a slight delay to override any other scrolling
-    const timeoutId = setTimeout(() => {
-      window.scrollTo(0, 0);
 
-      // For some browsers, we need to use scrollTo with behavior: 'auto'
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: "auto",
-      });
-
-      // As a last resort, try scrolling the document element and body
-      if (document.documentElement) {
-        document.documentElement.scrollTop = 0;
-      }
-      if (document.body) {
-        document.body.scrollTop = 0;
-      }
-    }, 50);
-
-    // Also use MutationObserver to detect when content is added
-    const observer = new MutationObserver(() => {
-      window.scrollTo(0, 0);
-    });
-
-    // Start observing the document body for DOM changes
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-
-    return () => {
-      clearTimeout(timeoutId);
-      observer.disconnect();
-    };
-  }, []);
-
-  // Check for verification success in URL parameters
+  // Check for email verification from URL params
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const verified = queryParams.get("verified");
     const needVerificationFix = queryParams.get("fix-verification");
 
     if (verified === "true") {
-      // Remove the parameter from the URL without refreshing the page
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
-
-      // Show the verification success message
       setShowVerificationSuccess(true);
 
-      // Ensure auth context is updated with verification status
       const checkVerification = async () => {
-        // Call the check function
         checkEmailVerification();
-
-        // Check the session directly
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          console.log(
-            "No valid session found after verification, redirecting to login"
-          );
+          console.log("No valid session found after verification, redirecting to login");
           navigate("/login");
         }
       };
-
       checkVerification();
 
-      // Get user's name from localStorage
       const name = localStorage.getItem("userName") || "";
       setUserName(name);
     }
 
-    // Check if we need to show verification fix notification
     if (needVerificationFix === "true") {
       setShowVerificationFixNotification(true);
-      // Remove the parameter from URL
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
   }, [location, checkEmailVerification, navigate]);
 
-  // fetch products, limit to first 5 products in the database
+  // Check if it's the first login
+  useEffect(() => {
+    if (user) {
+      const hasSeenPopup = localStorage.getItem("hasSeenFirstTimePopup");
+      if (!hasSeenPopup) {
+        setShowFirstTimePopup(true);
+        localStorage.setItem("hasSeenFirstTimePopup", "true");
+      }
+    }
+  }, [user]);
+    
+ 
+
+
+
+  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // Fetch products that are available, not flagged, not deleted, and approved
         const { data, error } = await supabase
           .from("products")
           .select("*")
-          .eq("status", "Available") // Only get available products
-          .eq("flag", false) // Don't show flagged products
-          .eq("is_deleted", false) // Don't show deleted products
-          .eq("moderation_status", "approved") // Only show approved products
-          .order("created_at", { ascending: false }) // Get newest first
-          .limit(10); // Limit to 10 products
+          .eq("status", "Available")
+          .eq("flag", false)
+          .eq("is_deleted", false)
+          .eq("moderation_status", "approved")
+          .order("created_at", { ascending: false })
+          .limit(10);
 
         if (error) {
           console.error("Error fetching products:", error);
         } else {
-          console.log("Fetched featured products:", data);
           setProducts(data || []);
         }
       } catch (err) {
@@ -143,9 +108,7 @@ export const Home = () => {
     <div className="home">
       {showVerificationSuccess && (
         <NotificationBanner
-          message={`Registration successful! Welcome${
-            userName ? ` ${userName}` : ""
-          } to Spartan Marketplace!`}
+          message={`Registration successful! Welcome${userName ? ` ${userName}` : ""} to Spartan Marketplace!`}
           type="success"
           show={true}
           duration={6000}
@@ -154,55 +117,35 @@ export const Home = () => {
       )}
 
       {showVerificationFixNotification && (
-        <div
-          style={{
-            backgroundColor: "#fff3cd",
-            color: "#856404",
-            padding: "10px",
-            borderRadius: "4px",
-            margin: "10px 0",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div className="verification-fix-banner">
           <div>
-            <strong>Notice:</strong> If Supabase still shows "waiting for
-            verification",
-            <a
-              href="/fix-verification"
-              style={{
-                marginLeft: "5px",
-                color: "#856404",
-                fontWeight: "bold",
-              }}
-            >
-              click here to fix it
-            </a>
-            .
+            <strong>Notice:</strong> If Supabase still shows "waiting for verification",
+            <a href="/fix-verification">click here to fix it</a>.
           </div>
-          <button
-            onClick={() => setShowVerificationFixNotification(false)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "16px",
-            }}
-          >
-            ✕
-          </button>
+          <button onClick={() => setShowVerificationFixNotification(false)}>✕</button>
         </div>
       )}
+    
+    
+      {/* First-time login popup */}
+      {showFirstTimePopup && (
+  <div className="first-time-popup">
+    <div className="popup-box">
+      👋 Hey there! Click your profile icon to see your full account!
+      <button onClick={() => setShowFirstTimePopup(false)}>Got it!</button>
+    </div>
+  </div>
+)}
 
-      {/* Hero Section - Unique to homepage */}
+
+      {/* Hero Section */}
       <section id="hero">
         <h1>Your Campus Marketplace</h1>
         <p>Buy, Sell, and Connect with Fellow Students</p>
         <Search />
       </section>
 
-      {/* Featured Products - Already implemented */}
+      {/* Featured Products */}
       <section id="featured-products">
         <h2>Featured Listings</h2>
         {loading ? (
