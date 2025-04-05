@@ -19,47 +19,12 @@ export const Home = () => {
   const location = useLocation();
   const { user, checkEmailVerification } = useAuth();
 
-  // Enhanced scroll reset - using multiple approaches to ensure it works
-  useEffect(() => {
-    // Immediately scroll to top
-    window.scrollTo(0, 0);
+ 
+ // Scroll to top on initial page load only
+useEffect(() => {
+  window.scrollTo(0, 0);
+}, []);
 
-    // Also scroll after a slight delay to override any other scrolling
-    const timeoutId = setTimeout(() => {
-      window.scrollTo(0, 0);
-
-      // For some browsers, we need to use scrollTo with behavior: 'auto'
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: "auto",
-      });
-
-      // As a last resort, try scrolling the document element and body
-      if (document.documentElement) {
-        document.documentElement.scrollTop = 0;
-      }
-      if (document.body) {
-        document.body.scrollTop = 0;
-      }
-    }, 50);
-
-    // Also use MutationObserver to detect when content is added
-    const observer = new MutationObserver(() => {
-      window.scrollTo(0, 0);
-    });
-
-    // Start observing the document body for DOM changes
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-
-    return () => {
-      clearTimeout(timeoutId);
-      observer.disconnect();
-    };
-  }, []);
 
   // Check for verification success in URL parameters
   useEffect(() => {

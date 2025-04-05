@@ -147,33 +147,55 @@ function AdminDashboard() {
       </Box>
 
       {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: "divider", px: 3, pt: 2 }}>
+      <Box 
+      sx={{ borderBottom: 1, borderColor: "divider", px: 3, pt: 2 
+        
+      }}
+      >
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
           indicatorColor="primary"
           textColor="primary"
         >
+        
           <Tab
             icon={<PeopleAltIcon />}
             iconPosition="start"
             label="User Management"
             id="tab-0"
             aria-controls="tabpanel-0"
+            sx={{
+              "&:hover": {
+                backgroundColor: "#f5f5f5"
+              }
+            }}
           />
+
           <Tab
             icon={<StorefrontIcon />}
             iconPosition="start"
             label="Product Moderation"
             id="tab-1"
             aria-controls="tabpanel-1"
+            sx={{
+              "&:hover": {
+                backgroundColor: "#f5f5f5"
+              }
+            }}
           />
+
           <Tab
             icon={<ReportIcon />}
             iconPosition="start"
             label="Reports"
             id="tab-2"
             aria-controls="tabpanel-2"
+            sx={{
+              "&:hover": {
+                backgroundColor: "#f5f5f5"
+              }
+            }}
           />
         </Tabs>
       </Box>
@@ -187,7 +209,9 @@ function AdminDashboard() {
           onEditUser={handleOpenEditUserDialog}
           onPromoteToAdmin={handlePromoteToAdmin}
           onRevokeAdmin={handleRevokeAdminPrivileges}
+          
         />
+        
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>
