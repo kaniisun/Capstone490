@@ -35,7 +35,7 @@ textarea {
 button {
     padding: 10px;
     border: none;
-    background-color: #0f45cf;
+    background-color: #0f2044;
     color: white;
     font-size: 16px;
     border-radius: 5px;
@@ -43,7 +43,7 @@ button {
 }
 
 button:hover {
-    background-color: #45a049;
+    background-color: #f5f5f5;
 }
 
 .dropdown-container {
