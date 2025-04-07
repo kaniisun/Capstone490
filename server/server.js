@@ -107,6 +107,16 @@ app.use(
 
 app.use(express.json());
 
+// Add a root route handler
+app.get("/", (req, res) => {
+  res.json({
+    message: "Spartan Marketplace Backend API",
+    status: "running",
+    environment: process.env.NODE_ENV || "development",
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Register API routes first, before any middleware or catch-all handlers
 app.use("/api/moderate-products", moderateProductsRoutes);
 app.use("/api/moderate-product", moderateProductRoute);
