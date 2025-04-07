@@ -33,6 +33,26 @@ const MessageHome = () => {
     getUser();
   }, []);
 
+  useEffect(() => {
+    const fetchReceiver = async () => {
+      if (userId && user) {
+        const { data: receiverData } = await supabase
+          .from("users")
+          .select("*")
+          .eq("userID", userId)
+          .single();
+
+        if (receiverData) {
+          setReceiver(receiverData);
+          markMessagesAsRead(userId);
+        }
+      }
+    };
+
+    fetchReceiver();
+    return () => {};
+  }, [userId, user]);
+
   const fetchUnreadCounts = async () => {
     if (!user) return;
 
@@ -93,42 +113,22 @@ const MessageHome = () => {
         )
         .subscribe();
 
-      return () => supabase.removeChannel(subscription);
+      return () => {
+        supabase.removeChannel(subscription);
+      };
     }
+    return undefined;
   }, [user]);
 
   return (
-    <Box
-      sx={{
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#f4f6f8",
-      }}
-    >
-      <Paper
-        elevation={4}
-        sx={{
-          width: "100vw",
-          height: "100vh",
-          display: "flex",
-          borderRadius: 0,
-          overflow: "hidden",
-        }}
-      >
-        <Grid container sx={{ height: "100%" }}>
+    <Box className="message-home-container">
+      <Paper className="message-home-paper">
+        <Grid container className="message-home-grid">
           {/* User List */}
           <Grid
             item
             xs={3}
-            sx={{
-              backgroundColor: "#fff",
-              borderRight: "2px solid #FFB71B",
-              overflowY: "auto",
-              height: "100%",
-            }}
+            className="message-home-user-list-grid"
           >
             <UserList
                 currentReceiver={receiver}
@@ -139,27 +139,18 @@ const MessageHome = () => {
                   markMessagesAsRead(user.userID);
                 }}
               />
-
           </Grid>
 
           {/* Message Area */}
-          <Grid item xs={9} sx={{ height: "100%" }}>
+          <Grid item xs={9} className="message-home-message-grid">
             {receiver ? (
               <MessageArea 
-              user={user} 
-              receiver={receiver} 
-              onCloseChat={() => setReceiver(null)} 
-            />            
+                user={user} 
+                receiver={receiver} 
+                onCloseChat={() => setReceiver(null)} 
+              />            
             ) : (
-              <Box
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#0F2044",
-                }}
-              >
+              <Box className="message-home-empty-chat-box">
                 <p>Select a user to start chatting.</p>
               </Box>
             )}

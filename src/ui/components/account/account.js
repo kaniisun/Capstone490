@@ -85,6 +85,8 @@ const Account = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
+
+
   useEffect(() => {
     if (user) {
       fetchUserProfile();
@@ -444,6 +446,8 @@ const Account = () => {
   };
 
   // Mark product as sold
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const handleMarkAsSold = async (productID) => {
     try {
@@ -455,15 +459,15 @@ const Account = () => {
         .select();
   
       if (error) throw error;
+  
       setProducts((prevProducts) =>
         prevProducts.map((product) =>
           product.productID === productID
             ? { ...product, status: "Sold", modified_at: modifiedAt }
-
             : product
         )
       );
-
+  
       setSnackbar({
         open: true,
         message: "Product marked as Sold!",
@@ -478,12 +482,11 @@ const Account = () => {
       });
     }
   };
-
+  
 
 // Mark product as available
 const handleMarkAsAvailable = async (productID) => {
   try {
-    // Update database
     const modifiedAt = new Date().toISOString();
     const { error } = await supabase
       .from("products")
@@ -492,11 +495,10 @@ const handleMarkAsAvailable = async (productID) => {
 
     if (error) throw error;
 
-   
     setProducts((prevProducts) =>
       prevProducts.map((product) =>
         product.productID === productID
-          ? { ...product, status: "Available", modified_at: modifiedAt  }
+          ? { ...product, status: "Available", modified_at: modifiedAt }
           : product
       )
     );
@@ -515,7 +517,39 @@ const handleMarkAsAvailable = async (productID) => {
     });
   }
 };
+
   
+// Calculate total made from sold products
+const [animatedTotal, setAnimatedTotal] = useState(0);
+const totalMade = products
+  .filter((product) => product.status === "Sold")
+  .reduce((sum, product) => sum + parseFloat(product.price || 0), 0);
+
+  useEffect(() => {
+    if (tabValue !== 2) return; // only animate when "Sold" tab is open
+  
+    let start = 0;
+    const duration = 800;
+    const frameRate = 60;
+    const totalFrames = Math.round((duration / 1000) * frameRate);
+    let frame = 0;
+  
+    const counter = setInterval(() => {
+      frame++;
+      const progress = frame / totalFrames;
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setAnimatedTotal(totalMade * eased);
+  
+      if (frame === totalFrames) {
+        clearInterval(counter);
+        setAnimatedTotal(totalMade);
+      }
+    }, 1000 / frameRate);
+  
+    return () => clearInterval(counter);
+  }, [tabValue, totalMade]);
+  
+
 
   // Get product condition stars
   const getConditionStars = (condition) => {
@@ -610,6 +644,10 @@ const handleMarkAsAvailable = async (productID) => {
                   textTransform: "none",
                   fontWeight: 500,
                   minHeight: "48px",
+                  transition: "background-color 0.2s ease",
+                  "&:hover": {
+                    backgroundColor: "#f5f5f5", // light gray on hover
+                  }, 
                 },
                 "& .Mui-selected": {
                   color: "#0f2044", // UNCG Blue
@@ -632,7 +670,8 @@ const handleMarkAsAvailable = async (productID) => {
           {/* Profile Tab */}
           <Box sx={{ p: 3 }} hidden={tabValue !== 0}>
             {tabValue === 0 && (
-              <Card variant="outlined" sx={{ borderRadius: 2 }}>
+              <Card variant="outlined" 
+              sx={{ borderRadius: 2 }}>
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="h6" gutterBottom fontWeight="500">
                     Profile Information
@@ -698,7 +737,7 @@ const handleMarkAsAvailable = async (productID) => {
                               py: 1,
                               bgcolor: "#0f2044", // UNCG Blue
                               "&:hover": {
-                                bgcolor: "#1a365d", // Slightly lighter UNCG Blue
+                                bgcolor: "#1a365d", 
                               },
                             }}
                           >
@@ -727,7 +766,7 @@ const handleMarkAsAvailable = async (productID) => {
                               color: "#0f2044",
                               "&:hover": {
                                 borderColor: "#ffc72c",
-                                bgcolor: "rgba(255, 199, 44, 0.04)", // Very light UNCG Gold background
+                                bgcolor: "rgba(255, 199, 44, 0.04)", 
                               },
                             }}
                             startIcon={<LockResetIcon />}
@@ -889,7 +928,7 @@ const handleMarkAsAvailable = async (productID) => {
                       py: 1,
                       bgcolor: "#0f2044", // UNCG Blue
                       "&:hover": {
-                        bgcolor: "#1a365d", // Slightly lighter UNCG Blue
+                        bgcolor: "#1a365d", 
                       },
                     }}
                     startIcon={<AddIcon />}
@@ -1152,9 +1191,10 @@ const handleMarkAsAvailable = async (productID) => {
                                     <Button
                                       variant="contained"
                                       startIcon={<LocalOfferIcon />}
-                                      onClick={() =>
-                                        handleMarkAsSold(product.productID)
-                                      }
+                                      onClick={() => {
+                                        setConfirmAction({ type: 'sold', productId: product.productID });
+                                        setConfirmDialogOpen(true);
+                                      }}
                                       size="small"
                                       sx={{
                                         flex: 1,
@@ -1163,7 +1203,7 @@ const handleMarkAsAvailable = async (productID) => {
                                         bgcolor: "#0f2044", // UNCG Blue
                                         color: "white",
                                         "&:hover": {
-                                          bgcolor: "#1a365d", // Slightly lighter UNCG Blue
+                                          bgcolor: "#1a365d", 
                                         },
                                       }}
                                       disabled={product.status === "Sold"}
@@ -1181,6 +1221,7 @@ const handleMarkAsAvailable = async (productID) => {
                                       justifyContent: "center",
                                       p: 2,
                                       bgcolor: "grey.50",
+                                  
                                     }}
                                   >
                                     {console.log(
@@ -1451,6 +1492,56 @@ const handleMarkAsAvailable = async (productID) => {
               </Button>
             </Box>
           )}
+{/* Your Dialog for confirmation */}
+<Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
+  <DialogTitle>
+    {confirmAction?.type === 'sold' ? 'Mark Product as Sold' : 'Mark Product as Available'}
+  </DialogTitle>
+  <DialogContent>
+    <DialogContentText>
+      Are you sure you want to {confirmAction?.type === 'sold' ? 'product as SOLD' : 'product AVAILABLE'}?
+    </DialogContentText>
+  </DialogContent>
+
+  <DialogActions>
+    <Button
+      onClick={() => setConfirmDialogOpen(false)}
+      sx={{
+        textTransform: 'none',
+        '&:hover': {
+          backgroundColor: '#f0f0f0', // light gray hover
+        },
+      }}
+    >
+      Cancel
+    </Button>
+    <Button
+      onClick={() => {
+        if (confirmAction?.type === 'sold') {
+          handleMarkAsSold(confirmAction.productId);
+        } else {
+          handleMarkAsAvailable(confirmAction.productId);
+        }
+        setConfirmDialogOpen(false);
+        setConfirmAction(null);
+      }}
+      autoFocus
+      variant="contained"
+      sx={{
+        textTransform: 'none',
+        bgcolor: '#0f2044',
+        color: '#fff',
+        '&:hover': {
+          backgroundColor: "#1a365d", 
+          color: '#white',           
+        },
+      }}
+    >
+      Confirm
+    </Button>
+  </DialogActions>
+</Dialog>
+
 
         {/* Snackbar for notifications */}
         <Snackbar
@@ -1467,7 +1558,7 @@ const handleMarkAsAvailable = async (productID) => {
               width: "100%",
               borderRadius: 1,
               ...(snackbar.severity !== "error" && {
-                bgcolor: "#0f2044", // UNCG Blue for success alerts
+                bgcolor: "#0f2044", 
               }),
             }}
           >
@@ -1486,6 +1577,19 @@ const handleMarkAsAvailable = async (productID) => {
               >
                 Sold Items
               </Typography>
+
+              {/*Total made form sold items */}
+              <Typography
+                variant="body2"
+                sx={{ mb: 3, fontStyle: "italic", color: "text.secondary" }}
+              >
+                You’ve earned{" "}
+                <strong style={{ color: "green", fontSize: "1.3rem" }}>
+                  ${animatedTotal.toFixed(2)}
+                </strong>{" "}
+                from sold items. 
+              </Typography>   
+
 
               {/* If there are no sold products */}
               {products.length > 0 &&
@@ -1555,6 +1659,7 @@ const handleMarkAsAvailable = async (productID) => {
                               }}
                             />
                           </Box>
+                          
 
                           {/* Product details */}
                           <CardContent sx={{ flexGrow: 1, p: 2 }}>
@@ -1650,9 +1755,10 @@ const handleMarkAsAvailable = async (productID) => {
                               <Button
                                 variant="contained"
                                 startIcon={<LocalOfferIcon />}
-                                onClick={() =>
-                                  handleMarkAsAvailable(product.productID)
-                                }
+                                onClick={() => {
+                                  setConfirmAction({ type: 'available', productId: product.productID });
+                                  setConfirmDialogOpen(true);
+                                }}
                                 size="small"
                                 sx={{
                                   flex: 1,
@@ -1692,7 +1798,9 @@ const handleMarkAsAvailable = async (productID) => {
         </Box>
       </Container>
     </Fade>
+    
   );
+  
 };
 
 export default Account;
