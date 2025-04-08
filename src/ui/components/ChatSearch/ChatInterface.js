@@ -130,7 +130,7 @@ export default function ChatInterface() {
   };
 
   // New function to handle a user wanting to contact a seller about a product
-  const handleContactSeller = (product) => {
+  const handleContactSeller = async (product) => {
     if (!product) return;
 
     // Get seller ID from product's userID
@@ -144,26 +144,83 @@ export default function ChatInterface() {
       return;
     }
 
-    // Mark conversation as initiated to prevent duplicate messages
-    console.log(
-      "Marking conversation from product page:",
-      userId,
-      sellerId,
-      product.productID
-    );
-    markMessageSent(userId, sellerId, product);
+    // Use a simple track in memory approach
+    if (!window.__sentMessages) window.__sentMessages = new Set();
 
-    // Save window scroll position
-    const windowScrollY = window.scrollY;
+    // Create a unique conversation key
+    const conversationKey = `${userId}_${sellerId}_${
+      product.productID || product.id
+    }`;
 
-    // Construct URL with both seller ID and product ID for context
-    const messagesUrl = `/messaging/${sellerId}?productId=${product.productID}`;
+    // Check if we've already sent a message in this session
+    if (window.__sentMessages.has(conversationKey)) {
+      console.log("Already initiated this conversation in current session");
+      // Just navigate without sending another message
+      window.location.href = `/messaging/${sellerId}?productId=${
+        product.productID || product.id
+      }`;
+      return;
+    }
 
-    // Navigate to messages
-    window.location.href = messagesUrl;
+    try {
+      // Track that we've initiated this conversation
+      window.__sentMessages.add(conversationKey);
 
-    // Restore window scroll position
-    window.scrollTo(0, windowScrollY);
+      // Create initial message
+      const initialMessage = `Hi, I'm interested in your ${product.name}. Is this still available?`;
+
+      if (product.image) {
+        initialMessage += `\n\n<div style="margin-top:10px; margin-bottom:10px; max-width:250px;">
+          <img src="${product.image}" alt="${product.name}" style="max-width:100%; border-radius:8px; border:1px solid #eee;" />
+        </div>\n\nLooking forward to your response!`;
+      }
+
+      // Save this info for the messaging page
+      sessionStorage.setItem(
+        "last_product_contacted",
+        JSON.stringify({
+          productId: product.productID || product.id,
+          sellerId: sellerId,
+          initialMessageSent: true,
+        })
+      );
+
+      // Send the message first
+      await supabase.from("messages").insert([
+        {
+          sender_id: userId,
+          receiver_id: sellerId,
+          content: initialMessage,
+          status: "active",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      console.log("Successfully sent initial message");
+
+      // Mark conversation as initiated
+      markMessageSent(userId, sellerId, product);
+
+      // Save window scroll position
+      const windowScrollY = window.scrollY;
+
+      // Construct URL with both seller ID and product ID for context
+      const messagesUrl = `/messaging/${sellerId}?productId=${
+        product.productID || product.id
+      }`;
+
+      // Navigate to messages
+      window.location.href = messagesUrl;
+
+      // Restore window scroll position
+      window.scrollTo(0, windowScrollY);
+    } catch (error) {
+      console.error("Error sending initial message:", error);
+      // Still redirect even if message fails
+      window.location.href = `/messaging/${sellerId}?productId=${
+        product.productID || product.id
+      }`;
+    }
   };
 
   // Update handleCategoryClick to be more aggressive about scroll prevention

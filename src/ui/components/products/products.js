@@ -73,12 +73,15 @@ function Products() {
       });
 
       // Get all available, non-deleted, and approved products
-      let { data: allProducts, error } = await supabase
+      const productsResult = await supabase
         .from("products")
         .select("*")
         .eq("status", "Available")
         .eq("is_deleted", false)
         .eq("moderation_status", "approved");
+
+      const allProducts = productsResult.data || [];
+      const error = productsResult.error;
 
       if (error) {
         console.error("Error fetching products:", error);
@@ -266,7 +269,9 @@ function Products() {
                           }
                         >
                           {/* Product name */}
-                          <div className="products-product-name">{product.name}</div>
+                          <div className="products-product-name">
+                            {product.name}
+                          </div>
 
                           {/* Price */}
                           <p className="price">

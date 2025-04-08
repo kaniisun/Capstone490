@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../../supabaseClient";
 import MessageArea from "./messageArea";
 import UserList from "./userList";
 import "./messages.css";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useLocation } from "react-router-dom";
 import { Grid, Box, Paper } from "@mui/material";
 
 const MessageHome = () => {
@@ -12,147 +12,19 @@ const MessageHome = () => {
   const [unreadCounts, setUnreadCounts] = useState({});
   const { userId } = useParams();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [productDetails, setProductDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch product details if productId is in URL
-  useEffect(() => {
-    const fetchProductDetails = async () => {
-      const productId = searchParams.get("productId");
-      if (!productId) return;
-
-      // Check if we've already fetched these product details
-      const productCacheKey = `product_details_${productId}`;
-      if (
-        window.__fetchedProductDetails &&
-        window.__fetchedProductDetails[productCacheKey]
-      ) {
-        console.log("Using cached product details for:", productId);
-        setProductDetails(window.__fetchedProductDetails[productCacheKey]);
-        return;
-      }
-
-      try {
-        console.log("Fetching product details for:", productId);
-        const { data: product, error } = await supabase
-          .from("products")
-          .select("*")
-          .eq("productID", productId)
-          .single();
-
-        if (error) {
-          console.error("Error fetching product details:", error);
-          return;
-        }
-
-        if (product) {
-          console.log("Found product details:", product);
-
-          // Cache the product details to prevent duplicate fetches
-          if (!window.__fetchedProductDetails)
-            window.__fetchedProductDetails = {};
-          window.__fetchedProductDetails[productCacheKey] = product;
-
-          // Only update state if we're still mounted and don't already have these details
-          setProductDetails(product);
-        }
-      } catch (err) {
-        console.error("Exception fetching product details:", err);
-      }
-    };
-
-    fetchProductDetails();
-  }, [searchParams]);
-
-  useEffect(() => {
-    const getUser = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase.auth.getUser();
-        if (error) {
-          console.error("Error getting authenticated user:", error);
-          setIsLoading(false);
-          return;
-        }
-
-        if (data?.user) {
-          const userID = data.user.id;
-          const { data: userData, error: userError } = await supabase
-            .from("users")
-            .select("*")
-            .eq("userID", userID)
-            .single();
-
-          if (userError) {
-            console.error("Error fetching user data:", userError);
-            setIsLoading(false);
-            return;
-          }
-
-          if (userData) {
-            console.log("User data loaded:", userData.userID);
-            setUser(userData);
-            localStorage.setItem("userId", userData.userID);
-          }
-        }
-      } catch (err) {
-        console.error("Exception in getUser:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    getUser();
-  }, []);
-
-  useEffect(() => {
-    const fetchReceiver = async () => {
-      if (!userId || !user || isLoading) return;
-
-      // Safety check
-      if (userId === "undefined" || userId === "null") {
-        console.error("Invalid userId in URL params:", userId);
-        return;
-      }
-
-      try {
-        console.log(`Fetching receiver with userId: ${userId}`);
-        const { data: receiverData, error } = await supabase
-          .from("users")
-          .select("*")
-          .eq("userID", userId)
-          .single();
-
-        if (error) {
-          console.error("Error fetching receiver:", error);
-          return;
-        }
-
-        if (receiverData) {
-          console.log("Receiver data loaded:", receiverData.userID);
-          setReceiver(receiverData);
-          if (user?.userID) {
-            markMessagesAsRead(userId);
-          }
-        } else {
-          console.error("No user found with ID:", userId);
-        }
-      } catch (err) {
-        console.error("Exception in fetchReceiver:", err);
-      }
-    };
-
-    fetchReceiver();
-  }, [userId, user, isLoading]);
-
-  const fetchUnreadCounts = async () => {
+  // Fetch unread message counts
+  const fetchUnreadCounts = useCallback(async () => {
     if (!user?.userID) return;
 
     try {
       console.log(`Fetching unread counts for user: ${user.userID}`);
       const { data, error } = await supabase
         .from("messages")
-        .select("sender_id")
+        .select("sender_id, conversation_id")
         .eq("receiver_id", user.userID)
         .eq("is_read", false);
 
@@ -173,114 +45,259 @@ const MessageHome = () => {
     } catch (err) {
       console.error("Exception in fetchUnreadCounts:", err);
     }
-  };
+  }, [user?.userID]);
 
-  const markMessagesAsRead = async (sender_id) => {
-    if (!user?.userID || !sender_id) return;
+  // Mark messages as read when selecting a conversation
+  const markMessagesAsRead = useCallback(
+    async (senderId) => {
+      if (!user?.userID || !senderId) return;
 
-    // Safety check
-    if (sender_id === "undefined" || sender_id === "null") {
-      console.error("Invalid sender_id in markMessagesAsRead:", sender_id);
-      return;
-    }
+      try {
+        console.log(`Marking messages from ${senderId} as read`);
 
-    try {
-      console.log(
-        `Marking messages as read from sender: ${sender_id} to receiver: ${user.userID}`
-      );
-      const { data: unreadMessages, error } = await supabase
-        .from("messages")
-        .select("id")
-        .eq("receiver_id", user.userID)
-        .eq("sender_id", sender_id)
-        .eq("is_read", false);
+        // Find the conversation
+        const { data: conversationData, error: convError } = await supabase
+          .from("conversations")
+          .select("conversation_id")
+          .or(
+            `and(participant1_id.eq.${user.userID},participant2_id.eq.${senderId}),and(participant1_id.eq.${senderId},participant2_id.eq.${user.userID})`
+          )
+          .limit(1);
 
-      if (error) {
-        console.error("Error finding unread messages:", error);
-        return;
-      }
+        if (convError || !conversationData || conversationData.length === 0) {
+          return;
+        }
 
-      if (unreadMessages?.length) {
+        const conversationId = conversationData[0].conversation_id;
+
+        // Find and mark unread messages in this conversation
+        const { data: unreadMessages, error } = await supabase
+          .from("messages")
+          .select("id")
+          .eq("conversation_id", conversationId)
+          .eq("receiver_id", user.userID)
+          .eq("sender_id", senderId)
+          .eq("is_read", false);
+
+        if (error || !unreadMessages?.length) {
+          return;
+        }
+
+        // Mark messages as read
         const messageIds = unreadMessages.map((msg) => msg.id);
-        console.log(`Marking ${messageIds.length} messages as read`);
-
         const { error: updateError } = await supabase
           .from("messages")
           .update({ is_read: true })
           .in("id", messageIds);
 
-        if (updateError) {
-          console.error("Error marking messages as read:", updateError);
+        if (!updateError) {
+          fetchUnreadCounts();
+        }
+      } catch (err) {
+        console.error("Error marking messages as read:", err);
+      }
+    },
+    [user?.userID, fetchUnreadCounts]
+  );
+
+  // Fetch product details from location state or URL params
+  useEffect(() => {
+    const fetchProductDetails = async () => {
+      // First check if product details are in the location state
+      if (location.state && location.state.productDetails) {
+        console.log(
+          "Using product details from location state:",
+          location.state.productDetails
+        );
+        setProductDetails(location.state.productDetails);
+        return;
+      }
+
+      // Fallback to query params if no state is available
+      const productId = searchParams.get("productId");
+      if (!productId) return;
+
+      try {
+        console.log("Fetching product details for:", productId);
+
+        // Use a simple approach - just try to fetch by productID
+        const productResult = await supabase
+          .from("products")
+          .select("*")
+          .eq("productID", productId)
+          .single();
+
+        const data = productResult.data;
+        const error = productResult.error;
+
+        if (error || !data) {
+          // Try by ID if productID fails
+          const secondTryResult = await supabase
+            .from("products")
+            .select("*")
+            .eq("id", productId)
+            .single();
+
+          const secondTryData = secondTryResult.data;
+          const secondTryError = secondTryResult.error;
+
+          if (secondTryData) {
+            console.log("Found product by ID:", secondTryData);
+            setProductDetails(secondTryData);
+          } else {
+            console.log("No product found with ID:", productId);
+          }
+        } else {
+          console.log("Found product by productID:", data);
+          setProductDetails(data);
+        }
+      } catch (err) {
+        console.error("Exception fetching product details:", err);
+      }
+    };
+
+    fetchProductDetails();
+  }, [searchParams, location.state]);
+
+  // Fetch current user data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const currentUserID = localStorage.getItem("userId");
+      if (!currentUserID) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("users")
+          .select("userID, firstName, lastName, email")
+          .eq("userID", currentUserID)
+          .single();
+
+        if (error) {
+          console.error("Error fetching user data:", error);
           return;
         }
 
-        fetchUnreadCounts();
+        if (data) {
+          setUser(data);
+        }
+      } catch (err) {
+        console.error("Exception in fetchUserData:", err);
       }
-    } catch (err) {
-      console.error("Exception in markMessagesAsRead:", err);
-    }
-  };
+    };
 
+    fetchUserData();
+  }, []);
+
+  // Fetch the receiver user data
+  useEffect(() => {
+    const fetchReceiverData = async () => {
+      if (!userId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("users")
+          .select("userID, firstName, lastName, email")
+          .eq("userID", userId)
+          .single();
+
+        if (error) {
+          console.error("Error fetching receiver data:", error);
+          return;
+        }
+
+        if (data) {
+          setReceiver(data);
+          // If we have both user and receiver, mark messages as read
+          if (user?.userID) {
+            markMessagesAsRead(userId);
+          }
+        }
+      } catch (err) {
+        console.error("Exception in fetchReceiverData:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReceiverData();
+  }, [userId, user?.userID, markMessagesAsRead]);
+
+  // Listen for new messages to update unread counts
   useEffect(() => {
     if (user?.userID) {
       fetchUnreadCounts();
 
-      const subscription = supabase
-        .channel("unread-message-updates")
+      // Set up real-time subscription for new messages
+      const messagesChannel = supabase
+        .channel("messages-changes")
         .on(
           "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "messages",
-            filter: `receiver_id=eq.${user.userID}`,
-          },
-          fetchUnreadCounts
+          { event: "INSERT", schema: "public", table: "messages" },
+          (payload) => {
+            if (payload.new.receiver_id === user.userID) {
+              fetchUnreadCounts();
+            }
+          }
         )
         .subscribe();
 
       return () => {
-        supabase.removeChannel(subscription);
+        messagesChannel.unsubscribe();
       };
     }
-    return undefined;
-  }, [user]);
+  }, [user?.userID, fetchUnreadCounts]);
+
+  // Handle selecting a user from the list
+  const handleSelectUser = (selectedUser) => {
+    setReceiver(selectedUser);
+    if (selectedUser && user?.userID) {
+      markMessagesAsRead(selectedUser.userID);
+    }
+  };
+
+  // Handle closing the chat
+  const handleCloseChat = () => {
+    setReceiver(null);
+  };
 
   return (
-    <Box className="message-home-container">
-      <Paper className="message-home-paper">
-        <Grid container className="message-home-grid">
-          {/* User List */}
-          <Grid item xs={3} className="message-home-user-list-grid">
+    <div className="message-home-container">
+      <Grid container spacing={0} className="message-home-grid">
+        <Grid item xs={12} sm={4} md={3} lg={3} className="user-list-container">
+          <Paper className="user-list-paper">
             <UserList
+              setReceiver={handleSelectUser}
               currentReceiver={receiver}
               unreadCounts={unreadCounts}
-              currentUserID={user?.userID || null}
-              setReceiver={(user) => {
-                setReceiver(user);
-                markMessagesAsRead(user.userID);
-              }}
+              currentUserID={user?.userID}
             />
-          </Grid>
-
-          {/* Message Area */}
-          <Grid item xs={9} className="message-home-message-grid">
+          </Paper>
+        </Grid>
+        <Grid
+          item
+          xs={12}
+          sm={8}
+          md={9}
+          lg={9}
+          className="message-area-container"
+        >
+          <Paper className="message-area-paper">
             {receiver ? (
               <MessageArea
                 user={user}
                 receiver={receiver}
-                onCloseChat={() => setReceiver(null)}
+                onCloseChat={handleCloseChat}
                 productDetails={productDetails}
               />
             ) : (
-              <Box className="message-home-empty-chat-box">
-                <p>Select a user to start chatting.</p>
-              </Box>
+              <div className="select-user-message">
+                <p>Select a user to start a conversation</p>
+              </div>
             )}
-          </Grid>
+          </Paper>
         </Grid>
-      </Paper>
-    </Box>
+      </Grid>
+    </div>
   );
 };
 

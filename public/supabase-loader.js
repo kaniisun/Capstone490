@@ -6,7 +6,19 @@
  */
 
 (function () {
-  console.log("🔄 Loading Supabase client from CDN...");
+  console.log("🔌 Supabase Loader Starting...");
+
+  // Skip creating dummy client if we're in product inquiry context
+  const isProductInquiryContext =
+    window.location.href.includes("/message/") ||
+    window.location.href.includes("/messaging/") ||
+    window.location.href.includes("productId=") ||
+    window.location.href.includes("/product/");
+
+  if (isProductInquiryContext) {
+    console.log("Skipping dummy client creation in product inquiry context");
+    return;
+  }
 
   // First check if Supabase is already available
   if (window.supabase && typeof window.supabase.from === "function") {
@@ -221,34 +233,17 @@
   }
 
   function showStatusIndicator(text, color) {
-    const bgColor =
+    // Don't create UI elements, just log to console
+    console.log(`[Supabase Loader] ${text} (${color})`);
+
+    // Log to console with appropriate styling
+    const style =
       color === "green"
-        ? "rgba(50, 205, 50, 0.7)"
+        ? "color: green; font-weight: bold;"
         : color === "red"
-        ? "rgba(220, 20, 60, 0.7)"
-        : "rgba(255, 165, 0, 0.7)";
+        ? "color: red; font-weight: bold;"
+        : "color: orange; font-weight: bold;";
 
-    const indicator = document.createElement("div");
-    indicator.style.position = "fixed";
-    indicator.style.bottom = "10px";
-    indicator.style.left = "10px";
-    indicator.style.backgroundColor = bgColor;
-    indicator.style.color = "white";
-    indicator.style.padding = "6px 12px";
-    indicator.style.borderRadius = "4px";
-    indicator.style.fontSize = "12px";
-    indicator.style.fontWeight = "bold";
-    indicator.style.zIndex = "9999";
-    indicator.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
-    indicator.textContent = text;
-
-    document.body.appendChild(indicator);
-
-    // Fade out after 5 seconds
-    setTimeout(() => {
-      indicator.style.transition = "opacity 0.5s ease";
-      indicator.style.opacity = "0";
-      setTimeout(() => indicator.remove(), 500);
-    }, 5000);
+    console.log(`%c[Supabase Status] ${text}`, style);
   }
 })();

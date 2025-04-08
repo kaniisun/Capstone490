@@ -32,158 +32,74 @@
     <!-- API Optimizer & Duplicate Message Preventer -->
     <script src="%PUBLIC_URL%/api-optimizer.js"></script>
 
-    <!-- 
-      TESTING: To reset message prevention, copy this script and paste it in the browser console:
-      ---------------------------------------------------------------------------------------------
-      
-      fetch('/console-reset.js')
-        .then(response => response.text())
-        .then(script => {
-          console.log('Loaded reset script');
-          eval(script);
-        })
-        .catch(err => {
-          console.error('Error loading reset script:', err);
-        });
-    -->
+    <!-- Quick support for message diagnostics -->
+    <script>
+      // Add a function to load the message tester tool when needed
+      window.loadMessageTester = function () {
+        console.log("Loading message tester script...");
+        const script = document.createElement("script");
+        script.src = "/message-tester.js";
+        script.onload = function () {
+          console.log("Message tester loaded successfully!");
+        };
+        script.onerror = function () {
+          console.error("Failed to load message tester");
+        };
+        document.head.appendChild(script);
+      };
 
-    <!-- 
-      TESTING: To force send an initial message, copy this script and paste it in the browser console:
-      -----------------------------------------------------------------------------------------------
-      
-      fetch('/force-send.js')
-        .then(response => response.text())
-        .then(script => {
-          console.log('Loaded force send script');
-          eval(script);
-        })
-        .catch(err => {
-          console.error('Error loading force send script:', err);
-        });
-    -->
+      // Add function to load the product inquiry fix
+      window.fixProductInquiry = function () {
+        console.log("Loading product inquiry fix script...");
+        const script = document.createElement("script");
+        script.src = "/product-inquiry-fix.js";
+        script.onload = function () {
+          console.log("Product inquiry fix loaded successfully!");
+        };
+        script.onerror = function () {
+          console.error("Failed to load product inquiry fix");
+        };
+        document.head.appendChild(script);
+      };
 
-    <!-- 
-      FIX FOR 400 BAD REQUEST ERRORS WHEN SENDING MESSAGES
-      If you're experiencing 400 Bad Request errors when sending messages, run this in your browser console:
-      
-      fetch('/fix-400-error.js')
-        .then(response => response.text())
-        .then(code => {
-          try {
-            eval(code);
-            console.log('✅ 400 error fix loaded successfully');
-          } catch (e) {
-            console.error('❌ Error loading fix script:', e);
-          }
-        })
-        .catch(err => console.error('❌ Failed to load the fix script:', err));
-    -->
-
-    <!-- 
-      DEBUG TOOL - Find duplicate message issues
-      Run this command in your browser console to analyze and fix duplicate message problems:
-      
-      fetch('/final-duplicate-fix.js')
-        .then(response => response.text())
-        .then(code => {
-          try {
-            eval(code);
-            console.log('Duplicate message fix installed');
-          } catch (e) {
-            console.error('Error installing duplicate message fix:', e);
-          }
-        })
-        .catch(err => console.error('Failed to load the duplicate fix script:', err));
-    -->
-
-    <!-- 
-      NEW: ADVANCED DEBUG TOOL FOR 400 BAD REQUEST ERRORS
-      Run this command to analyze your Supabase setup and find the right fix for your environment:
-      
-      fetch('/debug-send.js')
-        .then(response => response.text())
-        .then(code => {
-          try {
-            eval(code);
-            console.log('Debug send tool loaded successfully');
-          } catch (e) {
-            console.error('Error loading debug send tool:', e);
-          }
-        })
-        .catch(err => console.error('Failed to load the debug send tool:', err));
-    -->
-
-    <!-- 
-      FIX FOR "BODY STREAM ALREADY READ" ERRORS
-      Run this command if you are getting the error "body stream already read" with Supabase:
-      
-      fetch('/fix-stream-error.js')
-        .then(response => response.text())
-        .then(code => {
-          try {
-            eval(code);
-            console.log('✅ Stream error fix loaded successfully');
-          } catch (e) {
-            console.error('❌ Error loading stream error fix:', e);
-          }
-        })
-        .catch(err => console.error('❌ Failed to load the stream error fix:', err));
-    -->
-
-    <!-- 
-      FIX FOR PRODUCT INQUIRY IN CHAT
-      Run this command if you want different products from the same seller to create separate inquiries:
-      
-      fetch('/product-inquiry-fix.js')
-        .then(response => response.text())
-        .then(code => {
-          try {
-            eval(code);
-            console.log('✅ Product inquiry fix loaded successfully');
-          } catch (e) {
-            console.error('❌ Error loading product inquiry fix:', e);
-          }
-        })
-        .catch(err => console.error('❌ Failed to load the product inquiry fix:', err));
-    -->
-
-    <!-- 
-      ADVANCED PRODUCT INQUIRY FIX 
-      Use this if you're still having issues with the regular product inquiry fix:
-      
-      fetch('/advanced-inquiry-fix.js')
-        .then(response => response.text())
-        .then(code => {
-          try {
-            eval(code);
-            console.log('✅ Advanced product inquiry fix loaded successfully');
-          } catch (e) {
-            console.error('❌ Error loading advanced fix:', e);
-          }
-        })
-        .catch(err => console.error('❌ Failed to load the advanced fix:', err));
-    -->
-
-    <!-- 
-      DIRECT PRODUCT INQUIRY SENDER
-      When all else fails, use this to directly send product inquiries through Supabase:
-      
-      fetch('/direct-send.js')
-        .then(response => response.text())
-        .then(code => {
-          try {
-            eval(code);
-            console.log('✅ Direct product inquiry sender loaded successfully');
-          } catch (e) {
-            console.error('❌ Error loading direct sender:', e);
-          }
-        })
-        .catch(err => console.error('❌ Failed to load the direct sender:', err));
-    -->
+      // Expose the functions globally for easy access
+      console.log(
+        "Type window.loadMessageTester() to diagnose messaging issues"
+      );
+      console.log(
+        "Type window.fixProductInquiry() to fix product inquiry message issues"
+      );
+    </script>
 
     <!-- PERMANENT FIX: Product Inquiry Fix - Automatically loaded -->
     <script>
       document.addEventListener("DOMContentLoaded", function () {
+        // Check if we need to auto-fix message issues
+        const needsAutoFix =
+          localStorage.getItem("auto_fix_messages") === "true";
+        if (needsAutoFix) {
+          console.log("🔄 Auto-fix for messages triggered");
+          // Clear the flag so it only runs once
+          localStorage.removeItem("auto_fix_messages");
+
+          // Load and run the fix script
+          setTimeout(() => {
+            window.fixProductInquiry();
+          }, 2000); // Delay slightly to ensure page is fully loaded
+        }
+
+        // Automatically load auto-message-fix on messaging pages
+        const isMessagingPage =
+          window.location.pathname.includes("/messaging/");
+        if (isMessagingPage) {
+          console.log("On messaging page, loading automatic message fix");
+
+          // Load the auto-message-fix script
+          const autoFixScript = document.createElement("script");
+          autoFixScript.src = "/auto-message-fix.js";
+          document.head.appendChild(autoFixScript);
+        }
+
         // Wait for page to fully load before applying the fix
         setTimeout(() => {
           // Check if we're on a messaging or product page
@@ -195,10 +111,20 @@
             url.includes("/product/")
           ) {
             console.log(
-              "📱 Message or product page detected - Loading inquiry fix automatically"
+              "📱 Message or product page detected - Loading inquiry fix without UI"
             );
 
-            // First, load the Supabase loader script
+            // First, load the element inspector to track DOM access attempts
+            const elementInspectorScript = document.createElement("script");
+            elementInspectorScript.src = "/element-inspector.js";
+            document.head.appendChild(elementInspectorScript);
+
+            // Then load the Supabase connector script that bridges React and direct-send
+            const supabaseConnectorScript = document.createElement("script");
+            supabaseConnectorScript.src = "/supabase-connector.js";
+            document.head.appendChild(supabaseConnectorScript);
+
+            // Then load the Supabase loader script (which is now configured to skip dummy client)
             const supabaseLoaderScript = document.createElement("script");
             supabaseLoaderScript.src = "/supabase-loader.js";
             supabaseLoaderScript.onload = function () {
@@ -206,14 +132,48 @@
                 "Supabase loader script loaded, waiting for initialization..."
               );
 
+              // Inject a connector script to make the React app's Supabase client available globally
+              const connectorScript = document.createElement("script");
+              connectorScript.textContent = `
+                // Look for Supabase client in the React app
+                (function() {
+                  console.log("🔍 Looking for existing Supabase client in React app...");
+                  const checkInterval = setInterval(function() {
+                    // Check common places where Supabase might be stored
+                    if (window.__SUPABASE_CLIENT__) {
+                      console.log("✅ Found Supabase in __SUPABASE_CLIENT__");
+                      window.supabase = window.__SUPABASE_CLIENT__;
+                      clearInterval(checkInterval);
+                    } 
+                    
+                    // Try to find it in React's internal state
+                    const rootElement = document.getElementById('root');
+                    if (rootElement && rootElement._reactRootContainer) {
+                      console.log("Found React root, attempting to extract Supabase client");
+                      try {
+                        // Make the client globally available if found
+                        window.supabase = window.supabase || {};
+                        console.log("Set up backup Supabase client placeholder");
+                      } catch(e) {
+                        console.log("Couldn't extract from React state:", e);
+                      }
+                    }
+                  }, 500);
+                  
+                  // Stop checking after 10 seconds to avoid infinite loops
+                  setTimeout(() => clearInterval(checkInterval), 10000);
+                })();
+              `;
+              document.head.appendChild(connectorScript);
+
               // Wait for Supabase to be available before loading the direct-send script
               setTimeout(() => {
                 // Create script element for the direct-send.js
                 const script = document.createElement("script");
-                script.src = "/direct-send.js";
+                script.src = "/direct-send-v2.js";
                 script.onload = function () {
                   console.log(
-                    "✅ Product inquiry fix loaded and activated automatically"
+                    "✅ Product inquiry script loaded (background mode only)"
                   );
                 };
                 script.onerror = function () {

@@ -249,22 +249,152 @@ export function AuthProvider({ children }) {
         // Fetch user role/admin status from the database
         if (isVerified && currentUser) {
           try {
-            const { data: userData, error: userError } = await supabase
+            // Initialize variables for role comparison
+            let roleFromMetadata = null;
+            let isAdminFromMetadata = false;
+
+            // Check if user has role in metadata
+            if (currentUser.user_metadata?.role) {
+              roleFromMetadata = currentUser.user_metadata.role;
+              isAdminFromMetadata =
+                currentUser.user_metadata.isAdmin === true ||
+                roleFromMetadata === "admin";
+            }
+
+            console.log(
+              "Fetching user role from database for verification after login"
+            );
+
+            // Try with userID first
+            let dbUserData = null;
+            let dbUserError = null;
+
+            const userIDResult = await supabase
               .from("users")
-              .select("role")
+              .select("role, userID, email")
               .eq("userID", currentUser.id)
               .single();
 
-            if (userError) {
-              console.error("Error fetching user role:", userError);
-            } else if (userData) {
-              setUserRole(userData.role);
-              setIsAdmin(userData.role === "admin");
+            if (userIDResult.error) {
+              console.log(
+                "Failed to find user with userID field, trying with id:",
+                userIDResult.error
+              );
+
+              // Try with id field as fallback
+              const idResult = await supabase
+                .from("users")
+                .select("role, userID, email")
+                .eq("id", currentUser.id)
+                .single();
+
+              if (idResult.error) {
+                console.error(
+                  "Error finding user in database:",
+                  idResult.error
+                );
+                dbUserError = idResult.error;
+              } else {
+                dbUserData = idResult.data;
+                console.log("Found user with id field:", dbUserData);
+              }
+            } else {
+              dbUserData = userIDResult.data;
+              console.log("Found user with userID field:", dbUserData);
+            }
+
+            if (dbUserError && !dbUserData) {
+              console.error(
+                "Error fetching user role from database:",
+                dbUserError
+              );
+              // Continue with metadata role as fallback
+              console.log(
+                "Using metadata role as fallback due to database error"
+              );
+            } else if (dbUserData && dbUserData.role) {
+              // Database has authoritative role information
+              const dbRole = dbUserData.role;
+              const isDbAdmin = dbRole === "admin";
+
+              console.log("Database role:", dbRole, "isAdmin:", isDbAdmin);
+
+              // Set role from database as the source of truth
+              setUserRole(dbRole);
+              setIsAdmin(isDbAdmin);
+
+              // If metadata doesn't match database, update metadata
+              if (
+                typeof roleFromMetadata !== "undefined" &&
+                typeof isAdminFromMetadata !== "undefined" &&
+                (roleFromMetadata !== dbRole ||
+                  isAdminFromMetadata !== isDbAdmin)
+              ) {
+                console.log("Syncing metadata with database role");
+
+                try {
+                  const { error: metadataError } =
+                    await supabase.auth.updateUser({
+                      data: {
+                        role: dbRole,
+                        isAdmin: isDbAdmin,
+                      },
+                    });
+
+                  if (metadataError) {
+                    console.error(
+                      "Error updating user metadata:",
+                      metadataError
+                    );
+                  } else {
+                    console.log("User metadata updated to match database role");
+                  }
+                } catch (metadataErr) {
+                  console.error(
+                    "Exception updating user metadata:",
+                    metadataErr
+                  );
+                }
+              }
+            } else if (!dbUserData && !dbUserError) {
+              console.log(
+                "No user record found in database - might need to create one"
+              );
+
+              // Try to create a user record if we couldn't find one
+              try {
+                // Only if this is a valid user with an email
+                if (currentUser.email) {
+                  const { data: insertData, error: insertError } =
+                    await supabase
+                      .from("users")
+                      .insert({
+                        userID: currentUser.id,
+                        email: currentUser.email,
+                        firstName: currentUser.user_metadata?.firstName || "",
+                        lastName: currentUser.user_metadata?.lastName || "",
+                        role: currentUser.user_metadata?.role || "user",
+                        created_at: new Date().toISOString(),
+                        accountStatus: "active",
+                      })
+                      .select();
+
+                  if (insertError) {
+                    console.error("Error creating user record:", insertError);
+                  } else {
+                    console.log(
+                      "Created new user record in database:",
+                      insertData
+                    );
+                  }
+                }
+              } catch (insertErr) {
+                console.error("Exception creating user record:", insertErr);
+              }
             }
           } catch (err) {
-            console.error("Error checking admin status:", err);
-            setUserRole(null);
-            setIsAdmin(false);
+            console.error("Error syncing roles after login:", err);
+            // Continue execution, don't throw
           }
         }
 
@@ -435,17 +565,56 @@ export function AuthProvider({ children }) {
 
           // After login, always verify role against database
           try {
-            console.log("Fetching user role from database for verification");
-            const { data: dbUserData, error: dbUserError } = await supabase
+            console.log(
+              "Fetching user role from database for verification after login"
+            );
+
+            // Try with userID first
+            let dbUserData = null;
+            let dbUserError = null;
+
+            const userIDResult = await supabase
               .from("users")
-              .select("role")
+              .select("role, userID, email")
               .eq("userID", session.user.id)
               .single();
 
-            if (dbUserError) {
+            if (userIDResult.error) {
+              console.log(
+                "Failed to find user with userID field, trying with id:",
+                userIDResult.error
+              );
+
+              // Try with id field as fallback
+              const idResult = await supabase
+                .from("users")
+                .select("role, userID, email")
+                .eq("id", session.user.id)
+                .single();
+
+              if (idResult.error) {
+                console.error(
+                  "Error finding user in database:",
+                  idResult.error
+                );
+                dbUserError = idResult.error;
+              } else {
+                dbUserData = idResult.data;
+                console.log("Found user with id field:", dbUserData);
+              }
+            } else {
+              dbUserData = userIDResult.data;
+              console.log("Found user with userID field:", dbUserData);
+            }
+
+            if (dbUserError && !dbUserData) {
               console.error(
                 "Error fetching user role from database:",
                 dbUserError
+              );
+              // Continue with metadata role as fallback
+              console.log(
+                "Using metadata role as fallback due to database error"
               );
             } else if (dbUserData && dbUserData.role) {
               // Database has authoritative role information
@@ -460,26 +629,76 @@ export function AuthProvider({ children }) {
 
               // If metadata doesn't match database, update metadata
               if (
-                roleFromMetadata !== dbRole ||
-                isAdminFromMetadata !== isDbAdmin
+                typeof roleFromMetadata !== "undefined" &&
+                typeof isAdminFromMetadata !== "undefined" &&
+                (roleFromMetadata !== dbRole ||
+                  isAdminFromMetadata !== isDbAdmin)
               ) {
                 console.log("Syncing metadata with database role");
 
                 try {
-                  await supabase.auth.updateUser({
-                    data: {
-                      role: dbRole,
-                      isAdmin: isDbAdmin,
-                    },
-                  });
-                  console.log("User metadata updated to match database role");
-                } catch (err) {
-                  console.error("Error updating user metadata:", err);
+                  const { error: metadataError } =
+                    await supabase.auth.updateUser({
+                      data: {
+                        role: dbRole,
+                        isAdmin: isDbAdmin,
+                      },
+                    });
+
+                  if (metadataError) {
+                    console.error(
+                      "Error updating user metadata:",
+                      metadataError
+                    );
+                  } else {
+                    console.log("User metadata updated to match database role");
+                  }
+                } catch (metadataErr) {
+                  console.error(
+                    "Exception updating user metadata:",
+                    metadataErr
+                  );
                 }
+              }
+            } else if (!dbUserData && !dbUserError) {
+              console.log(
+                "No user record found in database - might need to create one"
+              );
+
+              // Try to create a user record if we couldn't find one
+              try {
+                // Only if this is a valid user with an email
+                if (session.user.email) {
+                  const { data: insertData, error: insertError } =
+                    await supabase
+                      .from("users")
+                      .insert({
+                        userID: session.user.id,
+                        email: session.user.email,
+                        firstName: session.user.user_metadata?.firstName || "",
+                        lastName: session.user.user_metadata?.lastName || "",
+                        role: session.user.user_metadata?.role || "user",
+                        created_at: new Date().toISOString(),
+                        accountStatus: "active",
+                      })
+                      .select();
+
+                  if (insertError) {
+                    console.error("Error creating user record:", insertError);
+                  } else {
+                    console.log(
+                      "Created new user record in database:",
+                      insertData
+                    );
+                  }
+                }
+              } catch (insertErr) {
+                console.error("Exception creating user record:", insertErr);
               }
             }
           } catch (err) {
             console.error("Error syncing roles after login:", err);
+            // Continue execution, don't throw
           }
 
           // Check if there's a stored expiration time
@@ -710,58 +929,113 @@ export function AuthProvider({ children }) {
       if (!user) return { success: false, error: "No user logged in" };
 
       try {
-        console.log("Refreshing user role data from database");
-        // Fetch fresh user role data from the database
-        const { data: userData, error: userError } = await supabase
+        console.log(
+          "Refreshing user role data from database for user:",
+          user.id
+        );
+
+        // Fetch fresh user role data from the database - try first with userID
+        let userData = null;
+        let userError = null;
+
+        // First attempt with userID field
+        const userIDResult = await supabase
           .from("users")
-          .select("role")
+          .select("role, userID, email")
           .eq("userID", user.id)
           .single();
 
-        if (userError) {
+        if (userIDResult.error) {
+          console.log(
+            "Failed to find user with userID, trying with id field:",
+            userIDResult.error
+          );
+
+          // Second attempt with id field
+          const idResult = await supabase
+            .from("users")
+            .select("role, userID, email")
+            .eq("id", user.id)
+            .single();
+
+          if (idResult.error) {
+            console.error("Error finding user in database:", idResult.error);
+            userError = idResult.error;
+          } else {
+            userData = idResult.data;
+            console.log("Found user with id field:", userData);
+          }
+        } else {
+          userData = userIDResult.data;
+          console.log("Found user with userID field:", userData);
+        }
+
+        if (userError && !userData) {
           console.error("Error refreshing user role:", userError);
-          return { success: false, error: userError.message };
+          return {
+            success: false,
+            error: userError.message,
+            details:
+              "Tried both userID and id fields but couldn't find the user",
+          };
         }
 
         if (userData) {
           // Update the role and admin status in context
-          console.log("Updated user role from database:", userData.role);
-          setUserRole(userData.role);
-          setIsAdmin(userData.role === "admin");
+          const newRole = userData.role || "user";
+          const isDbAdmin = newRole === "admin";
+
+          console.log(
+            `Updated user role from database: ${newRole} (isAdmin: ${isDbAdmin})`
+          );
+          setUserRole(newRole);
+          setIsAdmin(isDbAdmin);
 
           // Update the user metadata in Supabase auth with the new role
           // This ensures the role persists even after logout/login
           try {
             const { error: metadataError } = await supabase.auth.updateUser({
               data: {
-                role: userData.role,
-                isAdmin: userData.role === "admin",
+                role: newRole,
+                isAdmin: isDbAdmin,
               },
             });
 
             if (metadataError) {
               console.error("Error updating user metadata:", metadataError);
+              // Continue - metadata update is secondary
             } else {
               console.log(
                 "Successfully updated Supabase user metadata with role:",
-                userData.role
+                newRole
               );
             }
           } catch (metadataErr) {
             console.error("Exception updating user metadata:", metadataErr);
+            // Continue - metadata update is secondary
           }
 
           return {
             success: true,
-            role: userData.role,
-            isAdmin: userData.role === "admin",
+            role: newRole,
+            isAdmin: isDbAdmin,
+            userData: userData,
           };
         }
 
-        return { success: false, error: "No user data found" };
+        return {
+          success: false,
+          error: "No user data found",
+          userId: user.id,
+          userEmail: user.email,
+        };
       } catch (err) {
-        console.error("Error in refreshUserData:", err.message);
-        return { success: false, error: err.message };
+        console.error("Exception in refreshUserData:", err);
+        return {
+          success: false,
+          error: err.message,
+          errorType: "exception",
+        };
       }
     },
     updateUserRole: async (targetUserId, newRole) => {
@@ -808,6 +1082,7 @@ export function AuthProvider({ children }) {
 
             if (metadataError) {
               console.error("Error updating user metadata:", metadataError);
+              // Continue since DB update was successful
             } else {
               console.log(
                 "Successfully updated auth metadata for current user"
@@ -815,6 +1090,7 @@ export function AuthProvider({ children }) {
             }
           } catch (metadataErr) {
             console.error("Error updating metadata:", metadataErr);
+            // Continue since DB update was successful
           }
         } else {
           console.log(

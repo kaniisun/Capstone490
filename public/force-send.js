@@ -155,6 +155,7 @@
           content: initialMessage,
           status: "active",
           created_at: new Date().toISOString(),
+          product_id: productDetails.id || productDetails.productID,
         },
       ]);
 

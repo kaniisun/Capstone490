@@ -148,117 +148,90 @@ export const clearPreventionFlags = (senderId, receiverId, product) => {
 };
 
 /**
- * Force reset all message prevention mechanisms for testing
- * This is a heavy-handed approach for testing only!
+ * Resets all message prevention mechanisms
+ * This allows previously prevented duplicate messages to be sent again
  *
- * @param {string} [senderId] - Optional ID of the sender to reset only for a specific user
- * @param {string} [receiverId] - Optional ID of the receiver to reset only for a specific conversation
- * @param {object} [productDetails] - Optional product details to reset only for a specific product
- * @returns {boolean} - True if the reset was successful
+ * Can be used in two ways:
+ * 1. With no parameters: Resets ALL prevention state (global reset)
+ * 2. With specific parameters: Resets prevention for a specific product conversation
+ *
+ * @param {string} senderId - The sender ID (optional for targeted reset)
+ * @param {string} receiverId - The receiver ID (optional for targeted reset)
+ * @param {Object} productDetails - Product details (optional for targeted reset)
  */
 export const resetAllMessagePrevention = (
   senderId,
   receiverId,
   productDetails
 ) => {
-  try {
-    // If all parameters are provided, do a targeted reset for that specific conversation
-    if (senderId && receiverId && productDetails) {
-      // Generate the base prevention key
-      const baseKey = getPreventionKey(senderId, receiverId, productDetails);
+  console.log("Resetting message prevention state");
 
-      // Clear primary prevention flag - using existing clearPreventionFlags function
-      clearPreventionFlags(senderId, receiverId, productDetails);
-
-      console.log(
-        `Resetting prevention flags for product conversation: ${baseKey}`
-      );
-
-      // Clear all related localStorage keys
-      const keysToRemove = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (
-          key &&
-          key.startsWith(`${senderId}_${receiverId}`) &&
-          key.includes(productDetails.id || productDetails.productID)
-        ) {
-          keysToRemove.push(key);
-        }
-      }
-
-      // Remove identified keys
-      keysToRemove.forEach((key) => {
-        localStorage.removeItem(key);
-        console.log(`Removed prevention key: ${key}`);
-      });
-
-      // Clear from sentMessages
-      for (const key of sentMessages) {
-        if (
-          key.startsWith(`${senderId}_${receiverId}`) &&
-          key.includes(productDetails.id || productDetails.productID)
-        ) {
-          sentMessages.delete(key);
-          console.log(`Removed from prevention cache: ${key}`);
-        }
-      }
-
-      // Also clear from window.__sentProductMessages if available
-      if (window.__sentProductMessages) {
-        for (const key of window.__sentProductMessages) {
-          if (
-            key.includes(`${senderId}_${receiverId}`) &&
-            key.includes(productDetails.id || productDetails.productID)
-          ) {
-            window.__sentProductMessages.delete(key);
-            console.log(`Removed from sent product messages: ${key}`);
-          }
-        }
-      }
-
-      return true;
-    }
-
-    // Otherwise, do a global reset of all prevention mechanisms
-    console.log("Performing global reset of all message prevention mechanisms");
-
-    // Clear in-memory caches
-    sentMessages.clear();
-
-    // Clear localStorage keys related to message prevention
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (
-        key &&
-        (key.includes("_") ||
-          key.includes("message") ||
-          key.includes("conversation") ||
-          key.includes("prevented") ||
-          key.includes("product_msg"))
-      ) {
-        keysToRemove.push(key);
-      }
-    }
-
-    keysToRemove.forEach((key) => {
-      localStorage.removeItem(key);
-    });
-
-    // Clear window globals
-    if (window.__sentProductMessages) window.__sentProductMessages.clear();
-    if (window.__processedMessages) window.__processedMessages.clear();
-    if (window.initiatedConversations) window.initiatedConversations.clear();
-
+  // If all three parameters are provided, do a targeted reset
+  if (senderId && receiverId && productDetails) {
     console.log(
-      `🧹 Reset ALL message prevention mechanisms. Removed ${keysToRemove.length} localStorage keys.`
+      `Targeted reset for conversation: ${senderId} -> ${receiverId} about product ${
+        productDetails.id || productDetails.productID
+      }`
     );
-    return true;
-  } catch (err) {
-    console.error("Error resetting message prevention:", err);
-    return false;
+
+    // Clear any prevention flags in localStorage
+    const storageKey = getPreventionKey(senderId, receiverId, productDetails);
+    localStorage.removeItem(storageKey);
+
+    // Also clear any in-memory prevention flags
+    if (window.__sentProductMessages) {
+      const productMsgKey = `product_msg_${senderId}_${receiverId}_${
+        productDetails.id || productDetails.productID
+      }`;
+      window.__sentProductMessages.delete(productMsgKey);
+    }
+
+    // Also reset the product-specific session if it exists
+    const productSessionId = `${
+      productDetails.id || productDetails.productID
+    }_${receiverId}`;
+    if (
+      window.__sessionsByProduct &&
+      window.__sessionsByProduct[productSessionId]
+    ) {
+      window.__sessionsByProduct[productSessionId] = {
+        initialMessageSent: false,
+        processedMessageIds: new Set(),
+        fetchingMessages: false,
+        activeChannel: null,
+        messagesLoaded: false,
+      };
+    }
+
+    return;
   }
+
+  // GLOBAL RESET - only if no parameters were provided
+  // This resets ALL prevention mechanisms
+
+  // Clear all message prevention flags from localStorage
+  // Loop through all localStorage items and remove those that look like prevention flags
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("msg_prevent_")) {
+      localStorage.removeItem(key);
+    }
+  }
+
+  // Clear global window variables used for tracking
+  if (window.__sentProductMessages) {
+    window.__sentProductMessages.clear();
+  }
+
+  if (window.__processedMessageIds) {
+    window.__processedMessageIds.clear();
+  }
+
+  if (window.__sessionsByProduct) {
+    window.__sessionsByProduct = {};
+  }
+
+  console.log("All message prevention state has been reset");
 };
 
 /**
@@ -433,13 +406,18 @@ export const getDeletedMessageIds = () => {
 export const createProductInquiryMessage = (productDetails) => {
   if (!productDetails) return "Hi, I'm interested in your product";
 
-  // Basic message text
-  const messageText = `Hi, I'm interested in your ${
-    productDetails.name || "product"
-  }. Is it still available?`;
+  // Get product information
+  const productName = productDetails.name || "product";
+  const productPrice = productDetails.price
+    ? `$${productDetails.price}`
+    : "listed price";
+  const productImage = productDetails.image;
+
+  // Basic message text with price
+  const messageText = `Hi, I'm interested in your ${productName} listed for ${productPrice}. Is it still available?`;
 
   // If there's no image, just return the text
-  if (!productDetails.image) {
+  if (!productImage) {
     return messageText;
   }
 
@@ -448,10 +426,9 @@ export const createProductInquiryMessage = (productDetails) => {
   const htmlMessage = `
     ${messageText}
     <div style="margin-top: 10px; margin-bottom: 10px;">
-      <img src="${productDetails.image}" alt="${
-    productDetails.name || "Product"
-  }" style="max-width: 200px; border-radius: 6px; border: 1px solid #eee;" />
+      <img src="${productImage}" alt="${productName}" style="max-width: 200px; border-radius: 6px; border: 1px solid #eee;" />
     </div>
+    <div>Looking forward to your response!</div>
   `;
 
   return htmlMessage;
@@ -463,9 +440,8 @@ export const createProductInquiryMessage = (productDetails) => {
  * @param {string} receiverId - The ID of the message receiver
  * @param {Object} product - Details about the product (optional)
  * @returns {string} - A unique key for this message combination
- * @private
  */
-const getPreventionKey = (senderId, receiverId, product) => {
+export const getPreventionKey = (senderId, receiverId, product) => {
   if (!product) return `${senderId}_${receiverId}`;
 
   const productId =

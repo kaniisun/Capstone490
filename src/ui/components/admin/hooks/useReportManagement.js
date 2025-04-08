@@ -15,9 +15,10 @@ export const useReportManagement = (setSnackbar) => {
       console.log("Fetching reports...");
 
       // Check if there are any reports at all in the table
-      const { data: allReportsCheck, error: allReportsError } = await supabase
-        .from("reports")
-        .select("*");
+      const allReportsResult = await supabase.from("reports").select("*");
+
+      const allReportsCheck = allReportsResult.data;
+      const allReportsError = allReportsResult.error;
 
       console.log(
         "All reports in table (raw check):",
@@ -32,7 +33,7 @@ export const useReportManagement = (setSnackbar) => {
       }
 
       // First, fetch reports for posts
-      const { data: postReports, error: postError } = await supabase
+      const postReportsResult = await supabase
         .from("reports")
         .select(
           `
@@ -53,6 +54,9 @@ export const useReportManagement = (setSnackbar) => {
         .eq("report_type", "post")
         .order("created_at", { ascending: false });
 
+      const postReports = postReportsResult.data || [];
+      const postError = postReportsResult.error;
+
       console.log("Post reports fetched:", postReports?.length || 0);
       if (postError) {
         console.error("Error fetching post reports:", postError);
@@ -60,7 +64,7 @@ export const useReportManagement = (setSnackbar) => {
       }
 
       // Then fetch message reports
-      const { data: messageReports, error: messageError } = await supabase
+      const messageReportsResult = await supabase
         .from("reports")
         .select(
           `
@@ -81,6 +85,9 @@ export const useReportManagement = (setSnackbar) => {
         .eq("report_type", "message")
         .order("created_at", { ascending: false });
 
+      const messageReports = messageReportsResult.data || [];
+      const messageError = messageReportsResult.error;
+
       console.log("Message reports fetched:", messageReports?.length || 0);
       if (messageError) {
         console.error("Error fetching message reports:", messageError);
@@ -96,10 +103,13 @@ export const useReportManagement = (setSnackbar) => {
       const postIds = postReports.map((report) => report.reported_item_id);
       let posts = [];
       if (postIds.length > 0) {
-        const { data: postsData, error: postsError } = await supabase
+        const postsResult = await supabase
           .from("open_board")
           .select("open_board_id, content, title, creator_id")
           .in("open_board_id", postIds);
+
+        const postsData = postsResult.data;
+        const postsError = postsResult.error;
 
         if (postsError) throw postsError;
         posts = postsData || [];
@@ -120,10 +130,13 @@ export const useReportManagement = (setSnackbar) => {
 
       let messages = [];
       if (messageIds.length > 0) {
-        const { data: messagesData, error: messagesError } = await supabase
+        const messagesResult = await supabase
           .from("messages")
           .select("id, content, sender_id, receiver_id, created_at")
           .in("id", messageIds);
+
+        const messagesData = messagesResult.data;
+        const messagesError = messagesResult.error;
 
         if (messagesError) throw messagesError;
         messages = messagesData || [];
@@ -201,7 +214,7 @@ export const useReportManagement = (setSnackbar) => {
   // Dismiss a report (set status to 'dismissed')
   const dismissReport = async (reportId) => {
     try {
-      const { error } = await supabase
+      const result = await supabase
         .from("reports")
         .update({
           status: "dismissed",
@@ -209,7 +222,7 @@ export const useReportManagement = (setSnackbar) => {
         })
         .eq("report_id", reportId);
 
-      if (error) throw error;
+      if (result.error) throw result.error;
 
       // Update local state
       setReports((prev) =>

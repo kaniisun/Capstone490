@@ -63,26 +63,43 @@ const UserList = ({
       }
 
       try {
-        console.log(`Fetching latest messages for user: ${currentUserID}`);
-        const { data, error } = await supabase
-          .from("messages")
-          .select("sender_id, receiver_id, created_at")
-          .or(`sender_id.eq.${currentUserID},receiver_id.eq.${currentUserID}`)
-          .order("created_at", { ascending: false });
+        console.log(`Fetching latest conversations for user: ${currentUserID}`);
 
-        if (error) {
-          console.error("Error fetching latest messages:", error);
+        // Get all conversations this user is part of
+        const { data: conversations, error: conversationsError } =
+          await supabase
+            .from("conversations")
+            .select(
+              `
+            conversation_id, 
+            last_message_at, 
+            participant1_id, 
+            participant2_id
+          `
+            )
+            .or(
+              `participant1_id.eq.${currentUserID},participant2_id.eq.${currentUserID}`
+            )
+            .order("last_message_at", { ascending: false });
+
+        if (conversationsError) {
+          console.error("Error fetching conversations:", conversationsError);
           return;
         }
 
-        if (data) {
+        if (conversations && conversations.length > 0) {
           const timestamps = {};
-          data.forEach((msg) => {
-            const chatUserId =
-              msg.sender_id === currentUserID ? msg.receiver_id : msg.sender_id;
-            if (chatUserId && !timestamps[chatUserId]) {
-              timestamps[chatUserId] = msg.created_at;
-            }
+
+          // Process each conversation to get the other participant's ID
+          conversations.forEach((conversation) => {
+            // Determine which participant is the other user
+            const otherUserId =
+              conversation.participant1_id === currentUserID
+                ? conversation.participant2_id
+                : conversation.participant1_id;
+
+            // Store the timestamp for this conversation
+            timestamps[otherUserId] = conversation.last_message_at;
           });
 
           setLatestMessageTimestamps(timestamps);
@@ -102,21 +119,61 @@ const UserList = ({
       return;
     }
 
-    console.log(`Setting up message subscription for user: ${currentUserID}`);
+    console.log(
+      `Setting up message and conversation subscriptions for user: ${currentUserID}`
+    );
+
+    // Subscribe to messages table changes
     const messageChannel = supabase
-      .channel("chat")
+      .channel("messages-changes")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
-          const { sender_id, receiver_id, created_at } = payload.new;
-          const chatUserId =
-            sender_id === currentUserID ? receiver_id : sender_id;
+          const { sender_id, receiver_id, created_at, conversation_id } =
+            payload.new;
 
-          if (chatUserId) {
+          // If this message belongs to a conversation with the current user
+          if (sender_id === currentUserID || receiver_id === currentUserID) {
+            const chatUserId =
+              sender_id === currentUserID ? receiver_id : sender_id;
+
+            if (chatUserId) {
+              setLatestMessageTimestamps((prev) => ({
+                ...prev,
+                [chatUserId]: created_at,
+              }));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to conversations table changes
+    const conversationChannel = supabase
+      .channel("conversations-changes")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "conversations" },
+        (payload) => {
+          const { participant1_id, participant2_id, last_message_at } =
+            payload.new;
+
+          // If this conversation involves the current user
+          if (
+            participant1_id === currentUserID ||
+            participant2_id === currentUserID
+          ) {
+            // Get the other participant's ID
+            const otherUserId =
+              participant1_id === currentUserID
+                ? participant2_id
+                : participant1_id;
+
+            // Update the timestamp for this conversation
             setLatestMessageTimestamps((prev) => ({
               ...prev,
-              [chatUserId]: created_at,
+              [otherUserId]: last_message_at,
             }));
           }
         }
@@ -124,7 +181,8 @@ const UserList = ({
       .subscribe();
 
     return () => {
-      supabase.removeChannel(messageChannel);
+      messageChannel.unsubscribe();
+      conversationChannel.unsubscribe();
     };
   }, [currentUserID]);
 

@@ -163,40 +163,49 @@ const AdminSetup = () => {
 
     setCheckingEmail(true);
     try {
-      const { data, error } = await supabase
+      // First try with email field
+      const result = await supabase
         .from("users")
         .select("userID, email, firstName, lastName")
         .eq("email", formData.email)
         .single();
 
-      if (error && error.code !== "PGRST116") {
-        throw error;
-      }
-
-      setEmailChecked(true);
-
-      if (data) {
+      if (result.error) {
+        if (result.error.code === "PGRST116") {
+          // No record found - this is expected behavior
+          setEmailChecked(true);
+          setEmailExists(false);
+          setSnackbar({
+            open: true,
+            message: "Email not found. A new admin account will be created.",
+            severity: "info",
+          });
+        } else {
+          // Actual error occurred
+          console.error("Error checking email:", result.error);
+          setSnackbar({
+            open: true,
+            message: `Error checking email: ${result.error.message}`,
+            severity: "error",
+          });
+        }
+      } else if (result.data) {
+        // Found existing user
+        setEmailChecked(true);
         setEmailExists(true);
         setFormData((prev) => ({
           ...prev,
-          firstName: data.firstName || "",
-          lastName: data.lastName || "",
+          firstName: result.data.firstName || "",
+          lastName: result.data.lastName || "",
         }));
         setSnackbar({
           open: true,
-          message: `User found: ${data.firstName} ${data.lastName}. This user will be promoted to admin.`,
-          severity: "info",
-        });
-      } else {
-        setEmailExists(false);
-        setSnackbar({
-          open: true,
-          message: "Email not found. A new admin account will be created.",
+          message: `User found: ${result.data.firstName} ${result.data.lastName}. This user will be promoted to admin.`,
           severity: "info",
         });
       }
     } catch (error) {
-      console.error("Error checking email:", error);
+      console.error("Exception checking email:", error);
       setSnackbar({
         open: true,
         message: `Error checking email: ${error.message}`,
@@ -230,62 +239,35 @@ const AdminSetup = () => {
 
   // Helper function to handle API calls with fallback
   const apiCall = async (endpoint, data) => {
-    // Try through the proxy first (default)
     try {
-      console.log(`Attempting API call to ${endpoint} via proxy...`);
+      console.log(`Making API call to ${endpoint}`, data);
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${
+            (await supabase.auth.getSession()).data.session?.access_token || ""
+          }`,
         },
         body: JSON.stringify(data),
       });
 
-      // If we get HTML back instead of JSON, throw an error
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("text/html")) {
-        console.warn(`Received HTML response instead of JSON from ${endpoint}`);
-        throw new Error("Received HTML response instead of JSON");
-      }
+      // Always read JSON response as text first to avoid body stream errors
+      const responseText = await response.text();
 
-      if (!response.ok) {
-        throw new Error(`API call failed with status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.warn(`Proxy API call to ${endpoint} failed:`, error.message);
-      console.warn("Attempting direct API call to backend server...");
-
-      // Try direct call to the backend as fallback
+      // Then try to parse it
+      let result;
       try {
-        const directUrl = API_CONFIG.getUrl(endpoint);
-        console.log(`Trying direct API call to ${directUrl}...`);
-
-        const directResponse = await fetch(directUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data),
-        });
-
-        if (!directResponse.ok) {
-          throw new Error(
-            `Direct API call failed with status: ${directResponse.status}`
-          );
-        }
-
-        const result = await directResponse.json();
-        console.log(`Direct API call succeeded:`, result);
-        return result;
-      } catch (directError) {
-        console.error(
-          `Direct API call to ${endpoint} also failed:`,
-          directError.message
-        );
-        throw directError;
+        result = JSON.parse(responseText);
+      } catch (err) {
+        return { error: `Invalid JSON response: ${responseText}` };
       }
+
+      return result;
+    } catch (err) {
+      console.error(`API call error to ${endpoint}:`, err);
+      return { error: err.message || "Unknown API error" };
     }
   };
 
@@ -311,11 +293,14 @@ const AdminSetup = () => {
 
     try {
       // 1. Check if the user already exists in the users table
-      const { data: existingUsers, error: checkError } = await supabase
+      const userResult = await supabase
         .from("users")
         .select("userID, email, role")
         .eq("email", formData.email)
         .single();
+
+      const existingUsers = userResult.data;
+      const checkError = userResult.error;
 
       if (checkError && checkError.code !== "PGRST116") {
         // PGRST116 is the error code for "no rows returned" which is expected if user doesn't exist
@@ -324,7 +309,7 @@ const AdminSetup = () => {
 
       if (existingUsers) {
         // User already exists, update their role to admin
-        const { error: updateError } = await supabase
+        const updateResult = await supabase
           .from("users")
           .update({
             role: "admin",
@@ -332,7 +317,7 @@ const AdminSetup = () => {
           })
           .eq("userID", existingUsers.userID);
 
-        if (updateError) throw updateError;
+        if (updateResult.error) throw updateResult.error;
 
         // Update the user metadata in Supabase Auth
         const apiResult = await apiCall("/api/update-user-role", {
@@ -366,25 +351,25 @@ const AdminSetup = () => {
       } else {
         // User doesn't exist, create new admin account
         // 1. Create the user in Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp(
-          {
-            email: formData.email,
-            password: formData.password,
-            options: {
-              data: {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                isAdmin: true,
-                role: "admin",
-              },
+        const authResult = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              isAdmin: true,
+              role: "admin",
             },
-          }
-        );
+          },
+        });
 
-        if (authError) throw authError;
+        if (authResult.error) throw authResult.error;
+
+        const authData = authResult.data;
 
         // 2. Add the user to our users table with admin role
-        const { error: dbError } = await supabase.from("users").insert([
+        const dbResult = await supabase.from("users").insert([
           {
             userID: authData.user.id,
             email: formData.email,
@@ -395,7 +380,7 @@ const AdminSetup = () => {
           },
         ]);
 
-        if (dbError) throw dbError;
+        if (dbResult.error) throw dbResult.error;
 
         // 3. Update the user metadata via the API
         const apiResult = await apiCall("/api/update-user-role", {
