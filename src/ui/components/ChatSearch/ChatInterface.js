@@ -30,11 +30,9 @@ import { extractProductsFromMessage } from "./utils/productParser";
 // Import markdown renderer
 import Markdown from "markdown-to-jsx";
 import ProductCard from "./components/ProductCard";
+import API_CONFIG from "../../../config/api.js";
 
-const API_URL =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:3001/api/chat"
-    : "https://marketplace-backend.onrender.com/api/chat"; // Production URL
+const API_URL = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CHAT);
 
 export default function ChatInterface() {
   const theme = useTheme();
@@ -244,7 +242,12 @@ export default function ChatInterface() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: session?.access_token
+            ? `Bearer ${session.access_token}`
+            : undefined,
         },
+        credentials: "include",
         body: JSON.stringify({
           messages: [...messages, userMessage],
           userId: session?.user?.id || "anonymous",

@@ -96,8 +96,8 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === "production"
-        ? ["https://spartan-marketplace.onrender.com", "http://localhost:3000"]
-        : ["http://localhost:3000", "http://localhost:3001"],
+        ? ["https://spartan-marketplace.onrender.com"]
+        : ["http://localhost:3000"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
     credentials: true,
@@ -106,6 +106,16 @@ app.use(
 );
 
 app.use(express.json());
+
+// Add a root route handler
+app.get("/", (req, res) => {
+  res.json({
+    message: "Spartan Marketplace Backend API",
+    status: "running",
+    environment: process.env.NODE_ENV || "development",
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Register API routes first, before any middleware or catch-all handlers
 app.use("/api/moderate-products", moderateProductsRoutes);

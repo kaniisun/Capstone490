@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../../../supabaseClient";
+import API_CONFIG from "../../../../config/api.js";
 
 export const useUserManagement = (
   setSnackbar,
@@ -84,8 +85,7 @@ export const useUserManagement = (
 
       // Try direct call to the backend as fallback
       try {
-        // Convert /api/endpoint to http://localhost:3001/api/endpoint
-        const directUrl = `http://localhost:3001${endpoint}`;
+        const directUrl = API_CONFIG.getUrl(endpoint);
         console.log(`Trying direct API call to ${directUrl}...`);
 
         const directResponse = await fetch(directUrl, {

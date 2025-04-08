@@ -37,6 +37,7 @@ import {
 } from "@mui/icons-material";
 import { supabase } from "../../../../supabaseClient";
 import { getFormattedImageUrl } from "../../ChatSearch/utils/imageUtils";
+import API_CONFIG from '../../../../config/api.js';
 
 const ProductModerationTab = ({ setSnackbar }) => {
   // State for products
@@ -89,12 +90,12 @@ const ProductModerationTab = ({ setSnackbar }) => {
       // Make API request with properly encoded query parameters
       const encodedStatus = encodeURIComponent(filterStatus);
       const response = await fetch(
-        `http://localhost:3001/api/moderate-products?status=${encodedStatus}`,
+        API_CONFIG.getUrl(`${API_CONFIG.ENDPOINTS.MODERATE_PRODUCTS}?status=${encodedStatus}`),
         {
           method: "GET",
           headers: headers,
         }
-      );
+     );
 
       // Check if content type is JSON
       const contentType = response.headers.get("content-type");

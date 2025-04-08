@@ -23,6 +23,7 @@ import ErrorIcon from "@mui/icons-material/Error";
 import HelpIcon from "@mui/icons-material/Help";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DnsIcon from "@mui/icons-material/Dns";
+import API_CONFIG from "../../../config/api.js";
 
 const AdminSetup = () => {
   // Form state
@@ -258,8 +259,7 @@ const AdminSetup = () => {
 
       // Try direct call to the backend as fallback
       try {
-        // Convert /api/endpoint to http://localhost:3001/api/endpoint
-        const directUrl = `http://localhost:3001${endpoint}`;
+        const directUrl = API_CONFIG.getUrl(endpoint);
         console.log(`Trying direct API call to ${directUrl}...`);
 
         const directResponse = await fetch(directUrl, {
