@@ -41,20 +41,6 @@ A smart chat assistant for a college marketplace platform that helps users find 
 - OpenAI-powered chat interface
 - Supabase for authentication and database
 
-## 🌐 Deployment
-
-Live Demo: [Spartan Marketplace](https://spartan-marketplace.onrender.com)
-
-The application is deployed using Render:
-- Frontend: https://spartan-marketplace.onrender.com
-- Backend API: https://marketplace-backend-8tag.onrender.com
-
-Note for Reviewers:
-- The site currently contains demo/sample data for evaluation purposes
-- You can explore the basic UI and landing page without signing up
-- To test features like the AI-powered chat assistant, you'll need to create an account
-- While you can sign up and interact with the interface, please note this is a demo environment with sample data
-
 ## 📋 Requirements
 
 - Node.js 16+
