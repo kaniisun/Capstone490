@@ -4,8 +4,14 @@ import "./messages.css";
 import SearchIcon from "@mui/icons-material/Search";
 import Badge from "@mui/material/Badge";
 import MailIcon from "@mui/icons-material/Mail";
-import { List, ListItemButton, ListItemText, Avatar, Box, TextField } from "@mui/material";
-
+import {
+  List,
+  ListItemButton,
+  ListItemText,
+  Avatar,
+  Box,
+  TextField,
+} from "@mui/material";
 
 const UserList = ({
   setReceiver,
@@ -19,36 +25,70 @@ const UserList = ({
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("userID, firstName, lastName")
-        .neq("userID", currentUserID);
+      if (!currentUserID) {
+        console.log("Skipping fetchUsers: No currentUserID");
+        return;
+      }
 
-      if (!error && data) setUsers(data);
+      try {
+        console.log(`Fetching users for currentUserID: ${currentUserID}`);
+        const { data, error } = await supabase
+          .from("users")
+          .select("userID, firstName, lastName")
+          .neq("userID", currentUserID);
+
+        if (error) {
+          console.error("Error fetching users:", error);
+          return;
+        }
+
+        if (data) {
+          console.log(`Found ${data.length} users`);
+          setUsers(data);
+        }
+      } catch (err) {
+        console.error("Exception in fetchUsers:", err);
+      }
     };
 
     fetchUsers();
   }, [currentUserID]);
 
-  // fetch latest messages 
+  // fetch latest messages
   useEffect(() => {
     const fetchLatestMessages = async () => {
-      const { data, error } = await supabase
-        .from("messages")
-        .select("sender_id, receiver_id, created_at")
-        .or(`sender_id.eq.${currentUserID},receiver_id.eq.${currentUserID}`)
-        .order("created_at", { ascending: false });
+      if (!currentUserID) {
+        console.log("Skipping fetchLatestMessages: No currentUserID");
+        return;
+      }
 
-      if (!error && data) {
-        const timestamps = {};
-        data.forEach((msg) => {
-          const chatUserId = msg.sender_id === currentUserID ? msg.receiver_id : msg.sender_id;
-          if (!timestamps[chatUserId]) {
-            timestamps[chatUserId] = msg.created_at;
-          }
-        });
+      try {
+        console.log(`Fetching latest messages for user: ${currentUserID}`);
+        const { data, error } = await supabase
+          .from("messages")
+          .select("sender_id, receiver_id, created_at")
+          .or(`sender_id.eq.${currentUserID},receiver_id.eq.${currentUserID}`)
+          .order("created_at", { ascending: false });
 
-        setLatestMessageTimestamps(timestamps);
+        if (error) {
+          console.error("Error fetching latest messages:", error);
+          return;
+        }
+
+        if (data) {
+          const timestamps = {};
+          data.forEach((msg) => {
+            const chatUserId =
+              msg.sender_id === currentUserID ? msg.receiver_id : msg.sender_id;
+            if (chatUserId && !timestamps[chatUserId]) {
+              timestamps[chatUserId] = msg.created_at;
+            }
+          });
+
+          setLatestMessageTimestamps(timestamps);
+        }
+      } catch (err) {
+        console.error("Exception in fetchLatestMessages:", err);
       }
     };
 
@@ -57,6 +97,12 @@ const UserList = ({
 
   // listen for message updates
   useEffect(() => {
+    if (!currentUserID) {
+      console.log("Skipping subscription: No currentUserID");
+      return;
+    }
+
+    console.log(`Setting up message subscription for user: ${currentUserID}`);
     const messageChannel = supabase
       .channel("chat")
       .on(
@@ -64,12 +110,15 @@ const UserList = ({
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
           const { sender_id, receiver_id, created_at } = payload.new;
-          const chatUserId = sender_id === currentUserID ? receiver_id : sender_id;
+          const chatUserId =
+            sender_id === currentUserID ? receiver_id : sender_id;
 
-          setLatestMessageTimestamps((prev) => ({
-            ...prev,
-            [chatUserId]: created_at,
-          }));
+          if (chatUserId) {
+            setLatestMessageTimestamps((prev) => ({
+              ...prev,
+              [chatUserId]: created_at,
+            }));
+          }
         }
       )
       .subscribe();
@@ -81,11 +130,17 @@ const UserList = ({
 
   // filter and sort users
   const filteredUsers = users
-    .filter((user) => user.firstName.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((user) =>
+      user.firstName.toLowerCase().includes(searchTerm.toLowerCase())
+    )
     .sort((a, b) => {
-      const timeA = latestMessageTimestamps[a.userID] ? new Date(latestMessageTimestamps[a.userID]).getTime() : 0;
-      const timeB = latestMessageTimestamps[b.userID] ? new Date(latestMessageTimestamps[b.userID]).getTime() : 0;
-      return timeB - timeA; 
+      const timeA = latestMessageTimestamps[a.userID]
+        ? new Date(latestMessageTimestamps[a.userID]).getTime()
+        : 0;
+      const timeB = latestMessageTimestamps[b.userID]
+        ? new Date(latestMessageTimestamps[b.userID]).getTime()
+        : 0;
+      return timeB - timeA;
     });
 
   return (
@@ -110,8 +165,11 @@ const UserList = ({
             onClick={() => setReceiver(user)}
             sx={{ borderRadius: 1, mb: 1 }}
           >
-            <Avatar sx={{ bgcolor: "#0F2044", mr: 2 }}>{user.firstName[0]}</Avatar>
-            <ListItemText               primary={
+            <Avatar sx={{ bgcolor: "#0F2044", mr: 2 }}>
+              {user.firstName[0]}
+            </Avatar>
+            <ListItemText
+              primary={
                 <span className="user-name-with-badge">
                   {user.firstName} {user.lastName}
                   {unreadCounts?.[user.userID] > 0 && (
@@ -124,7 +182,8 @@ const UserList = ({
                     </Badge>
                   )}
                 </span>
-              } />
+              }
+            />
           </ListItemButton>
         ))}
       </List>

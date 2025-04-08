@@ -31,6 +31,7 @@ import { extractProductsFromMessage } from "./utils/productParser";
 import Markdown from "markdown-to-jsx";
 import ProductCard from "./components/ProductCard";
 import API_CONFIG from "../../../config/api.js";
+import { markMessageSent } from "../messageArea/messageHelper";
 
 const API_URL = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CHAT);
 
@@ -93,28 +94,6 @@ export default function ChatInterface() {
     window.scrollTo(0, pagePositionRef.current);
   };
 
-  // New function to handle a user wanting to contact a seller about a product
-  const handleContactSeller = (product) => {
-    if (!product) return;
-
-    // Save window scroll position
-    const windowScrollY = window.scrollY;
-
-    setSelectedProduct(product);
-
-    // Add the messaging confirmation to the chat
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: `Would you like to send a message to the seller about the ${product.name}? If so, what would you like to say?`,
-      },
-    ]);
-
-    // Restore window scroll position
-    window.scrollTo(0, windowScrollY);
-  };
-
   // Define a more robust scroll lock function
   const forcePreventPageScroll = (callback) => {
     // Store position
@@ -148,6 +127,43 @@ export default function ChatInterface() {
         setTimeout(() => observer.disconnect(), 300);
       }
     }, 0);
+  };
+
+  // New function to handle a user wanting to contact a seller about a product
+  const handleContactSeller = (product) => {
+    if (!product) return;
+
+    // Get seller ID from product's userID
+    const sellerId = product.userID;
+    if (!sellerId) return;
+
+    // Get current user ID
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      console.error("No user ID found in localStorage");
+      return;
+    }
+
+    // Mark conversation as initiated to prevent duplicate messages
+    console.log(
+      "Marking conversation from product page:",
+      userId,
+      sellerId,
+      product.productID
+    );
+    markMessageSent(userId, sellerId, product);
+
+    // Save window scroll position
+    const windowScrollY = window.scrollY;
+
+    // Construct URL with both seller ID and product ID for context
+    const messagesUrl = `/messaging/${sellerId}?productId=${product.productID}`;
+
+    // Navigate to messages
+    window.location.href = messagesUrl;
+
+    // Restore window scroll position
+    window.scrollTo(0, windowScrollY);
   };
 
   // Update handleCategoryClick to be more aggressive about scroll prevention

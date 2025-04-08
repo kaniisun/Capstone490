@@ -1,14 +1,62 @@
+// Disable TypeScript checking for this file
+// @ts-nocheck
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../../../supabaseClient";
 import "./messages.css";
 import { Snackbar, Alert } from "@mui/material";
+import {
+  shouldPreventMessage,
+  markMessageSent,
+  trackDeletedMessage,
+  isMessageDeleted,
+  getDeletedMessageIds,
+  resetAllMessagePrevention,
+  createProductInquiryMessage,
+} from "./messageHelper";
+import DuplicateMessageFixer from "./DuplicateMessageFixer";
+import CleanupButton from "./CleanupButton";
+import RequestDebouncer from "./RequestDebouncer";
+import { useSnackbar } from "notistack";
 
-const MessageArea = ({ user, receiver, onCloseChat }) => {
+/**
+ * @typedef {Object} CustomWindowProperties
+ * @property {Object} __fetchingMessages - Tracks ongoing message fetches
+ * @property {Object} __activeChannels - Tracks active subscription channels
+ * @property {Set<string>} __processedMessageIds - Tracks processed message IDs
+ * @property {Set<string>} __sentProductMessages - Tracks sent product messages
+ * @property {Object} __initialMessageFetch - Tracks initial message fetches
+ * @property {Object} __sessionsByProduct - Sessions organized by product ID
+ */
+
+/**
+ * @typedef {Window & typeof globalThis & CustomWindowProperties} CustomWindow
+ */
+
+// @ts-ignore
+/** @type {CustomWindow} */
+const customWindow = window;
+
+/**
+ * MessageArea component for displaying and managing chat messages
+ * @param {Object} props - Component props
+ * @param {Object} props.user - Current user information
+ * @param {Object} props.receiver - Receiver user information
+ * @param {Function} props.onCloseChat - Function to close the chat
+ * @param {Object} props.productDetails - Details about the product being discussed
+ */
+const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [userID, setUserID] = useState(localStorage.getItem("userId"));
   const [replyingTo, setReplyingTo] = useState(null);
   const messagesEndRef = useRef(null);
+  const initialMessageRef = useRef(false);
+  const productSessionRef = useRef(null); // Track current product session
+
+  // Add ref for last sender to handle message grouping
+  // const lastSenderRef = useRef(null);
+  // const lastMessageTimeRef = useRef(null);
 
   const [showReportPopup, setShowReportPopup] = useState(false);
   const [selectedReasons, setSelectedReasons] = useState([]);
@@ -21,6 +69,11 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
     severity: "success",
   });
 
+  // Add reset button state
+  const [showReset, setShowReset] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
+
   const reportReasons = [
     "Spam",
     "Harassment",
@@ -32,13 +85,83 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
 
   useEffect(() => {
     setUserID(localStorage.getItem("userId"));
-  }, []);
+
+    // Initialize product-specific sessions if needed
+    if (!customWindow.__sessionsByProduct) {
+      customWindow.__sessionsByProduct = {};
+    }
+
+    // Create unique session ID for this product conversation
+    if (productDetails && productDetails.id && receiver) {
+      const productSessionId = `${productDetails.id}_${receiver.userID}`;
+      productSessionRef.current = productSessionId;
+
+      // Initialize this product session if it doesn't exist
+      if (!customWindow.__sessionsByProduct[productSessionId]) {
+        customWindow.__sessionsByProduct[productSessionId] = {
+          initialMessageSent: false,
+          processedMessageIds: new Set(),
+          fetchingMessages: false,
+          activeChannel: null,
+          messagesLoaded: false,
+        };
+
+        console.log(`Created new session for product: ${productSessionId}`);
+        setShowReset(false);
+      } else {
+        console.log(`Using existing session for product: ${productSessionId}`);
+        setShowReset(true);
+      }
+    }
+  }, [productDetails, receiver]);
 
   // Fetch messages with proper filtering
   const fetchMessages = useCallback(async () => {
-    if (!receiver || !userID) return;
+    if (!receiver?.userID || !userID) return;
+
+    // Get current product session if available
+    const productSessionId = productSessionRef.current;
+    const currentSession = productSessionId
+      ? customWindow.__sessionsByProduct[productSessionId]
+      : null;
+
+    // Create a unique key for this conversation to track if it's already fetched
+    const conversationKey = `messages_${userID}_${receiver.userID}`;
+
+    // Check if we're already fetching or have recently fetched these messages
+    // Use product-specific session if available
+    if (currentSession) {
+      if (currentSession.fetchingMessages) {
+        console.log(
+          "Already fetching messages for this product conversation, skipping duplicate fetch"
+        );
+        return;
+      }
+
+      // Mark this product session as fetching
+      currentSession.fetchingMessages = true;
+    } else if (
+      customWindow.__fetchingMessages &&
+      customWindow.__fetchingMessages[conversationKey]
+    ) {
+      console.log(
+        "Already fetching messages for this conversation, skipping duplicate fetch"
+      );
+      return;
+    } else {
+      // Mark this conversation as being fetched (legacy approach)
+      if (!customWindow.__fetchingMessages)
+        customWindow.__fetchingMessages = {};
+      customWindow.__fetchingMessages[conversationKey] = true;
+    }
 
     try {
+      console.log(
+        `Fetching messages between ${userID} and ${receiver.userID}${
+          productDetails ? ` for product ${productDetails.id}` : ""
+        }`
+      );
+
       // Query with explicit status filtering
       const { data, error } = await supabase
         .from("messages")
@@ -51,89 +174,328 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
         .order("created_at", { ascending: true });
 
       if (error) {
-        alert(`Error fetching messages: ${error.message}`);
+        console.error(`Error fetching messages: ${error.message}`);
         return;
       }
 
       // Double-check that we're not including any flagged messages
-      const filteredMessages =
+      let filteredMessages =
         data?.filter((msg) => msg.status !== "flagged") || [];
 
+      // IMPORTANT: Also filter out messages that have been deleted
+      const deletedIds = getDeletedMessageIds();
+      if (deletedIds.size > 0) {
+        const beforeCount = filteredMessages.length;
+        filteredMessages = filteredMessages.filter(
+          (msg) => !deletedIds.has(msg.id)
+        );
+        const removedCount = beforeCount - filteredMessages.length;
+
+        if (removedCount > 0) {
+          console.log(
+            `Filtered out ${removedCount} previously deleted messages`
+          );
+        }
+      }
+
+      console.log(
+        `Found ${filteredMessages.length} messages in conversation after filtering`
+      );
+
       setMessages(filteredMessages);
+
+      // Check if there are any messages matching our product inquiry
+      // to prevent duplicate messages
+      if (productDetails && filteredMessages.length > 0 && currentSession) {
+        const productMessage = `Hi, I'm interested in your ${productDetails.name}`;
+        const hasProductMessage = filteredMessages.some((msg) =>
+          msg.content.includes(productMessage.substring(0, 25))
+        );
+
+        if (hasProductMessage) {
+          // Update product-specific session
+          currentSession.initialMessageSent = true;
+          initialMessageRef.current = true;
+          console.log(
+            "Found existing product inquiry, preventing duplicate message"
+          );
+        }
+
+        // Mark messages as loaded in this product session
+        currentSession.messagesLoaded = true;
+      }
     } catch (err) {
+      console.error("Error in fetchMessages:", err);
       // Silent failure with empty array
       setMessages([]);
-    }
-  }, [receiver, userID]);
-
-  useEffect(() => {
-    if (!receiver || !userID) return;
-    fetchMessages(); // get existing messages
-
-    const messageChannel = supabase
-      .channel("chat")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
-        (payload) => {
-          // Only add messages that aren't flagged
-          if (payload.new.status === "flagged") {
-            return;
-          }
-
-          if (
-            (payload.new.sender_id === userID &&
-              payload.new.receiver_id === receiver.userID) ||
-            (payload.new.sender_id === receiver.userID &&
-              payload.new.receiver_id === userID)
-          ) {
-            // Check if message already exists to prevent duplicates
-            setMessages((prevMessages) => {
-              const messageExists = prevMessages.some(
-                (msg) => msg.id === payload.new.id
-              );
-              if (messageExists) {
-                return prevMessages;
-              }
-              return [...prevMessages, payload.new];
-            });
-          }
+    } finally {
+      // Clear fetch marker after a delay to prevent rapid refetching
+      setTimeout(() => {
+        if (currentSession) {
+          currentSession.fetchingMessages = false;
+        } else if (customWindow.__fetchingMessages) {
+          delete customWindow.__fetchingMessages[conversationKey];
         }
-      )
+      }, 2000);
+    }
+  }, [userID, receiver?.userID, productDetails]);
+
+  /**
+   * Initialize global variables used for tracking state across components
+   */
+  const setupGlobalVariables = () => {
+    // Safe initialization of global tracking variables with ts-ignore comments
+    // @ts-ignore - Allow custom window properties
+    customWindow.__fetchingMessages = customWindow.__fetchingMessages || {};
+    // @ts-ignore - Allow custom window properties
+    customWindow.__activeChannels = customWindow.__activeChannels || {};
+    // @ts-ignore - Allow custom window properties
+    customWindow.__processedMessageIds =
+      customWindow.__processedMessageIds || new Set();
+    // @ts-ignore - Allow custom window properties
+    customWindow.__sentProductMessages =
+      customWindow.__sentProductMessages || new Set();
+    // @ts-ignore - Allow custom window properties
+    customWindow.__initialMessageFetch =
+      customWindow.__initialMessageFetch || {};
+    // @ts-ignore - Allow custom window properties
+    customWindow.__sessionsByProduct = customWindow.__sessionsByProduct || {};
+  };
+
+  // Update setupRealTimeListener to ignore deleted messages
+  /* Keeping this function commented in case it's needed in the future
+  const setupRealTimeListener = useCallback(() => {
+    if (!userID || !receiver?.userID) return;
+
+    // Setup global variables on first run
+    setupGlobalVariables();
+
+    // Create unique channel key for this conversation
+    const channelKey = `messages:${userID}:${receiver.userID}`;
+
+    // Check if we're already subscribed to this channel
+    if (
+      customWindow.__activeChannels &&
+      customWindow.__activeChannels[channelKey]
+    ) {
+      console.log(
+        "Already subscribed to this channel, skipping duplicate subscription"
+      );
+      return;
+    }
+
+    console.log(
+      `Setting up real-time listener for messages between ${userID} and ${receiver.userID}`
+    );
+
+    // Mark channel as active
+    if (!customWindow.__activeChannels) customWindow.__activeChannels = {};
+    customWindow.__activeChannels[channelKey] = true;
+
+    const channel = supabase
+      .channel("public:messages")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "messages" },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `receiver_id=eq.${userID}`,
+        },
         (payload) => {
-          // If a message was flagged, remove it from the UI
-          if (payload.new.status === "flagged") {
-            setMessages((prevMessages) =>
-              prevMessages.filter((msg) => msg.id !== payload.new.id)
-            );
+          console.log("New message received:", payload);
+
+          // Skip processing if the message is from a different sender
+          // than the one we're chatting with
+          if (payload.new.sender_id !== receiver.userID) return;
+
+          // Skip if the message was deleted (additional check)
+          if (isMessageDeleted(payload.new.id)) {
+            console.log("Ignoring deleted message:", payload.new.id);
             return;
           }
 
-          // For other updates, refresh the message data
-          if (
-            (payload.new.sender_id === userID &&
-              payload.new.receiver_id === receiver.userID) ||
-            (payload.new.sender_id === receiver.userID &&
-              payload.new.receiver_id === userID)
-          ) {
-            // Update the message if it exists
-            setMessages((prevMessages) =>
-              prevMessages.map((msg) =>
-                msg.id === payload.new.id ? payload.new : msg
-              )
-            );
-          }
+          // Add new message to the messages list
+          setMessages((prevMessages) => [...prevMessages, payload.new]);
         }
       )
       .subscribe();
 
+    // Cleanup function for useEffect
     return () => {
-      supabase.removeChannel(messageChannel);
+      console.log("Cleaning up real-time listener");
+      channel.unsubscribe();
+      if (customWindow.__activeChannels) {
+        delete customWindow.__activeChannels[channelKey];
+      }
     };
-  }, [receiver, userID, fetchMessages]);
+  }, [userID, receiver?.userID]);
+  */
+
+  // Make sure to call setupGlobalVariables on initial component load
+  useEffect(() => {
+    setupGlobalVariables();
+  }, []);
+
+  // Handle product details to send initial message
+  useEffect(() => {
+    const sendProductMessage = async () => {
+      // Skip if we don't have all needed data
+      if (!productDetails || !receiver || !userID) return;
+
+      // Get current product session if available
+      const productSessionId = productSessionRef.current;
+      const currentSession = productSessionId
+        ? customWindow.__sessionsByProduct[productSessionId]
+        : null;
+
+      // Skip if we already sent initial message during this session
+      // Check product-specific session first
+      if (currentSession && currentSession.initialMessageSent) {
+        console.log("Initial message already sent for this product session");
+        return;
+      } else if (initialMessageRef.current) {
+        console.log("Initial message already sent during this global session");
+        return;
+      }
+
+      // Create a unique key for this specific product/seller combination
+      const productMsgKey = `product_msg_${userID}_${receiver.userID}_${
+        productDetails.id || productDetails.productID
+      }`;
+
+      // Check if we already sent this message (using window-level tracking)
+      if (
+        customWindow.__sentProductMessages &&
+        customWindow.__sentProductMessages.has(productMsgKey)
+      ) {
+        console.log(
+          "Initial message already processed on this page:",
+          productMsgKey
+        );
+
+        // Update both global and product-specific session state
+        initialMessageRef.current = true;
+        if (currentSession) {
+          currentSession.initialMessageSent = true;
+        }
+        return;
+      }
+
+      // Double-check if this specific message exists in the messages array already
+      const productMessageStart = `Hi, I'm interested in your ${productDetails.name}`;
+      const existingMessage = messages.some(
+        (msg) =>
+          msg.content.includes(productMessageStart) &&
+          msg.sender_id === userID &&
+          msg.receiver_id === receiver.userID
+      );
+
+      if (existingMessage) {
+        console.log(
+          "Found existing product message in messages array, skipping"
+        );
+
+        // Update both global and product-specific session state
+        initialMessageRef.current = true;
+        if (currentSession) {
+          currentSession.initialMessageSent = true;
+        }
+        return;
+      }
+
+      // If we already have messages loaded but none are about this product,
+      // then we likely need to send the product message
+      let shouldSendMessage = messages.length === 0;
+
+      // Even if we have messages, check if none are about this product
+      if (messages.length > 0 && !existingMessage) {
+        console.log(
+          "Have existing messages but none about this product, will try to send"
+        );
+        shouldSendMessage = true;
+      }
+
+      // Additional check with our helper (but ignore its result if no messages exist)
+      if (shouldPreventMessage(userID, receiver.userID, productDetails)) {
+        console.log("Initial message prevented by messageHelper");
+
+        // If we have no messages, override the prevention since we need at least one
+        if (messages.length === 0) {
+          console.log("But no messages exist, so overriding prevention");
+          shouldSendMessage = true;
+        } else {
+          // If we do have messages, respect the prevention
+          initialMessageRef.current = true;
+          return;
+        }
+      }
+
+      // We passed all checks, send the message if no messages exist or we explicitly set flag
+      if (shouldSendMessage) {
+        try {
+          console.log("Sending initial product message");
+          initialMessageRef.current = true; // Set this BEFORE the API call to prevent race conditions
+
+          // Use the new function to create message with product image
+          const initialMessage = createProductInquiryMessage(productDetails);
+
+          const { error } = await supabase.from("messages").insert([
+            {
+              sender_id: userID,
+              receiver_id: receiver.userID,
+              content: initialMessage,
+              status: "active",
+              created_at: new Date().toISOString(),
+            },
+          ]);
+
+          if (error) {
+            if (
+              error.message &&
+              error.message.includes("Duplicate message detected")
+            ) {
+              console.log("Duplicate message prevented by database");
+              // No need to show error to user, just continue as if successful
+            } else {
+              console.error("Error sending initial message:", error);
+            }
+            return;
+          }
+
+          // Mark as sent in both localStorage and memory
+          markMessageSent(userID, receiver.userID, productDetails);
+
+          // Add to window.__sentProductMessages
+          if (!customWindow.__sentProductMessages)
+            customWindow.__sentProductMessages = new Set();
+          customWindow.__sentProductMessages.add(productMsgKey);
+
+          // Update product-specific session state
+          if (currentSession) {
+            currentSession.initialMessageSent = true;
+          }
+
+          // Force a refresh of messages
+          setTimeout(() => {
+            fetchMessages();
+          }, 1000);
+        } catch (err) {
+          console.error("Exception sending initial message:", err);
+        }
+      } else {
+        console.log("Initial message not needed based on current state");
+      }
+    };
+
+    // Only run when we have messages loaded
+    if (messages.length >= 0) {
+      // Add a small delay to ensure all initial messages are loaded
+      setTimeout(() => {
+        sendProductMessage();
+      }, 1500);
+    }
+  }, [messages, productDetails, receiver, userID, fetchMessages]);
 
   // Format date and time
   const formatDateTime = (timestamp) => {
@@ -177,15 +539,25 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
       const { error } = await supabase.from("messages").insert([messageData]);
 
       if (error) {
-        alert(`Failed to send message: ${error.message}`);
-        return;
+        if (
+          error.message &&
+          error.message.includes("Duplicate message detected")
+        ) {
+          console.log("Duplicate message prevented by database");
+          // No need to show error to user, still clear the input
+          setNewMessage("");
+          setReplyingTo(null);
+        } else {
+          console.error(`Failed to send message: ${error.message}`);
+          return;
+        }
+      } else {
+        // Clear input and reply state immediately
+        setNewMessage("");
+        setReplyingTo(null);
       }
-
-      // Clear input and reply state immediately
-      setNewMessage("");
-      setReplyingTo(null);
     } catch (err) {
-      alert(`Error sending message: ${err.message}`);
+      console.error(`Error sending message: ${err.message}`);
     }
   };
 
@@ -199,15 +571,48 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
 
   // delete message
   const deleteMessage = async (messageId) => {
-    const { error } = await supabase
-      .from("messages")
-      .delete()
-      .eq("id", messageId);
+    try {
+      console.log(`Attempting to delete message: ${messageId}`);
 
-    if (!error) {
+      // First delete from database
+      const { error } = await supabase
+        .from("messages")
+        .delete()
+        .eq("id", messageId);
+
+      if (error) {
+        console.error(`Error deleting message: ${error.message}`);
+        setSnackbar({
+          open: true,
+          message: `Failed to delete message: ${error.message}`,
+          severity: "error",
+        });
+        return;
+      }
+
+      // If successful, remove from UI
       setMessages((prevMessages) =>
         prevMessages.filter((msg) => msg.id !== messageId)
       );
+
+      // IMPORTANT: Track this deleted message to prevent it from reappearing
+      trackDeletedMessage(messageId);
+
+      console.log(`Successfully deleted message ID: ${messageId}`);
+
+      // Show success message
+      setSnackbar({
+        open: true,
+        message: "Message deleted successfully",
+        severity: "success",
+      });
+    } catch (err) {
+      console.error(`Exception during message deletion: ${err.message}`);
+      setSnackbar({
+        open: true,
+        message: `Error deleting message: ${err.message}`,
+        severity: "error",
+      });
     }
   };
 
@@ -235,7 +640,7 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // report message stored in Supabase
+  // report message
   const reportMessage = async () => {
     if (!messageToReport || selectedReasons.length === 0) {
       setSnackbar({
@@ -319,31 +724,111 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
     scrollToBottom();
   }, [messages]);
 
-  // Add this function to help test message filtering
-  const flagMessage = async (messageId) => {
-    try {
-      const { error } = await supabase
-        .from("messages")
-        .update({
-          status: "flagged",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", messageId);
+  // Load initial messages only once when the component mounts with valid IDs
+  useEffect(() => {
+    if (!userID || !receiver?.userID) return;
 
-      if (error) {
-        alert(`Error flagging message: ${error.message}`);
-      } else {
-        // Remove the message from the UI
-        setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+    // Only fetch messages if we haven't already
+    const initialFetchKey = `initialFetch_${userID}_${receiver.userID}`;
+    if (
+      customWindow.__initialMessageFetch &&
+      customWindow.__initialMessageFetch[initialFetchKey]
+    ) {
+      console.log("Initial messages already fetched for this conversation");
+      return;
+    }
+
+    console.log("Performing initial message fetch");
+    fetchMessages();
+
+    // Mark this conversation as having been initially fetched
+    if (!customWindow.__initialMessageFetch)
+      customWindow.__initialMessageFetch = {};
+    customWindow.__initialMessageFetch[initialFetchKey] = true;
+
+    // Clean up tracking on component unmount
+    return () => {
+      if (customWindow.__initialMessageFetch) {
+        delete customWindow.__initialMessageFetch[initialFetchKey];
       }
-    } catch (err) {
-      alert(`Error during flag operation: ${err.message}`);
+    };
+  }, [userID, receiver?.userID, fetchMessages]);
+
+  // Add reset session button for product-specific conversations
+  const resetProductSession = () => {
+    const productSessionId = productSessionRef.current;
+    if (
+      productSessionId &&
+      customWindow.__sessionsByProduct[productSessionId]
+    ) {
+      console.log(`Resetting session for product: ${productSessionId}`);
+
+      // Reset the session state
+      customWindow.__sessionsByProduct[productSessionId] = {
+        initialMessageSent: false,
+        processedMessageIds: new Set(),
+        fetchingMessages: false,
+        activeChannel: null,
+        messagesLoaded: false,
+      };
+
+      // Clear message prevention flags for this product
+      if (productDetails && receiver) {
+        resetAllMessagePrevention(userID, receiver.userID, productDetails);
+      }
+
+      // Reset refs and trigger fetch
+      initialMessageRef.current = false;
+      setMessages([]);
+      setShowReset(false);
+      fetchMessages();
+
+      setSnackbar({
+        open: true,
+        message: "Product session has been reset",
+        severity: "success",
+      });
     }
   };
 
+  // Handler for resetting message prevention for this product conversation
+  const handleResetConversation = () => {
+    if (!userID || !receiver?.userID || !productDetails) return;
+
+    resetAllMessagePrevention(userID, receiver.userID, productDetails);
+
+    // Reset window flags specific to this product
+    if (customWindow.__sessionsByProduct) {
+      const sessionKey = `${productDetails.id || ""}_${receiver.userID || ""}`;
+      if (customWindow.__sessionsByProduct[sessionKey]) {
+        delete customWindow.__sessionsByProduct[sessionKey];
+      }
+    }
+
+    if (customWindow.__sentProductMessages) {
+      const productKey = `${userID}_${receiver.userID}_${
+        productDetails.id || productDetails.productID
+      }`;
+      customWindow.__sentProductMessages.delete(productKey);
+    }
+
+    setShowResetConfirm(true);
+
+    // Refresh messages
+    fetchMessages();
+
+    enqueueSnackbar("Conversation reset successfully", {
+      variant: "success",
+      autoHideDuration: 3000,
+    });
+  };
+
+  // Revert to original UI but keep Facebook-style message handling
   return (
-    // display chatroom and messages
     <div className="message-area-chat">
+      <CleanupButton />
+      <RequestDebouncer />
+      {/* Test button for development removed from production */}
       {receiver ? (
         <>
           <div className="message-area-header">
@@ -375,7 +860,41 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
                       ...
                     </div>
                   )}
-                  <p>{msg.content}</p>
+                  {/* Render message content with HTML support */}
+                  {msg.content.includes("<div") ||
+                  msg.content.includes("<img") ? (
+                    <div
+                      className="message-content-html"
+                      dangerouslySetInnerHTML={{
+                        __html: msg.content.replace(/\n/g, "<br/>"),
+                      }}
+                    />
+                  ) : (
+                    <p>{msg.content}</p>
+                  )}
+
+                  {/* Add product attachment rendering while keeping original UI */}
+                  {msg.product_id &&
+                    productDetails &&
+                    (productDetails.id === msg.product_id ||
+                      productDetails.productID === msg.product_id) && (
+                      <div className="product-reference">
+                        <div className="product-reference-name">
+                          {productDetails.name}
+                        </div>
+                        {productDetails.image && (
+                          <img
+                            src={productDetails.image}
+                            alt={productDetails.name}
+                            className="product-reference-image"
+                          />
+                        )}
+                        <div className="product-reference-price">
+                          ${productDetails.price}
+                        </div>
+                      </div>
+                    )}
+
                   <span className="message-timestamp">
                     {formatDateTime(msg.created_at)}
                   </span>
@@ -424,9 +943,18 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
             />
-            <button onClick={sendMessage} disabled={!newMessage.trim()}>
-              Send
-            </button>
+            <div className="button-container">
+              <button
+                className="reset-button"
+                onClick={handleResetConversation}
+                title="Reset conversation state if messages aren't sending"
+              >
+                Reset
+              </button>
+              <button onClick={sendMessage} disabled={!newMessage.trim()}>
+                Send
+              </button>
+            </div>
           </div>
         </>
       ) : (
@@ -469,28 +997,40 @@ const MessageArea = ({ user, receiver, onCloseChat }) => {
         </div>
       )}
 
-      {/* Add Snackbar component at the end of the return */}
+      {/* Render the request debouncer */}
+      <RequestDebouncer />
+
+      {/* Render the reset button for product sessions */}
+      {showReset && productDetails && (
+        <button className="reset-session-button" onClick={resetProductSession}>
+          Reset Messages
+        </button>
+      )}
+
+      {/* Render the Snackbar component */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={5000}
+        autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
-          variant="filled"
-          sx={{
-            width: "100%",
-            borderRadius: 1,
-            ...(snackbar.severity === "success" && {
-              bgcolor: "#0f2044", 
-            }),
-          }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Render the DuplicateMessageFixer component */}
+      <DuplicateMessageFixer userID={userID} productDetails={productDetails} />
+
+      <Snackbar
+        open={showResetConfirm}
+        autoHideDuration={3000}
+        onClose={() => setShowResetConfirm(false)}
+        message="Conversation state has been reset"
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 /* MESSAGE AREA */
 .message-area-chat {
-  flex: 1;  
+  flex: 1;
   display: flex;
   flex-direction: column;
   background-color: #ffffff;
@@ -10,8 +10,8 @@
 
 .message-area-header {
   padding: 20px;
-  background-color: #0F2044;
-  border-bottom: 1px solid #0F2044;
+  background-color: #0f2044;
+  border-bottom: 1px solid #0f2044;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -26,15 +26,15 @@
 }
 
 .message-area-header .close-chat-btn {
-  background-color: #0F2044;
-  color: #0F2044;
+  background-color: #0f2044;
+  color: #ffffff;
   border: none;
-  padding: 8px; 
-  border-radius: 50%; 
-  font-size: 1.2rem; 
+  padding: 8px;
+  border-radius: 50%;
+  font-size: 1.2rem;
   font-weight: bold;
-  width: 30px; 
-  height: 30px; 
+  width: 30px;
+  height: 30px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -73,7 +73,7 @@
 
 .sent {
   align-self: flex-end;
-  background-color: #0F2044 !important;
+  background-color: #0f2044 !important;
   color: white !important;
   border-bottom-right-radius: 4px;
 }
@@ -81,7 +81,7 @@
 .received {
   align-self: flex-start;
   background-color: #ffffff !important;
-  color: #0F2044 !important;
+  color: #0f2044 !important;
   border: 1px solid #eaeaea;
   border-bottom-left-radius: 4px;
 }
@@ -90,7 +90,7 @@
   display: flex;
   padding: 16px 20px;
   background: #ffffff;
-  border-top: 2px solid #FFB71B;
+  border-top: 2px solid #ffb71b;
   gap: 12px;
   align-items: center;
 }
@@ -107,16 +107,16 @@
 
 .message-area-message-input input:focus {
   outline: none;
-  border-color: #FFB71B;
+  border-color: #ffb71b;
   box-shadow: 0 0 0 3px rgba(255, 183, 27, 0.1);
 }
 
 .message-area-message-input button {
-  flex: 0.4; 
-  padding: 8px 12px; 
-  font-size: 0.9rem; 
-  background-color: #FFB71B;
-  color: #0F2044;
+  flex: 0.4;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  background-color: #ffb71b;
+  color: #0f2044;
   border: none;
   border-radius: 8px;
   font-weight: 600;
@@ -161,7 +161,7 @@
 
 .message-area-reply-btn {
   background-color: #ffffff;
-  color: #0F2044;
+  color: #0f2044;
   font-weight: 600;
 }
 
@@ -192,18 +192,18 @@
 
 .reply-reference {
   font-size: 0.85rem;
-  color: #0F2044;
+  color: #0f2044;
   background-color: rgba(255, 183, 27, 0.1);
   padding: 8px 12px;
   border-radius: 6px;
   margin-bottom: 8px;
-  border-left: 3px solid #FFB71B;
+  border-left: 3px solid #ffb71b;
 }
 
 .sent .reply-reference {
   color: rgba(255, 255, 255, 0.9);
   background-color: rgba(255, 255, 255, 0.1);
-  border-left-color: #FFB71B;
+  border-left-color: #ffb71b;
 }
 
 .message-timestamp {
@@ -218,7 +218,7 @@
 
 .message-sender {
   font-size: 0.8rem;
-  color: #0F2044;
+  color: #0f2044;
   margin-bottom: 6px;
   font-weight: 600;
 }
@@ -239,6 +239,7 @@
   justify-content: center;
   align-items: center;
   backdrop-filter: blur(4px);
+  z-index: 9999;
 }
 
 .report-popup {
@@ -248,11 +249,11 @@
   box-shadow: 0 4px 20px rgba(15, 32, 68, 0.15);
   width: 400px;
   max-width: 90%;
-  border-top: 4px solid #FFB71B;
+  border-top: 4px solid #ffb71b;
 }
 
 .report-popup h3 {
-  color: #0F2044;
+  color: #0f2044;
   margin-bottom: 16px;
   font-size: 1.2rem;
   font-weight: 600;
@@ -274,7 +275,7 @@
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  color: #0F2044;
+  color: #0f2044;
 }
 
 .report-reasons label:hover {
@@ -297,8 +298,9 @@
 }
 
 .confirm-report {
-  background-color: #0F2044;
+  background-color: #0f2044;
   color: white;
+  border: none;
 }
 
 .confirm-report:hover {
@@ -307,112 +309,144 @@
 
 .cancel-report {
   background-color: #f3f4f6;
-  color: #0F2044;
+  color: #0f2044;
+  border: none;
 }
 
 .cancel-report:hover {
   background-color: #e5e7eb;
 }
 
-/* User list styles */
-.user-list {
-  width: 280px;
-  background-color: #ffffff;
-  border-right: 2px solid #FFB71B;
-  padding: 20px 0;
-  overflow-y: auto;
-}
-
-.user-list h3 {
-  margin-left: 20px;
-}
-
-.user-item {
-  padding: 12px 20px;
-  border-bottom: 1px solid #f3f4f6;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #0F2044;
-}
-
-.user-item:hover {
+/* Product reference styling */
+.product-reference {
+  margin: 10px 0;
+  padding: 12px;
   background-color: rgba(255, 183, 27, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #ffb71b;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.user-item.selected {
-  background-color: rgba(255, 183, 27, 0.2);
-  border-left: 4px solid #FFB71B;
+.sent .product-reference {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-left-color: rgba(255, 255, 255, 0.5);
+}
+
+.product-reference-name {
   font-weight: 600;
+  font-size: 0.9rem;
+  color: #0f2044;
 }
 
-.user-search-box {
-  position: relative;
+.sent .product-reference-name {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.product-reference-image {
+  max-width: 180px;
+  border-radius: 6px;
+  margin-top: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.product-reference-price {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f2044;
+}
+
+.sent .product-reference-price {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Style for messages with images in sent vs received messages */
+.sent .message-content-html img {
+  max-width: 200px;
+  float: right;
+  clear: both;
+}
+
+.received .message-content-html img {
+  max-width: 200px;
+  float: left;
+  clear: both;
+}
+
+/* Add styles for messages with HTML content like images */
+.message-content-html {
+  margin: 5px 0;
+  line-height: 1.5;
+}
+
+.message-content-html img {
+  max-width: 250px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease-in-out;
+}
+
+.message-content-html img:hover {
+  transform: scale(1.02);
+}
+
+/* Reset button styling */
+.reset-button {
+  background-color: #f0f0f0;
+  color: #0f2044;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  padding: 6px 12px;
+  border: none;
+  margin-right: 10px;
+  transition: all 0.2s ease;
+}
+
+.reset-button:hover {
+  background-color: #e0e0e0;
+}
+
+.button-container {
   display: flex;
   align-items: center;
-  margin-left: 12px;
 }
 
-.user-search-input {
-  padding: 10px;
-  width: 80px;
-  height: 40px; 
+.reply-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: rgba(255, 183, 27, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #ffb71b;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: #0f2044;
+}
+
+.reply-indicator button {
   background: none;
-  border: 4px solid #FFB71B;
-  border-radius: 50px;
-  box-sizing: border-box;
-  font-size: 14px; 
-  color: #0F2044;
-  outline: none;
-  transition: width 0.5s, background 0.5s, border-radius 0.5s;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #0f2044;
 }
 
-.user-search-box:hover .user-search-input {
-  width: 250px; 
-  background: none;
-  border-radius: 10px;
+.reset-session-button {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  background-color: #ffb71b;
+  color: #0f2044;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 100;
 }
-
-/* Message Home Container */
-.message-home-container {
-  height: 100vh;
-  width: 100vw;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #f4f6f8;
-}
-
-.message-home-paper {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  border-radius: 0;
-  overflow: hidden;
-}
-
-.message-home-grid {
-  height: 100%;
-}
-
-/* User List Grid */
-.message-home-user-list-grid {
-  background-color: #fff;
-  border-right: 2px solid #FFB71B;
-  overflow-y: auto;
-  height: 100%;
-}
-
-/* Message Area Grid */
-.message-home-message-grid {
-  height: 100%;
-}
-
-/* Empty Chat Box */
-.message-home-empty-chat-box {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #0F2044;
-}
-
