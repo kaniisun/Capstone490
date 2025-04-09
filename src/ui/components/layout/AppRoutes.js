@@ -128,7 +128,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/messaging/:userId"
+          path="/messages/:userId"
           element={
             <ProtectedRoute>
               <MessageHome />

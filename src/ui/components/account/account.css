@@ -80,7 +80,7 @@ form button {
 }
 
 form button:hover {
-    background-color: #473fb3;
+    background-color: #1a365d;
 }
 
 .buttons-container {
@@ -219,7 +219,7 @@ button {
 }
 
 button:hover {
-    background-color: #3182ce;
+    background-color: #1a365d;
 }
 
 button:disabled {

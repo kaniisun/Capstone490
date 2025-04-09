@@ -29,6 +29,168 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
+    <!-- API Optimizer & Duplicate Message Preventer -->
+    <script src="%PUBLIC_URL%/api-optimizer.js"></script>
+
+    <!-- Quick support for message diagnostics -->
+    <script>
+      // Add a function to load the message tester tool when needed
+      window.loadMessageTester = function () {
+        console.log("Loading message tester script...");
+        const script = document.createElement("script");
+        script.src = "/message-tester.js";
+        script.onload = function () {
+          console.log("Message tester loaded successfully!");
+        };
+        script.onerror = function () {
+          console.error("Failed to load message tester");
+        };
+        document.head.appendChild(script);
+      };
+
+      // Add function to load the product inquiry fix
+      window.fixProductInquiry = function () {
+        console.log("Loading product inquiry fix script...");
+        const script = document.createElement("script");
+        script.src = "/product-inquiry-fix.js";
+        script.onload = function () {
+          console.log("Product inquiry fix loaded successfully!");
+        };
+        script.onerror = function () {
+          console.error("Failed to load product inquiry fix");
+        };
+        document.head.appendChild(script);
+      };
+
+      // Expose the functions globally for easy access
+      console.log(
+        "Type window.loadMessageTester() to diagnose messaging issues"
+      );
+      console.log(
+        "Type window.fixProductInquiry() to fix product inquiry message issues"
+      );
+    </script>
+
+    <!-- PERMANENT FIX: Product Inquiry Fix - Automatically loaded -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Check if we need to auto-fix message issues
+        const needsAutoFix =
+          localStorage.getItem("auto_fix_messages") === "true";
+        if (needsAutoFix) {
+          console.log("🔄 Auto-fix for messages triggered");
+          // Clear the flag so it only runs once
+          localStorage.removeItem("auto_fix_messages");
+
+          // Load and run the fix script
+          setTimeout(() => {
+            window.fixProductInquiry();
+          }, 2000); // Delay slightly to ensure page is fully loaded
+        }
+
+        // Automatically load auto-message-fix on messaging pages
+        const isMessagingPage =
+          window.location.pathname.includes("/messaging/");
+        if (isMessagingPage) {
+          console.log("On messaging page, loading automatic message fix");
+
+          // Load the auto-message-fix script
+          const autoFixScript = document.createElement("script");
+          autoFixScript.src = "/auto-message-fix.js";
+          document.head.appendChild(autoFixScript);
+        }
+
+        // Wait for page to fully load before applying the fix
+        setTimeout(() => {
+          // Check if we're on a messaging or product page
+          const url = window.location.href;
+          if (
+            url.includes("/message/") ||
+            url.includes("/messaging/") ||
+            url.includes("productId=") ||
+            url.includes("/product/")
+          ) {
+            console.log(
+              "📱 Message or product page detected - Loading inquiry fix without UI"
+            );
+
+            // First, load the element inspector to track DOM access attempts
+            const elementInspectorScript = document.createElement("script");
+            elementInspectorScript.src = "/element-inspector.js";
+            document.head.appendChild(elementInspectorScript);
+
+            // Then load the Supabase connector script that bridges React and direct-send
+            const supabaseConnectorScript = document.createElement("script");
+            supabaseConnectorScript.src = "/supabase-connector.js";
+            document.head.appendChild(supabaseConnectorScript);
+
+            // Then load the Supabase loader script (which is now configured to skip dummy client)
+            const supabaseLoaderScript = document.createElement("script");
+            supabaseLoaderScript.src = "/supabase-loader.js";
+            supabaseLoaderScript.onload = function () {
+              console.log(
+                "Supabase loader script loaded, waiting for initialization..."
+              );
+
+              // Inject a connector script to make the React app's Supabase client available globally
+              const connectorScript = document.createElement("script");
+              connectorScript.textContent = `
+                // Look for Supabase client in the React app
+                (function() {
+                  console.log("🔍 Looking for existing Supabase client in React app...");
+                  const checkInterval = setInterval(function() {
+                    // Check common places where Supabase might be stored
+                    if (window.__SUPABASE_CLIENT__) {
+                      console.log("✅ Found Supabase in __SUPABASE_CLIENT__");
+                      window.supabase = window.__SUPABASE_CLIENT__;
+                      clearInterval(checkInterval);
+                    } 
+                    
+                    // Try to find it in React's internal state
+                    const rootElement = document.getElementById('root');
+                    if (rootElement && rootElement._reactRootContainer) {
+                      console.log("Found React root, attempting to extract Supabase client");
+                      try {
+                        // Make the client globally available if found
+                        window.supabase = window.supabase || {};
+                        console.log("Set up backup Supabase client placeholder");
+                      } catch(e) {
+                        console.log("Couldn't extract from React state:", e);
+                      }
+                    }
+                  }, 500);
+                  
+                  // Stop checking after 10 seconds to avoid infinite loops
+                  setTimeout(() => clearInterval(checkInterval), 10000);
+                })();
+              `;
+              document.head.appendChild(connectorScript);
+
+              // Wait for Supabase to be available before loading the direct-send script
+              setTimeout(() => {
+                // Create script element for the direct-send.js
+                const script = document.createElement("script");
+                script.src = "/direct-send-v2.js";
+                script.onload = function () {
+                  console.log(
+                    "✅ Product inquiry script loaded (background mode only)"
+                  );
+                };
+                script.onerror = function () {
+                  console.error("❌ Failed to load product inquiry fix");
+                };
+
+                // Add the script to the page
+                document.head.appendChild(script);
+              }, 1000); // Give Supabase loader time to initialize
+            };
+
+            // Add the Supabase loader script to the page
+            document.head.appendChild(supabaseLoaderScript);
+          }
+        }, 1000);
+      });
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

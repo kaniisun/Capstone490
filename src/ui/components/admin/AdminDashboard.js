@@ -36,26 +36,43 @@ function AdminDashboard() {
   useEffect(() => {
     const checkUserRole = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const currentUser = session?.user;
+        // Get the current session
+        const sessionResult = await supabase.auth.getSession();
+        const currentUser = sessionResult.data?.session?.user;
 
         if (currentUser) {
           console.log("Current user:", currentUser);
 
-          // Check user's role in the users table
-          const { data: userData, error: userError } = await supabase
-            .from("users")
-            .select("role, userID")
-            .eq("userID", currentUser.id)
-            .single();
+          try {
+            // Check user's role in the users table - first with userID
+            const { data: userData, error: userError } = await supabase
+              .from("users")
+              .select("role, userID, email")
+              .eq("userID", currentUser.id)
+              .single();
 
-          if (userError) {
-            console.error("Error fetching user role:", userError);
-          } else {
-            console.log("User data from users table:", userData);
-            console.log("User role:", userData?.role);
+            if (userError) {
+              console.error("Error fetching user role:", userError);
+
+              // Try with id field as fallback
+              const { data: userData2, error: userError2 } = await supabase
+                .from("users")
+                .select("role, userID, email")
+                .eq("id", currentUser.id)
+                .single();
+
+              if (userError2) {
+                console.error("Error fetching user with id field:", userError2);
+              } else if (userData2) {
+                console.log("User data found with id field:", userData2);
+                console.log("User role:", userData2.role);
+              }
+            } else if (userData) {
+              console.log("User data from users table:", userData);
+              console.log("User role:", userData.role);
+            }
+          } catch (dbError) {
+            console.error("Exception checking user role in database:", dbError);
           }
         } else {
           console.error("No user session found");
@@ -147,18 +164,13 @@ function AdminDashboard() {
       </Box>
 
       {/* Tabs */}
-      <Box 
-      sx={{ borderBottom: 1, borderColor: "divider", px: 3, pt: 2 
-        
-      }}
-      >
+      <Box sx={{ borderBottom: 1, borderColor: "divider", px: 3, pt: 2 }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
           indicatorColor="primary"
           textColor="primary"
         >
-        
           <Tab
             icon={<PeopleAltIcon />}
             iconPosition="start"
@@ -167,8 +179,8 @@ function AdminDashboard() {
             aria-controls="tabpanel-0"
             sx={{
               "&:hover": {
-                backgroundColor: "#f5f5f5"
-              }
+                backgroundColor: "#f5f5f5",
+              },
             }}
           />
 
@@ -180,8 +192,8 @@ function AdminDashboard() {
             aria-controls="tabpanel-1"
             sx={{
               "&:hover": {
-                backgroundColor: "#f5f5f5"
-              }
+                backgroundColor: "#f5f5f5",
+              },
             }}
           />
 
@@ -193,8 +205,8 @@ function AdminDashboard() {
             aria-controls="tabpanel-2"
             sx={{
               "&:hover": {
-                backgroundColor: "#f5f5f5"
-              }
+                backgroundColor: "#f5f5f5",
+              },
             }}
           />
         </Tabs>
@@ -209,9 +221,7 @@ function AdminDashboard() {
           onEditUser={handleOpenEditUserDialog}
           onPromoteToAdmin={handlePromoteToAdmin}
           onRevokeAdmin={handleRevokeAdminPrivileges}
-          
         />
-        
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>

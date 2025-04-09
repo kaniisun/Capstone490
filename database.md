@@ -106,6 +106,9 @@
 - reply_to (uuid, foreign key -> messages.id)
 - status (text, default: 'active')
 - updated_at (timestamp, default: now())
+- is_read (boolean, default: false)
+- is_deleted (boolean, default: false)
+- Added **conversation_id** (`UUID`, `NOT NULL`, `REFERENCES conversations(conversation_id)`): Links the message to its conversation.
 
 Table: communities
 
@@ -140,3 +143,13 @@ Table: board_comments
 - created_at (timestamp, default: now())
 - updated_at (timestamp, default: now())
 - UNIQUE constraint on (user_id, target_type, target_id)
+
+### Table: conversations
+
+- **conversation_id** (`UUID`, `PRIMARY KEY`, `DEFAULT uuid_generate_v4()`): Unique identifier for each conversation.
+- **participant1_id** (`UUID`, `REFERENCES users(userID)`): The first participant in the conversation.
+- **participant2_id** (`UUID`, `REFERENCES users(userID)`): The second participant in the conversation.
+- **created_at** (`TIMESTAMP WITH TIME ZONE`, `DEFAULT now()`): When the conversation was created.
+- **updated_at** (`TIMESTAMP WITH TIME ZONE`, `DEFAULT now()`): When the conversation was last updated.
+- **last_message_at** (`TIMESTAMP WITH TIME ZONE`, `DEFAULT now()`): Timestamp of the most recent message.
+- **UNIQUE** constraint on (participant1_id, participant2_id): Ensures only one conversation record exists between any two users.
