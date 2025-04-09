@@ -272,11 +272,45 @@ function determineSearchResponse(
       ? categoryTerms
       : require("./search-utils").extractCategoryTerms(query);
 
-  // Step 2: Find category matches
+  // Check for specific category search pattern and enforce strict category matching
+  let strictCategoryMatch = null;
+  const categorySearchMatch = query.toLowerCase().match(/show me\s+(\w+)/i);
+  if (categorySearchMatch && categorySearchMatch[1]) {
+    const requestedCategory = categorySearchMatch[1].toLowerCase();
+
+    // Map common category terms to their canonical category
+    const categoryMap = {
+      textbooks: "textbooks",
+      textbook: "textbooks",
+      books: "textbooks",
+      book: "textbooks",
+      electronics: "electronics",
+      electronic: "electronics",
+      furniture: "furniture",
+      clothing: "clothing",
+      clothes: "clothing",
+      misc: "miscellaneous",
+      miscellaneous: "miscellaneous",
+    };
+
+    if (categoryMap[requestedCategory]) {
+      strictCategoryMatch = categoryMap[requestedCategory];
+      console.log(
+        `Strict category matching enabled for: ${strictCategoryMatch}`
+      );
+    }
+  }
+
+  // Step 2: Find category matches with improved filtering
   const categoryMatches = products.filter((product) => {
     if (!product.category) return false;
 
     const productCategory = product.category.toLowerCase();
+
+    // For strict category searches, only match exact category
+    if (strictCategoryMatch) {
+      return productCategory === strictCategoryMatch;
+    }
 
     return extractedCategoryTerms.some((term) => {
       // Direct category match
