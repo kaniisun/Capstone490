@@ -25,8 +25,19 @@ const API_CONFIG = {
 
   // Helper function to get full URL for an endpoint
   getUrl: function (endpoint) {
-    return `${this.BASE_URL}${endpoint}`;
-  },
+  // Ensure proper URL joining for all platforms
+  let base = this.BASE_URL;
+  let path = endpoint;
+  
+  // Remove trailing slashes from base
+  base = base.replace(/\/+$/, '');
+  
+  // Remove leading slashes from path
+  path = path.replace(/^\/+/, '');
+  
+  // Join with a single slash
+  return `${base}/${path}`;
+},
 
   // Default fetch options to be used across all API calls
   defaultFetchOptions: {
@@ -41,5 +52,11 @@ const API_CONFIG = {
   TIMEOUT: 10000,
   WITH_CREDENTIALS: true,
 };
+
+// Temporary debug logging - remove after confirming fix works
+console.log("[API Config] Environment:", process.env.NODE_ENV);
+console.log("[API Config] Base URL:", API_CONFIG.BASE_URL);
+console.log("[API Config] Test URL:", API_CONFIG.getUrl("/api/test"));
+console.log("[API Config] Chat URL:", API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CHAT));
 
 export default API_CONFIG;
