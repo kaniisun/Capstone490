@@ -1,11 +1,12 @@
-# Spartan Marketplace 
+# Spartan Marketplace
 
 ## Table of Contents
-* [General Info](#general-info)
-* [Technologies](#technologies)
-* [Setup](#setup)
-* [Marketplace Assistant](#marketplace-assistant)
-* [Project Status](#project-status)
+
+- [General Info](#general-info)
+- [Technologies](#technologies)
+- [Setup](#setup)
+- [Marketplace Assistant](#marketplace-assistant)
+- [Project Status](#project-status)
 
 ## General Info
 
@@ -13,20 +14,20 @@ Spartan Marketplace is an exclusive online marketplace designed specifically for
 
 ## Technologies
 
-* React
-* NodeJS
-* HTML
-* CSS
-* Javascript
-* Supabase
-* OpenAI
+- React
+- NodeJS
+- HTML
+- CSS
+- Javascript
+- Supabase
+- OpenAI
 
 ## Setup
 
-* "npm install"
-* open two terminals
-* in the root directory terminal, do "npm start"
-* in one terminal, do "cd server", and then "nodemon server.js"
+- "npm install"
+- open two terminals
+- in the root directory terminal, do "npm start"
+- in one terminal, do "cd server", and then "nodemon server.js"
 
 # Marketplace Assistant
 
@@ -46,10 +47,12 @@ A smart chat assistant for a college marketplace platform that helps users find 
 Live Demo: [Spartan Marketplace](https://spartan-marketplace.onrender.com)
 
 The application is deployed using Render:
+
 - Frontend: https://spartan-marketplace.onrender.com
 - Backend API: https://marketplace-backend-8tag.onrender.com
 
 Note for Reviewers:
+
 - The site currently contains demo/sample data for evaluation purposes
 - You can explore the basic UI and landing page without signing up
 - To test features like the AI-powered chat assistant, you'll need to create an account
