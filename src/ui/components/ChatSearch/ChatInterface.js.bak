@@ -734,29 +734,8 @@ export default function ChatInterface() {
     // 2. Store the current scroll position immediately
     const originalScrollPosition = window.scrollY;
 
-    // 3. Create the category search message with consistent casing
-    let normalizedCategory = category.toLowerCase();
-
-    // Map common category names to ensure consistency
-    const categoryMapping = {
-      electronics: "electronics",
-      furniture: "furniture",
-      textbooks: "books",
-      books: "books",
-      clothing: "clothing",
-      miscellaneous: "misc",
-      misc: "misc",
-    };
-
-    // Use the mapped category if available, otherwise use the original
-    normalizedCategory =
-      categoryMapping[normalizedCategory] || normalizedCategory;
-
-    // Create the message using the original category name from the chip for display
+    // 3. Create the category search message
     const message = `Show me ${category}`;
-    console.log(
-      `Searching for category: ${category} (normalized: ${normalizedCategory})`
-    );
 
     // 4. Use our enhanced scroll prevention approach
     forcePreventPageScroll(() => {
@@ -820,51 +799,14 @@ export default function ChatInterface() {
     const currentInput = input.trim();
     if (!currentInput) return;
 
-    // Store the input to use for consistent messaging
-    const displayInput = currentInput;
-
-    // Check if this is a category search and normalize if needed
-    let searchInput = currentInput;
-    const showMeMatch = currentInput.match(/show me\s+(\w+)/i);
-    if (showMeMatch && showMeMatch[1]) {
-      const categoryToSearch = showMeMatch[1].toLowerCase();
-      // Map common category names to ensure consistency
-      const categoryMapping = {
-        electronics: "electronics",
-        furniture: "furniture",
-        textbooks: "books",
-        books: "books",
-        clothing: "clothing",
-        miscellaneous: "misc",
-        misc: "misc",
-      };
-
-      // Use the mapped category if available
-      const normalizedCategory =
-        categoryMapping[categoryToSearch] || categoryToSearch;
-      if (normalizedCategory !== categoryToSearch) {
-        console.log(
-          `Normalized category search: ${categoryToSearch} -> ${normalizedCategory}`
-        );
-        // Replace the category in the search input but keep the display input the same
-        searchInput = currentInput.replace(
-          new RegExp(categoryToSearch, "i"),
-          normalizedCategory
-        );
-      }
-    }
-
     // Add user message to chat without scroll manipulation
-    const userMessage = { role: "user", content: displayInput };
+    const userMessage = { role: "user", content: currentInput };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
     try {
-      // Send message to API with potentially normalized search terms
-      console.log("Sending API request with message:", searchInput);
-      console.log("API URL:", API_URL);
-
+      // Send message to API
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
@@ -876,35 +818,32 @@ export default function ChatInterface() {
         },
         credentials: "include",
         body: JSON.stringify({
-          messages: [...messages, { role: "user", content: searchInput }],
+          messages: [...messages, userMessage],
           userId: session?.user?.id || "anonymous",
         }),
       });
 
       if (!response.ok) {
-        console.error(
-          "API response not OK:",
-          response.status,
-          response.statusText
-        );
         throw new Error("API request failed");
       }
 
       const data = await response.json();
-      console.log("API response data:", data);
 
-      // Handle different response formats
+      // Modified validation to handle different API response formats
+      // Check if the response is an OpenAI response (containing role and content)
+      // or a wrapper containing a message property
       let messageToProcess;
       if (data && data.role && data.content) {
-        // Direct OpenAI format (most likely case)
-        console.log("Received direct OpenAI response format");
+        // The API returned an OpenAI response object directly
+        console.log("Direct OpenAI response format received");
         messageToProcess = data;
-      } else if (data && data.message && typeof data.message === "object") {
-        // Wrapped message format
-        console.log("Received wrapped message format");
+      } else if (data && data.message) {
+        // The API returned a wrapped message object
+        console.log("Wrapped message format received");
         messageToProcess = data.message;
       } else {
-        console.error("Invalid API response:", data);
+        // Invalid response format
+        console.error("Invalid API response format:", data);
         throw new Error("Received invalid response from API");
       }
 
@@ -1185,14 +1124,11 @@ export default function ChatInterface() {
       };
     }
 
-    console.log("Processing message for products:", message);
-
     // Check if the message contains the verified products marker
     if (
       message.content.includes("VERIFIED_PRODUCTS_START") &&
       message.content.includes("VERIFIED_PRODUCTS_END")
     ) {
-      console.log("Found VERIFIED_PRODUCTS markers in response");
       // Extract the verified products JSON
       // Found verified products marker in message
       const productsJson = message.content
@@ -1201,9 +1137,6 @@ export default function ChatInterface() {
 
       try {
         const products = JSON.parse(productsJson);
-        console.log(
-          `Successfully parsed ${products.length} products from VERIFIED_PRODUCTS`
-        );
 
         // Save products to localStorage for favorites functionality
         console.log("Saving search results to localStorage:", products);
@@ -2287,7 +2220,29 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={(e) => handleCategoryClick("electronics", e)}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "electronics";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
@@ -2301,7 +2256,29 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={(e) => handleCategoryClick("furniture", e)}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "furniture";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
@@ -2311,11 +2288,33 @@ export default function ChatInterface() {
               }}
             />
             <Chip
-              label="Books"
+              label="Textbooks"
               size="small"
               variant="outlined"
               color="primary"
-              onClick={(e) => handleCategoryClick("books", e)}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "textbooks";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
@@ -2329,7 +2328,29 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={(e) => handleCategoryClick("clothing", e)}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "clothing";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
@@ -2343,7 +2364,29 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={(e) => handleCategoryClick("miscellaneous", e)}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "miscellaneous";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {

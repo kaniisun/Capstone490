@@ -234,12 +234,13 @@ const UploadProduct = () => {
             category: product.category.toLowerCase(),
             price: parseFloat(product.price),
             image: imageUrl, // Store the full public URL
-            status: product.status,
+            status: "available",
             is_bundle: product.is_bundle,
             flag: product.flag,
             created_at: new Date().toISOString(),
             modified_at: new Date().toISOString(),
             is_deleted: false, // Explicitly set is_deleted to false for new products
+            moderation_status: "pending", // Add moderation status
           },
         ])
         .select();

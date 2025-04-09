@@ -73,14 +73,13 @@
   height: 10px;
   transform: scale(0);
   transition: transform 0.2s ease;
-  background-color: #FFB71B; 
+  background-color: #ffb71b;
   border-radius: 2px;
 }
 
 .checkbox-group input[type="checkbox"]:checked::before {
   transform: scale(1);
 }
-
 
 .price-slider {
   width: 100%;
@@ -173,8 +172,8 @@
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 5px;
-  padding: 20px;
+  gap: 8px;
+  padding: 10px;
 }
 
 /* Polaroid-style Product Card Design with color */
@@ -185,7 +184,7 @@
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   width: 250px;
   height: auto;
-  min-height: 340px;
+  min-height: 400px;
   text-align: center;
   position: relative;
   cursor: pointer;
@@ -193,6 +192,8 @@
   border: 1px solid #e8e8e8;
   transition: all 0.25s ease;
   transform: rotate(-1.5deg);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Varied rotation for more natural scattered look */
@@ -218,7 +219,7 @@
 .product-image-container {
   width: calc(100% - 10px);
   height: 180px;
-  margin: 0 auto 20px auto; /* Reduced bottom margin */
+  margin: 0 auto 15px auto;
   overflow: hidden;
   border-radius: 1px;
   position: relative;
@@ -261,13 +262,13 @@
   justify-content: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 5px;
+  margin-top: auto; /* Push tags to the bottom of the container */
+  padding-top: 5px;
   width: 100%;
 }
 
-/* Make status and bundle tags appear inline */
-.status-available,
-.bundle-tag {
+/* Make status tag appear inline */
+.status-available {
   font-size: 0.7rem;
   font-weight: 600;
   padding: 3px 10px;
@@ -301,22 +302,17 @@
   border: 1px solid #ffca28;
 }
 
-/* Bundle tag with more vibrant color */
-.bundle-tag {
-  background-color: #e3f2fd;
-  color: #0d47a1;
-  border: 1px solid #64b5f6;
-}
-
 /* Product info styling with better spacing */
 .product-info {
   padding: 0 8px;
   height: auto;
-  min-height: 100px;
+  min-height: 120px;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
 }
 
 /* Product name styling for Polaroid caption */
@@ -324,43 +320,47 @@
   font-size: 0.9rem;
   color: #333;
   font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  overflow: visible;
+  text-overflow: initial;
+  display: block;
   max-width: 100%;
   height: auto;
-  max-height: 3.2em;  
+  min-height: 2.8em;
   line-height: 1.4;
   text-align: center;
+  margin-bottom: 12px;
+  padding: 0 5px;
 }
 
+/* Remove the problematic negative margin */
 .products-product-name {
-  margin-bottom: -57px;
+  /* margin-bottom: -57px; */ /* This was causing the issue - removing it */
+  position: relative;
+  z-index: 1;
 }
-
 
 /* Price styling for Polaroid */
 .price {
   color: #0f2044;
   font-weight: 700;
   font-size: 1.1rem;
-  margin: 0 0 10px 0;
+  margin: 5px 0;
+  position: relative;
+  z-index: 1;
 }
 
 /* Use ::after for shadow and development effect */
 .product::after {
   content: "";
   position: absolute;
-  bottom: 8px;
-  right: 5px;
-  left: 5px;
-  height: 20px;
-  background: rgba(0, 0, 0, 0.06);
+  bottom: 3px;
+  right: 3px;
+  left: 3px;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.08);
   border-radius: 50%;
   z-index: -1;
-  filter: blur(5px);
+  filter: blur(3px);
 }
 
 /* Use data-spot attribute selector for the film development spot */
@@ -697,15 +697,6 @@
 
 .product-actions button:hover {
   color: #0f2044;
-}
-
-/* Override product-list layout for better alignment */
-.product-list {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px;
 }
 
 /* Add sticky note shadow effect */

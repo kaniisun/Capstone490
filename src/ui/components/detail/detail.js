@@ -405,6 +405,14 @@ export const Detail = () => {
                   Condition: {product.condition}
                 </p>
                 <p className="detail-status">Status: {product.status}</p>
+
+                {/* Add bundle indicator that only shows if product is a bundle */}
+                {product.is_bundle && (
+                  <p className="detail-bundle-tag">
+                    <FontAwesomeIcon icon={faTag} />
+                    <span>Bundle</span>
+                  </p>
+                )}
               </div>
 
               <div className="detail-description-section">
