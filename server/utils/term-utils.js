@@ -21,11 +21,6 @@ const productTermMap = {
     "notebooks",
     "computer",
     "computers",
-    "macbook",
-    "dell",
-    "lenovo",
-    "hp",
-    "asus",
   ],
   furniture: [
     "desk",
@@ -55,7 +50,7 @@ const productTermMap = {
     "garments",
     "apparel",
   ],
-  books: [
+  textbooks: [
     "book",
     "books",
     "textbook",
@@ -64,7 +59,6 @@ const productTermMap = {
     "novels",
     "reading",
     "literature",
-    "textbook",
     "manual",
     "manuals",
   ],
@@ -80,6 +74,10 @@ const productTermMap = {
     "appliance",
     "appliances",
     "digital",
+    "macbook",
+    "macbooks",
+    "mac",
+    "apple computer",
   ],
   sports: [
     "sport",

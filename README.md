@@ -1,11 +1,14 @@
-# Spartan Marketplace 
+# Spartan Marketplace
 
 ## Table of Contents
-* [General Info](#general-info)
-* [Technologies](#technologies)
-* [Setup](#setup)
-* [Marketplace Assistant](#marketplace-assistant)
-* [Project Status](#project-status)
+
+- [General Info](#general-info)
+- [Technologies](#technologies)
+- [Setup](#setup)
+- [Marketplace Assistant](#marketplace-assistant)
+- [Project Status](#project-status)
+- [AI Product Creator](#ai-product-creator)
+
 
 ## General Info
 
@@ -13,20 +16,20 @@ Spartan Marketplace is an exclusive online marketplace designed specifically for
 
 ## Technologies
 
-* React
-* NodeJS
-* HTML
-* CSS
-* Javascript
-* Supabase
-* OpenAI
+- React
+- NodeJS
+- HTML
+- CSS
+- Javascript
+- Supabase
+- OpenAI
 
 ## Setup
 
-* "npm install"
-* open two terminals
-* in the root directory terminal, do "npm start"
-* in one terminal, do "cd server", and then "nodemon server.js"
+- "npm install"
+- open two terminals
+- in the root directory terminal, do "npm start"
+- in one terminal, do "cd server", and then "nodemon server.js"
 
 # Marketplace Assistant
 
@@ -46,10 +49,12 @@ A smart chat assistant for a college marketplace platform that helps users find 
 Live Demo: [Spartan Marketplace](https://spartan-marketplace.onrender.com)
 
 The application is deployed using Render:
+
 - Frontend: https://spartan-marketplace.onrender.com
 - Backend API: https://marketplace-backend-8tag.onrender.com
 
 Note for Reviewers:
+
 - The site currently contains demo/sample data for evaluation purposes
 - You can explore the basic UI and landing page without signing up
 - To test features like the AI-powered chat assistant, you'll need to create an account
@@ -130,3 +135,17 @@ MIT
 ## Project Status
 
 Project is: _Incomplete_
+
+## AI Product Creator
+
+The AI Product Creator is an integrated feature of our Marketplace Assistant chatbot that uses OpenAI Vision API to automatically generate product listings from images. Users can upload a photo of an item directly in the chat interface, and the AI will analyze it to generate a product title, description, suggested price, condition, and category.
+
+### Using the Image Analysis Feature
+
+1. Open the Marketplace Assistant chat interface in the app
+2. Click the camera icon in the chat input field
+3. Upload a product image
+4. The AI will analyze the image and generate product details
+5. Edit the details if needed and click "Create Listing"
+
+This seamless integration allows users to create listings without leaving the chat interface, making the selling process faster and more intuitive. The feature requires OpenAI API access to the `gpt-4-turbo` model.

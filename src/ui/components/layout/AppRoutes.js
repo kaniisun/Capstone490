@@ -28,6 +28,7 @@ import Favorites from "../favorites/Favorites";
 import { useAuth } from "../../../contexts/AuthContext";
 import AdminDashboard from "../admin/AdminDashboard";
 import AdminSetup from "../admin/AdminSetup";
+import TestAI from "../pages/TestAI";
 
 // Wrapper component for MessageArea that provides required props
 const MessageAreaWrapper = () => {
@@ -172,6 +173,9 @@ function AppRoutes() {
         <Route path="/connection-test" element={<ConnectionTester />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />
+
+        {/* TestAI route */}
+        <Route path="/test-ai" element={<TestAI />} />
       </Routes>
       <Footer />
     </div>

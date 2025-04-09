@@ -75,6 +75,8 @@ const Account = () => {
   const [tabValue, setTabValue] = useState(0);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -84,8 +86,6 @@ const Account = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
-
-
 
   useEffect(() => {
     if (user) {
@@ -119,13 +119,36 @@ const Account = () => {
   // Fetch user products
   const fetchUserProducts = async () => {
     try {
+      console.log("Fetching products for user:", user.id);
+
       const { data, error } = await supabase
         .from("products")
         .select("*")
         .eq("userID", user.id)
-        .eq("is_deleted", false);
+        .eq("is_deleted", false)
+        .or("moderation_status.eq.approved,moderation_status.eq.pending")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
+
+      // Log the fetched products for debugging
+      console.log("Fetched user products:", data);
+      console.log("Number of products:", data?.length || 0);
+      console.log("Products by moderation status:", {
+        approved:
+          data?.filter((p) => p.moderation_status === "approved").length || 0,
+        pending:
+          data?.filter((p) => p.moderation_status === "pending").length || 0,
+      });
+      console.log("Products by availability:", {
+        available:
+          data?.filter(
+            (p) => p.status === "Available" || p.status === "available"
+          ).length || 0,
+        sold:
+          data?.filter((p) => p.status === "Sold" || p.status === "sold")
+            .length || 0,
+      });
 
       setProducts(data || []);
     } catch (error) {
@@ -276,7 +299,9 @@ const Account = () => {
 
   // Get background color for product status
   const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
+    const statusLower = status?.toLowerCase() || "";
+
+    switch (statusLower) {
       case "available":
         return "success";
       case "sold":
@@ -446,28 +471,25 @@ const Account = () => {
   };
 
   // Mark product as sold
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(null);
-
   const handleMarkAsSold = async (productID) => {
     try {
       const modifiedAt = new Date().toISOString();
       const { data, error } = await supabase
         .from("products")
-        .update({ status: "Sold", modified_at: modifiedAt })
+        .update({ status: "sold", modified_at: modifiedAt })
         .eq("productID", productID)
         .select();
-  
+
       if (error) throw error;
-  
+
       setProducts((prevProducts) =>
         prevProducts.map((product) =>
           product.productID === productID
-            ? { ...product, status: "Sold", modified_at: modifiedAt }
+            ? { ...product, status: "sold", modified_at: modifiedAt }
             : product
         )
       );
-  
+
       setSnackbar({
         open: true,
         message: "Product marked as Sold!",
@@ -482,81 +504,80 @@ const Account = () => {
       });
     }
   };
-  
 
-// Mark product as available
-const handleMarkAsAvailable = async (productID) => {
-  try {
-    const modifiedAt = new Date().toISOString();
-    const { error } = await supabase
-      .from("products")
-      .update({ status: "Available", modified_at: modifiedAt })
-      .eq("productID", productID);
+  // Mark product as available
+  const handleMarkAsAvailable = async (productID) => {
+    try {
+      const modifiedAt = new Date().toISOString();
+      const { error } = await supabase
+        .from("products")
+        .update({ status: "available", modified_at: modifiedAt })
+        .eq("productID", productID);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    setProducts((prevProducts) =>
-      prevProducts.map((product) =>
-        product.productID === productID
-          ? { ...product, status: "Available", modified_at: modifiedAt }
-          : product
-      )
-    );
+      setProducts((prevProducts) =>
+        prevProducts.map((product) =>
+          product.productID === productID
+            ? { ...product, status: "available", modified_at: modifiedAt }
+            : product
+        )
+      );
 
-    setSnackbar({
-      open: true,
-      message: "Product marked as Available!",
-      severity: "success",
-    });
-  } catch (error) {
-    console.error("Error marking product as Available:", error.message);
-    setSnackbar({
-      open: true,
-      message: `Error: ${error.message}`,
-      severity: "error",
-    });
-  }
-};
+      setSnackbar({
+        open: true,
+        message: "Product marked as Available!",
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error marking product as Available:", error.message);
+      setSnackbar({
+        open: true,
+        message: `Error: ${error.message}`,
+        severity: "error",
+      });
+    }
+  };
 
-  
-// Calculate total made from sold products
-const [animatedTotal, setAnimatedTotal] = useState(0);
-const totalMade = products
-  .filter((product) => product.status === "Sold")
-  .reduce((sum, product) => sum + parseFloat(product.price || 0), 0);
+  // Calculate total made from sold products
+  const [animatedTotal, setAnimatedTotal] = useState(0);
+  const totalMade = products
+    .filter((product) => product.status === "Sold" || product.status === "sold")
+    .reduce((sum, product) => sum + parseFloat(product.price || 0), 0);
 
   useEffect(() => {
     if (tabValue !== 2) return; // only animate when "Sold" tab is open
-  
+
     let start = 0;
     const duration = 800;
     const frameRate = 60;
     const totalFrames = Math.round((duration / 1000) * frameRate);
     let frame = 0;
-  
+
     const counter = setInterval(() => {
       frame++;
       const progress = frame / totalFrames;
       const eased = 1 - Math.pow(1 - progress, 3);
       setAnimatedTotal(totalMade * eased);
-  
+
       if (frame === totalFrames) {
         clearInterval(counter);
         setAnimatedTotal(totalMade);
       }
     }, 1000 / frameRate);
-  
+
     return () => clearInterval(counter);
   }, [tabValue, totalMade]);
-  
-
 
   // Get product condition stars
   const getConditionStars = (condition) => {
-    switch (condition?.toLowerCase()) {
+    const conditionLower = condition?.toLowerCase() || "";
+
+    switch (conditionLower) {
       case "new":
         return 5;
       case "like new":
+      case "like_new":
         return 4;
       case "good":
         return 3;
@@ -567,6 +588,33 @@ const totalMade = products
       default:
         return 3;
     }
+  };
+
+  // Diagnostic function to help identify inconsistent status fields
+  const checkProductStatus = (product) => {
+    const statusLower = product.status?.toLowerCase() || "";
+    const isAvailable = statusLower === "available";
+    const isSold = statusLower === "sold";
+
+    if (!isAvailable && !isSold) {
+      console.warn(
+        "Product has unexpected status value:",
+        product.status,
+        product
+      );
+    }
+
+    return isAvailable ? "available" : isSold ? "sold" : product.status;
+  };
+
+  // Function to standardize product status display
+  const getDisplayStatus = (product) => {
+    const standardStatus = checkProductStatus(product);
+    return standardStatus === "available"
+      ? "Available"
+      : standardStatus === "sold"
+      ? "Sold"
+      : product.status || "Unknown";
   };
 
   if (loading) {
@@ -647,7 +695,7 @@ const totalMade = products
                   transition: "background-color 0.2s ease",
                   "&:hover": {
                     backgroundColor: "#f5f5f5", // light gray on hover
-                  }, 
+                  },
                 },
                 "& .Mui-selected": {
                   color: "#0f2044", // UNCG Blue
@@ -670,8 +718,7 @@ const totalMade = products
           {/* Profile Tab */}
           <Box sx={{ p: 3 }} hidden={tabValue !== 0}>
             {tabValue === 0 && (
-              <Card variant="outlined" 
-              sx={{ borderRadius: 2 }}>
+              <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="h6" gutterBottom fontWeight="500">
                     Profile Information
@@ -737,7 +784,7 @@ const totalMade = products
                               py: 1,
                               bgcolor: "#0f2044", // UNCG Blue
                               "&:hover": {
-                                bgcolor: "#1a365d", 
+                                bgcolor: "#1a365d",
                               },
                             }}
                           >
@@ -766,7 +813,7 @@ const totalMade = products
                               color: "#0f2044",
                               "&:hover": {
                                 borderColor: "#ffc72c",
-                                bgcolor: "rgba(255, 199, 44, 0.04)", 
+                                bgcolor: "rgba(255, 199, 44, 0.04)",
                               },
                             }}
                             startIcon={<LockResetIcon />}
@@ -928,7 +975,7 @@ const totalMade = products
                       py: 1,
                       bgcolor: "#0f2044", // UNCG Blue
                       "&:hover": {
-                        bgcolor: "#1a365d", 
+                        bgcolor: "#1a365d",
                       },
                     }}
                     startIcon={<AddIcon />}
@@ -954,7 +1001,11 @@ const totalMade = products
                     <Grid container spacing={2}>
                       {Array.isArray(products) &&
                         products
-                          .filter((product) => product.status === "Available")
+                          .filter(
+                            (product) =>
+                              product.status === "Available" ||
+                              product.status === "available"
+                          )
                           .slice(0, 3)
                           .map((product) => {
                             if (!product?.productID) return null;
@@ -1145,7 +1196,11 @@ const totalMade = products
                   <Grid container spacing={3}>
                     {Array.isArray(products) &&
                       products
-                        .filter((product) => product.status === "Available") // Only available products
+                        .filter(
+                          (product) =>
+                            product.status === "Available" ||
+                            product.status === "available"
+                        )
                         .map((product) => {
                           if (!product?.productID) return null;
                           return (
@@ -1181,8 +1236,10 @@ const totalMade = products
                                     }}
                                   >
                                     <Chip
-                                      label={product.status || "Available"}
-                                      color={getStatusColor(product.status)}
+                                      label={getDisplayStatus(product)}
+                                      color={getStatusColor(
+                                        getDisplayStatus(product)
+                                      )}
                                       size="small"
                                       sx={{ fontSize: "0.75rem" }}
                                     />
@@ -1192,7 +1249,10 @@ const totalMade = products
                                       variant="contained"
                                       startIcon={<LocalOfferIcon />}
                                       onClick={() => {
-                                        setConfirmAction({ type: 'sold', productId: product.productID });
+                                        setConfirmAction({
+                                          type: "sold",
+                                          productId: product.productID,
+                                        });
                                         setConfirmDialogOpen(true);
                                       }}
                                       size="small"
@@ -1203,10 +1263,12 @@ const totalMade = products
                                         bgcolor: "#0f2044", // UNCG Blue
                                         color: "white",
                                         "&:hover": {
-                                          bgcolor: "#1a365d", 
+                                          bgcolor: "#1a365d",
                                         },
                                       }}
-                                      disabled={product.status === "Sold"}
+                                      disabled={
+                                        getDisplayStatus(product) === "Sold"
+                                      }
                                     >
                                       Mark as Sold
                                     </Button>
@@ -1221,7 +1283,6 @@ const totalMade = products
                                       justifyContent: "center",
                                       p: 2,
                                       bgcolor: "grey.50",
-                                  
                                     }}
                                   >
                                     {console.log(
@@ -1492,56 +1553,64 @@ const totalMade = products
               </Button>
             </Box>
           )}
-{/* Your Dialog for confirmation */}
-<Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
-  <DialogTitle>
-    {confirmAction?.type === 'sold' ? 'Mark Product as Sold' : 'Mark Product as Available'}
-  </DialogTitle>
-  <DialogContent>
-    <DialogContentText>
-      Are you sure you want to {confirmAction?.type === 'sold' ? 'product as SOLD' : 'product AVAILABLE'}?
-    </DialogContentText>
-  </DialogContent>
+        {/* Your Dialog for confirmation */}
+        <Dialog
+          open={confirmDialogOpen}
+          onClose={() => setConfirmDialogOpen(false)}
+        >
+          <DialogTitle>
+            {confirmAction?.type === "sold"
+              ? "Mark Product as Sold"
+              : "Mark Product as Available"}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to{" "}
+              {confirmAction?.type === "sold"
+                ? "product as SOLD"
+                : "product AVAILABLE"}
+              ?
+            </DialogContentText>
+          </DialogContent>
 
-  <DialogActions>
-    <Button
-      onClick={() => setConfirmDialogOpen(false)}
-      sx={{
-        textTransform: 'none',
-        '&:hover': {
-          backgroundColor: '#f0f0f0', // light gray hover
-        },
-      }}
-    >
-      Cancel
-    </Button>
-    <Button
-      onClick={() => {
-        if (confirmAction?.type === 'sold') {
-          handleMarkAsSold(confirmAction.productId);
-        } else {
-          handleMarkAsAvailable(confirmAction.productId);
-        }
-        setConfirmDialogOpen(false);
-        setConfirmAction(null);
-      }}
-      autoFocus
-      variant="contained"
-      sx={{
-        textTransform: 'none',
-        bgcolor: '#0f2044',
-        color: '#fff',
-        '&:hover': {
-          backgroundColor: "#1a365d", 
-          color: '#white',           
-        },
-      }}
-    >
-      Confirm
-    </Button>
-  </DialogActions>
-</Dialog>
-
+          <DialogActions>
+            <Button
+              onClick={() => setConfirmDialogOpen(false)}
+              sx={{
+                textTransform: "none",
+                "&:hover": {
+                  backgroundColor: "#f0f0f0", // light gray hover
+                },
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (confirmAction?.type === "sold") {
+                  handleMarkAsSold(confirmAction.productId);
+                } else {
+                  handleMarkAsAvailable(confirmAction.productId);
+                }
+                setConfirmDialogOpen(false);
+                setConfirmAction(null);
+              }}
+              autoFocus
+              variant="contained"
+              sx={{
+                textTransform: "none",
+                bgcolor: "#0f2044",
+                color: "#fff",
+                "&:hover": {
+                  backgroundColor: "#1a365d",
+                  color: "#white",
+                },
+              }}
+            >
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Snackbar for notifications */}
         <Snackbar
@@ -1558,7 +1627,7 @@ const totalMade = products
               width: "100%",
               borderRadius: 1,
               ...(snackbar.severity !== "error" && {
-                bgcolor: "#0f2044", 
+                bgcolor: "#0f2044",
               }),
             }}
           >
@@ -1583,20 +1652,24 @@ const totalMade = products
                 variant="body2"
                 sx={{ mb: 3, fontStyle: "italic", color: "text.secondary" }}
               >
-                You’ve earned{" "}
+                You've earned{" "}
                 <strong style={{ color: "green", fontSize: "1.3rem" }}>
                   ${animatedTotal.toFixed(2)}
                 </strong>{" "}
-                from sold items. 
-              </Typography>   
-
+                from sold items.
+              </Typography>
 
               {/* If there are no sold products */}
               {products.length > 0 &&
-              products.some((p) => p.status === "Sold") ? (
+              products.some(
+                (p) => p.status === "Sold" || p.status === "sold"
+              ) ? (
                 <Grid container spacing={3}>
                   {products
-                    .filter((product) => product.status === "Sold")
+                    .filter(
+                      (product) =>
+                        product.status === "Sold" || product.status === "sold"
+                    )
                     .map((product) => (
                       <Grid item xs={12} sm={6} md={4} key={product.productID}>
                         <Card
@@ -1659,7 +1732,6 @@ const totalMade = products
                               }}
                             />
                           </Box>
-                          
 
                           {/* Product details */}
                           <CardContent sx={{ flexGrow: 1, p: 2 }}>
@@ -1756,7 +1828,10 @@ const totalMade = products
                                 variant="contained"
                                 startIcon={<LocalOfferIcon />}
                                 onClick={() => {
-                                  setConfirmAction({ type: 'available', productId: product.productID });
+                                  setConfirmAction({
+                                    type: "available",
+                                    productId: product.productID,
+                                  });
                                   setConfirmDialogOpen(true);
                                 }}
                                 size="small"
@@ -1770,7 +1845,9 @@ const totalMade = products
                                     bgcolor: "#b71c1c", // Slightly lighter UNCG Blue
                                   },
                                 }}
-                                disabled={product.status === "Available"}
+                                disabled={
+                                  getDisplayStatus(product) === "Available"
+                                }
                               >
                                 Change to Available
                               </Button>
@@ -1798,9 +1875,7 @@ const totalMade = products
         </Box>
       </Container>
     </Fade>
-    
   );
-  
 };
 
 export default Account;

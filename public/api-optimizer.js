@@ -48,84 +48,82 @@
   const createConversationKey = (sellerId, productId) =>
     `${sellerId}:${productId}`;
 
-  // Override window.location to prevent duplicate redirects
-  const originalLocationDescriptor = Object.getOwnPropertyDescriptor(
-    window,
-    "location"
-  );
+  // REMOVED: Previous unsafe window.location override that caused TypeError
+  // We now use the event-based approach below instead
 
-  Object.defineProperty(window, "location", {
-    get: function () {
-      return originalLocationDescriptor.get.call(this);
-    },
-    set: function (val) {
-      try {
-        const url = new URL(val, window.location.origin);
+  // SAFER APPROACH: Use click event listeners instead of redefining window.location
+  document.addEventListener("click", function (e) {
+    // Find if the click is on a link or inside a link
+    let target = e.target;
+    while (target && target.tagName !== "A") {
+      if (target === document.body) return; // Not a link click
+      target = target.parentElement;
+    }
 
-        // Check if this is a messaging-related redirect
-        if (
-          url.pathname.includes("/messages/") &&
-          url.search.includes("productId=")
-        ) {
-          // Extract seller and product IDs from URL
-          const sellerId = url.pathname.split("/messages/")[1];
-          const params = new URLSearchParams(url.search);
-          const productId = params.get("productId");
+    if (!target || !target.href) return; // Not a link or no href
 
-          if (sellerId && productId) {
-            const conversationKey = createConversationKey(sellerId, productId);
+    try {
+      const url = new URL(target.href);
 
-            // Check if this conversation has already been initiated within this page session
-            if (initiatedConversations.has(conversationKey)) {
-              console.log(
-                `🛑 Blocked duplicate redirect to conversation: ${conversationKey}`
-              );
+      // Check if this is a messaging-related link
+      if (
+        url.pathname.includes("/messaging/") ||
+        url.pathname.includes("/messages/")
+      ) {
+        // Extract seller and product IDs from URL
+        const pathParts = url.pathname.split("/");
+        const sellerId = pathParts[pathParts.length - 1]; // Last part of the path
+        const params = new URLSearchParams(url.search);
+        const productId = params.get("productId");
 
-              // Instead of blocking completely, reload the page if we're already on the messages page
-              // This helps refresh stale state while preventing multiple redirects
-              if (window.location.pathname.includes("/messages/")) {
-                console.log("Refreshing existing messages page");
-                window.location.reload();
-              }
-              return; // Prevent the duplicate redirect
-            }
+        if (sellerId && productId) {
+          const conversationKey = createConversationKey(sellerId, productId);
 
-            // Mark this conversation as initiated
-            initiatedConversations.add(conversationKey);
-
-            // Save to localStorage for persistence but with a shorter key
-            // and a different name to prevent conflict with DuplicateMessageFixer
-            try {
-              localStorage.setItem(
-                "optimizer_initiated_convs",
-                JSON.stringify(Array.from(initiatedConversations))
-              );
-
-              // Clear any previous prevention flags that might block the initial message
-              const preventedKey = `${sellerId}_${productId}`;
-              if (localStorage.getItem(preventedKey)) {
-                console.log(
-                  `Clearing prevented flag for: ${preventedKey} to allow initial message`
-                );
-                localStorage.removeItem(preventedKey);
-              }
-            } catch (e) {
-              console.error("Error saving initiated conversations", e);
-            }
-
+          // Check if this conversation has already been initiated
+          if (initiatedConversations.has(conversationKey)) {
             console.log(
-              `✅ Allowing redirect to new conversation: ${conversationKey}`
+              `🛑 Preventing duplicate navigation to: ${conversationKey}`
             );
-          }
-        }
-      } catch (e) {
-        console.error("Error in location override", e);
-      }
+            e.preventDefault();
 
-      // Proceed with the redirect
-      originalLocationDescriptor.set.call(this, val);
-    },
-    configurable: true,
+            // Instead of blocking completely, reload if we're already on a messages page
+            if (
+              window.location.pathname.includes("/messages/") ||
+              window.location.pathname.includes("/messaging/")
+            ) {
+              console.log("Refreshing existing messages page");
+              window.location.reload();
+            }
+            return;
+          }
+
+          // Mark this conversation as initiated
+          initiatedConversations.add(conversationKey);
+
+          // Save to localStorage
+          try {
+            localStorage.setItem(
+              "optimizer_initiated_convs",
+              JSON.stringify(Array.from(initiatedConversations))
+            );
+
+            // Clear any previous prevention flags
+            const preventedKey = `${sellerId}_${productId}`;
+            if (localStorage.getItem(preventedKey)) {
+              localStorage.removeItem(preventedKey);
+            }
+          } catch (e) {
+            console.error("Error saving initiated conversations", e);
+          }
+
+          console.log(
+            `✅ Allowing navigation to conversation: ${conversationKey}`
+          );
+        }
+      }
+    } catch (e) {
+      console.error("Error in click handler", e);
+    }
   });
 
   // ===== DUPLICATE MESSAGE CLEANUP =====

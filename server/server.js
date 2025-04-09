@@ -96,8 +96,8 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === "production"
-        ? ["https://spartan-marketplace.onrender.com"]
-        : ["http://localhost:3000"],
+        ? ["https://spartan-marketplace.onrender.com", "http://localhost:3000"]
+        : ["http://localhost:3000", "http://localhost:3001"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
     credentials: true,
@@ -113,7 +113,7 @@ app.get("/", (req, res) => {
     message: "Spartan Marketplace Backend API",
     status: "running",
     environment: process.env.NODE_ENV || "development",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -180,6 +180,98 @@ app.get("/api/test", (req, res) => {
     message: "Server is working!",
     timestamp: new Date().toISOString(),
   });
+});
+
+// Add a simple test endpoint for OpenAI Vision API access
+app.get("/api/test-vision", async (req, res) => {
+  console.log("Vision API test endpoint called");
+  try {
+    // Simple test with a 1x1 transparent pixel encoded in base64
+    const base64Image =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+    console.log("OpenAI API Key available:", !!process.env.OPENAI_API_KEY);
+    console.log("OpenAI Vision API test - Starting test request");
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4-turbo",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "What's in this image? Just respond with 'Test OK'",
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/png;base64,${base64Image}`,
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 5,
+      });
+
+      console.log(
+        "Vision API test - Response received:",
+        completion.choices[0]?.message?.content
+      );
+
+      res.json({
+        status: "success",
+        message: "Vision API test successful",
+        response: completion.choices[0]?.message?.content || "No response",
+      });
+    } catch (openaiError) {
+      console.error("OpenAI Vision API Error:", openaiError);
+      console.error("Error Message:", openaiError.message);
+      console.error("Error Code:", openaiError.code);
+      console.error("Error Type:", openaiError.type);
+      console.error("Error Status:", openaiError.status);
+
+      let errorType = "unknown";
+      let suggestion = "";
+
+      if (openaiError.message.includes("Incorrect API key")) {
+        errorType = "invalid_api_key";
+        suggestion = "Your API key is invalid";
+      } else if (
+        openaiError.message.includes("does not exist") ||
+        openaiError.message.includes("The model")
+      ) {
+        errorType = "model_access";
+        suggestion = "Your API key doesn't have access to GPT-4 Vision";
+      } else if (openaiError.message.includes("Rate limit")) {
+        errorType = "rate_limit";
+        suggestion = "Rate limit exceeded";
+      }
+
+      console.log("Returning error response:", {
+        status: "error",
+        message: openaiError.message,
+        type: errorType,
+        suggestion,
+      });
+
+      return res.status(500).json({
+        status: "error",
+        message: openaiError.message,
+        type: errorType,
+        suggestion,
+      });
+    }
+  } catch (error) {
+    console.error("Test endpoint general error:", error);
+    res.status(500).json({
+      error: "Server error",
+      message: error.message,
+      stack: error.stack,
+    });
+  }
 });
 
 // Health check endpoint for connection testing
@@ -890,778 +982,229 @@ app.post("/api/enforce-account-status", async (req, res) => {
   }
 });
 
+// Chat endpoint
 app.post("/api/chat", async (req, res) => {
   try {
     const { messages, userId } = req.body;
 
-    // Process the user's intent - searching or listing
-    const userMessage = messages[messages.length - 1].content.toLowerCase();
+    // Validate input
+    if (!messages || !Array.isArray(messages)) {
+      return res
+        .status(400)
+        .json({ error: "Messages must be provided as an array" });
+    }
 
-    // Check if query contains a price filter
-    const priceFilter = extractPriceFilter(userMessage);
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: "OpenAI API key not configured" });
+    }
 
-    // Create system message with context - enhanced with stricter instructions
-    const systemMessage = {
-      role: "system",
-      content: `You are a helpful assistant for a student marketplace. 
-      You can help users search for products or list items for sale.
-      When users want to search, extract key details and respond with relevant listings.
-      When users want to list an item, collect all necessary information like title, description, price, condition.
-      
-      VERIFICATION SYSTEM:
-      1. You must ONLY discuss products that are specifically found in the database.
-      2. Every product mentioned MUST have a verification code [VPxxx].
-      3. Never make up or hallucinate products that don't have verification codes.
-      4. If you're uncertain about a product, DO NOT mention it.
-      5. When referring to products, use EXACTLY the names provided in the verified data.
-      
-      RESPONSE FORMAT:
-      - When showing products, always include their verification codes.
-      - Always wrap product listings in the VERIFIED_PRODUCTS_START and VERIFIED_PRODUCTS_END markers.
-      - For any product info that isn't explicitly verified, say "I don't have that information" rather than making it up.
-      
-      Remember: It's better to provide less information that is verified than more information that might be wrong.`,
-    };
-
-    // Prepare conversation history for OpenAI
-    const conversationHistory = [
-      systemMessage,
-      ...messages.slice(-10), // Send only the last 10 messages for context
-    ];
-
-    // Determine if user is searching or listing
-    let aiResponse;
+    // Get the last message for improved logging
+    const lastMessage = messages[messages.length - 1]?.content || "";
+    console.log(`Chat request received from user ${userId || "anonymous"}`);
+    console.log(`Last message: "${lastMessage}"`);
+    console.log(
+      `Number of messages in conversation history: ${messages.length}`
+    );
 
     // Check if this is a product search query
-    const isProductSearch = isProductSearchQuery(userMessage);
+    const isSearchQuery = isProductSearchQuery(lastMessage);
+    let productSearchResults = [];
 
-    if (isProductSearch) {
+    if (isSearchQuery) {
+      console.log("Detected product search query, searching database...");
       try {
-        // Get products from database using our universal search function
-        let searchResults = await searchProducts(supabase, userMessage);
-
-        // Check if query is specifically about a category
-        const categoryMatch = userMessage.match(/show me (\w+)/i);
-        // Also check for direct category mentions (from button clicks)
-        let requestedCategory = null;
-
-        if (categoryMatch && categoryMatch[1]) {
-          requestedCategory = categoryMatch[1].toLowerCase();
-        } else if (
-          /^(electronics|furniture|textbooks|clothing|miscellaneous)$/i.test(
-            userMessage.trim()
-          )
-        ) {
-          // Direct category button click
-          requestedCategory = userMessage.trim().toLowerCase();
-        }
-
-        if (requestedCategory) {
-          // Filter results to only include products from that category
-          const filteredResults = searchResults.filter(
-            (product) =>
-              product.category &&
-              product.category.toLowerCase() === requestedCategory
-          );
-
-          // If no products found in requested category, show a helpful message
-          if (filteredResults.length === 0) {
-            aiResponse = {
-              role: "assistant",
-              content: `I couldn't find any ${requestedCategory} items currently available. Would you like to browse other categories instead? Try clicking one of the category buttons below.`,
-            };
-            return res.json({ message: aiResponse });
-          }
-
-          // Use the filtered results instead of all results
-          searchResults = filteredResults;
-        }
-
-        // Get search terms
-        const searchTerms = extractSearchTerms(userMessage);
-
-        // Determine response
-        const determinedResponse = determineSearchResponse(
-          searchResults,
-          userMessage,
-          searchTerms
+        // Search for products in the database
+        productSearchResults = await searchProducts(supabase, lastMessage);
+        console.log(
+          `Found ${productSearchResults.length} products matching the query`
         );
 
-        if (!searchResults || searchResults.length === 0) {
-          // No products found
-          aiResponse = {
+        if (productSearchResults.length > 0) {
+          // Verify the search results match the query
+          const verificationResult = verifySearchMatch(
+            productSearchResults,
+            lastMessage
+          );
+
+          // Format the AI response with the product data
+          const response = determineSearchResponse(
+            productSearchResults,
+            lastMessage,
+            extractSearchTerms(lastMessage)
+          );
+
+          // Format product data with verification codes for security
+          const productsWithCodes = productSearchResults.map((product) => ({
+            ...product,
+            _vcode: `VP${Math.floor(Math.random() * 1000)}`, // Add verification code
+          }));
+
+          // Create the AI response with the product data embedded
+          const aiMessage = {
             role: "assistant",
-            content:
-              "I'm sorry, but I couldn't find any products matching your search criteria in our current inventory. Would you like to try a different search term or browse other categories instead?",
+            content: `${
+              response.responseText
+            }\n\nVERIFIED_PRODUCTS_START${JSON.stringify(
+              productsWithCodes
+            )}VERIFIED_PRODUCTS_END`,
           };
+
+          console.log("Returning search results with embedded product data");
+          return res.json(aiMessage);
         } else {
-          try {
-            // Format product data with verification codes
-            const formattedResults = searchResults.map((item) => {
-              // Get image URL if available
-              let imageUrl = item.image || "";
-
-              // If the image is a storage path, construct the full URL
-              if (imageUrl && !imageUrl.startsWith("http")) {
-                const imagePath = imageUrl.startsWith("/")
-                  ? imageUrl.substring(1)
-                  : imageUrl;
-
-                // Use the exact Supabase URL format
-                imageUrl = `https://vfjcutqzhhcvqjqjzwaf.supabase.co/storage/v1/object/public/product-images/${imagePath}`;
-              }
-
-              // Add verification code to product
-              const verificationCode = `VP${item.productID}`; // Verified Product + ID
-
-              // Return a clean, formatted object
-              return {
-                id: item.productID,
-                productID: item.productID,
-                name: item.name || "",
-                price: item.price || 0,
-                description: item.description || "",
-                image: imageUrl,
-                condition: item.condition || "",
-                category: item.category || "",
-                status: item.status || "available",
-                is_bundle: item.is_bundle || false,
-                flag: item.flag || false,
-                created_at: item.created_at || "",
-                modified_at: item.modified_at || "",
-                userID: item.userID || "",
-                _vcode: verificationCode, // Add verification code
-              };
-            });
-
-            // Use the deterministic response template
-            const responseTemplate = determinedResponse.responseText;
-
-            aiResponse = {
-              role: "assistant",
-              content: `VERIFIED_PRODUCTS_START${JSON.stringify(
-                formattedResults
-              )}VERIFIED_PRODUCTS_END
-
-${responseTemplate}
-
-Let me know if you'd like more information about any of these items or if you'd like to refine your search.${
-                priceFilter ? ` You can also try different price ranges.` : ""
-              }`,
-            };
-          } catch (formattingError) {
-            aiResponse = {
-              role: "assistant",
-              content:
-                "I'm sorry, but I encountered an error while formatting the search results. Please try again later.",
-            };
-          }
+          console.log("No products found matching the query");
         }
       } catch (searchError) {
-        aiResponse = {
-          role: "assistant",
-          content:
-            "I'm sorry, but I encountered an error while searching for products. Please try again later.",
-        };
-      }
-    } else if (
-      userMessage.includes("sell") ||
-      userMessage.includes("list") ||
-      userMessage.includes("listing")
-    ) {
-      // User wants to list an item
-      try {
-        aiResponse = await getAIResponse(conversationHistory);
-
-        // Extract product details from conversation
-        const extractedProduct = extractProductDetails(conversationHistory);
-
-        if (extractedProduct.isComplete) {
-          // Save the product to database
-          const { data, error } = await supabase
-            .from("products")
-            .insert({
-              userID: userId,
-              name: extractedProduct.title,
-              description: extractedProduct.description,
-              price: extractedProduct.price,
-              category: extractedProduct.category,
-              condition: extractedProduct.condition,
-              image: extractedProduct.imageUrl || "",
-              status: "available",
-              is_bundle: false,
-              flag: false,
-              created_at: new Date(),
-              modified_at: new Date(),
-            })
-            .select();
-
-          if (error) {
-            // Update AI response to indicate error
-            aiResponse.content +=
-              "\n\nThere was an error creating your listing. Please try again.";
-          } else {
-            // Update AI response to confirm listing was created
-            aiResponse.content +=
-              "\n\nGreat! I've created your listing for: " +
-              extractedProduct.title;
-          }
-        } else {
-          // Product information is incomplete, ask for missing fields
-          aiResponse.content +=
-            "\n\nTo complete your listing, I still need: " +
-            extractedProduct.missingFields.join(", ");
-        }
-      } catch (listingError) {
-        aiResponse = {
-          role: "assistant",
-          content:
-            "I'm sorry, but I encountered an error while processing your listing request. Please try again later.",
-        };
-      }
-    } else {
-      // General conversation
-      try {
-        // Use a more restrictive system prompt for general conversations too
-        const generalSystemMessage = {
-          role: "system",
-          content: `You are a helpful assistant for a student marketplace.
-          Provide general help and information, but never make claims about specific products
-          unless they've been explicitly provided to you from the database.
-          Our marketplace has categories: electronics, furniture, clothing, textbooks, and miscellaneous.
-          Never hallucinate or make up products that aren't in the database.`,
-        };
-
-        const conversationWithRestrictions = [
-          generalSystemMessage,
-          ...messages.slice(-10),
-        ];
-
-        aiResponse = await getAIResponse(conversationWithRestrictions);
-      } catch (conversationError) {
-        aiResponse = {
-          role: "assistant",
-          content:
-            "I'm sorry, but I encountered an error while processing your request. Please try again later.",
-        };
+        console.error("Error during product search:", searchError);
+        // Continue with regular OpenAI response if search fails
       }
     }
 
-    res.json({ message: aiResponse });
+    // Call OpenAI API with improved error handling
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4-turbo",
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
+
+      console.log("OpenAI API response received successfully");
+      return res.json(completion.choices[0].message);
+    } catch (openaiError) {
+      console.error("OpenAI API Error:", openaiError);
+      console.error(
+        "Error details:",
+        openaiError.response?.data || "No detailed error data"
+      );
+
+      return res.status(500).json({
+        error: "OpenAI API Error",
+        message: openaiError.message,
+        details: openaiError.response?.data || "No detailed error data",
+      });
+    }
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "An error occurred while processing your request" });
+    console.error("Server Error:", error);
+    return res.status(500).json({
+      error: "Error processing chat request",
+      details: error.message,
+    });
   }
 });
 
-/**
- * Get AI response from OpenAI
- */
-async function getAIResponse(messages) {
+// New endpoint for analyzing images with OpenAI Vision API
+app.post("/api/analyze-image", async (req, res) => {
   try {
-    // Validate input
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return {
-        role: "assistant",
-        content: "I'm sorry, there was an issue with the message format.",
-      };
+    const { image } = req.body;
+
+    if (!image) {
+      return res.status(400).json({ error: "No image provided" });
     }
 
     // Validate API key
     if (!process.env.OPENAI_API_KEY) {
-      return {
-        role: "assistant",
-        content:
-          "I'm sorry, there's a configuration issue with the AI service.",
-      };
-    }
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: messages,
-      temperature: 0.7,
-    });
-
-    if (!completion || !completion.choices || !completion.choices[0]) {
-      throw new Error("Invalid response structure from OpenAI API");
-    }
-
-    return completion.choices[0].message;
-  } catch (error) {
-    return {
-      role: "assistant",
-      content:
-        "I'm sorry, I'm having trouble processing your request right now. Please try again later.",
-    };
-  }
-}
-
-/**
- * Extract product details from conversation
- */
-function extractProductDetails(messages) {
-  const requiredFields = [
-    "title",
-    "description",
-    "price",
-    "category",
-    "condition",
-  ];
-  const product = {
-    title: null,
-    description: null,
-    price: null,
-    category: null,
-    condition: null,
-    imageUrl: "",
-    isComplete: false,
-    missingFields: [],
-  };
-
-  // Look through last few messages for product details
-  const userMessages = messages
-    .filter((msg) => msg.role === "user")
-    .map((msg) => msg.content.toLowerCase());
-
-  // Extract product details from messages
-  userMessages.forEach((content) => {
-    // Extract title
-    if (
-      !product.title &&
-      (content.includes("title:") ||
-        content.includes("selling") ||
-        content.includes("listing"))
-    ) {
-      const titleMatch = content.match(
-        /(?:title:|selling|listing)\s+([^\.]+)/i
-      );
-      if (titleMatch && titleMatch[1]) product.title = titleMatch[1].trim();
-    }
-
-    // Extract price
-    if (
-      !product.price &&
-      (content.includes("$") || content.includes("price:"))
-    ) {
-      const priceMatch = content.match(
-        /\$\s*(\d+(?:\.\d{2})?)|price:\s*(\d+(?:\.\d{2})?)/i
-      );
-      if (priceMatch)
-        product.price = parseFloat(priceMatch[1] || priceMatch[2]);
-    }
-
-    // Extract other fields
-    if (!product.description && content.includes("description:")) {
-      const descMatch = content.match(/description:\s+([^\.]+)/i);
-      if (descMatch) product.description = descMatch[1].trim();
-    }
-
-    if (!product.category && content.includes("category:")) {
-      const categoryMatch = content.match(/category:\s+([^\.]+)/i);
-      if (categoryMatch) product.category = categoryMatch[1].trim();
-    }
-
-    if (!product.condition && content.includes("condition:")) {
-      const conditionMatch = content.match(/condition:\s+([^\.]+)/i);
-      if (conditionMatch) product.condition = conditionMatch[1].trim();
-    }
-  });
-
-  // Check which fields are missing
-  product.missingFields = requiredFields.filter((field) => !product[field]);
-  product.isComplete = product.missingFields.length === 0;
-
-  return product;
-}
-
-// For production, serve static files from the build directory
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../build")));
-
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../build", "index.html"));
-  });
-}
-
-// Catch-all JSON 404 handler - must come after all valid routes
-app.use((req, res, next) => {
-  console.log(`Route not found: ${req.method} ${req.path}`);
-  res.status(404).json({
-    error: "Not Found",
-    message: `The requested endpoint ${req.method} ${req.path} does not exist.`,
-    status: 404,
-  });
-});
-
-// Global error handler - ensure all errors return JSON
-app.use((err, req, res, next) => {
-  console.error(`[ERROR] ${req.method} ${req.path}:`, err.stack || err);
-
-  // Ensure response is sent as JSON
-  const statusCode = err.statusCode || 500;
-  const errorMessage =
-    process.env.NODE_ENV === "production"
-      ? "Internal Server Error"
-      : err.message || String(err);
-
-  res.status(statusCode).json({
-    error: err.name || "Error",
-    message: errorMessage,
-    status: statusCode,
-  });
-});
-
-// Change the port back to 3001
-const PORT = process.env.PORT || 3001;
-
-// Update where the server listens
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/api/health-check`);
-});
-
-// Graceful shutdown
-process.on("SIGTERM", () => {
-  console.log("SIGTERM signal received: closing HTTP server");
-  server.close(() => {
-    console.log("HTTP server closed");
-    process.exit(0);
-  });
-});
-
-process.on("SIGINT", () => {
-  console.log("SIGINT signal received: closing HTTP server");
-  server.close(() => {
-    console.log("HTTP server closed");
-    process.exit(0);
-  });
-});
-
-// Legacy non-API route for backward compatibility
-app.post("/reinstate", async (req, res) => {
-  console.log(
-    "Received request to /reinstate (legacy endpoint) - forwarding to /api/reinstate"
-  );
-
-  // Simply forward the request to the /api/reinstate handler
-  try {
-    req.url = "/api/reinstate";
-    app.handle(req, res);
-  } catch (error) {
-    console.error("Error forwarding to /api/reinstate:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error forwarding request",
-    });
-  }
-});
-
-// Update authentication middleware to use users table
-const authenticateUser = async (req, res, next) => {
-  const { authorization } = req.headers;
-
-  if (!authorization) {
-    return res.status(401).json({
-      success: false,
-      message: "No authorization header provided",
-      requestSource: "auth-middleware",
-    });
-  }
-
-  if (!authorization.startsWith("Bearer ")) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid authorization format, Bearer expected",
-      requestSource: "auth-middleware",
-    });
-  }
-
-  const token = authorization.replace("Bearer ", "");
-
-  try {
-    const { data, error } = await supabase.auth.getUser(token);
-
-    if (error || !data.user) {
-      console.error("Auth error:", error);
-      return res.status(401).json({
-        success: false,
-        message: "Invalid or expired token",
-        requestSource: "auth-middleware",
+      return res.status(500).json({
+        error: "OpenAI API key not configured",
       });
     }
 
-    // Get user data from users table (updated to use userID)
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("role, accountStatus")
-      .eq("userID", data.user.id)
-      .single();
+    console.log("Starting OpenAI Vision API request");
+    console.log("Image data length:", image.length);
 
-    if (userError) {
-      console.error("Error getting user data:", userError);
+    // Set cache headers to prevent browsers from caching the response
+    res.setHeader(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Surrogate-Control", "no-store");
 
-      // If user record doesn't exist, create one with default role
-      if (userError.code === "PGRST116") {
-        const { error: insertError } = await supabase.from("users").insert([
+    try {
+      // Call OpenAI Vision API with optimized settings for faster responses
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4-turbo", // Use the latest model
+        messages: [
           {
-            userID: data.user.id,
-            email: data.user.email,
             role: "user",
-            accountStatus: "active",
+            content: [
+              {
+                type: "text",
+                text: "Analyze this image and create a marketplace listing. Return ONLY a JSON object with these exact fields: name (short title), description (detailed but brief), price (numeric, USD), condition (one of: new, like_new, good, fair, poor), category (one of: electronics, furniture, textbooks, clothing, miscellaneous). No explanations, just the JSON object.",
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${image}`,
+                },
+              },
+            ],
           },
-        ]);
+        ],
+        max_tokens: 500,
+        temperature: 0.3, // Lower temperature for more consistent responses
+        response_format: { type: "json_object" }, // Request JSON directly
+      });
 
-        if (insertError) {
-          console.error("Error creating user record:", insertError);
+      console.log("OpenAI Vision API response received successfully");
+
+      // Parse the response - with the json_object response_format, this should be more reliable
+      try {
+        const content = completion.choices[0].message.content;
+        const productData = JSON.parse(content);
+        return res.json(productData);
+      } catch (parseError) {
+        console.error("Error parsing JSON response:", parseError);
+
+        // Attempt regex extraction as fallback
+        const content = completion.choices[0].message.content;
+        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```|({[\s\S]*})/);
+
+        if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
+          try {
+            const productData = JSON.parse(jsonMatch[1] || jsonMatch[2]);
+            return res.json(productData);
+          } catch (err) {
+            console.error("JSON regex extraction failed", err);
+            return res.status(500).json({
+              error: "Failed to parse product data from AI response",
+              content,
+            });
+          }
+        } else {
           return res.status(500).json({
-            success: false,
-            message: "Error creating user record",
-            requestSource: "auth-middleware",
+            error: "Failed to extract JSON from AI response",
+            content,
           });
         }
-
-        // Set default user data
-        req.user = {
-          ...data.user,
-          role: "user",
-          accountStatus: "active",
-        };
-      } else {
-        return res.status(500).json({
-          success: false,
-          message: "Error getting user data",
-          requestSource: "auth-middleware",
-        });
       }
-    } else {
-      // Add user data to request
-      req.user = {
-        ...data.user,
-        role: userData.role,
-        accountStatus: userData.accountStatus,
-      };
+    } catch (openaiError) {
+      console.error("OpenAI API Error:", openaiError);
+      console.error(
+        "Error details:",
+        openaiError.response?.data || "No detailed error data"
+      );
+      return res.status(500).json({
+        error: "OpenAI Vision API Error",
+        message: openaiError.message,
+        details: openaiError.response?.data || "No detailed error data",
+      });
     }
-
-    next();
   } catch (error) {
-    console.error("Auth middleware error:", error);
+    console.error("Error analyzing image:", error);
     return res.status(500).json({
-      success: false,
-      message: "Server error during authentication",
-      requestSource: "auth-middleware",
-    });
-  }
-};
-
-// Add a debug endpoint for product moderation
-app.get("/api/debug-products", async (req, res) => {
-  try {
-    console.log("Debug products endpoint called");
-
-    const results = {};
-
-    // Get pending products (NULL or pending)
-    const { data: pendingProducts, error: pendingError } = await supabase
-      .from("products")
-      .select("productID, name, moderation_status")
-      .or("moderation_status.is.null,moderation_status.eq.pending")
-      .limit(10);
-
-    if (pendingError) {
-      results.pendingError = pendingError.message;
-    } else {
-      results.pending = {
-        count: pendingProducts.length,
-        samples: pendingProducts.slice(0, 3),
-      };
-    }
-
-    // Get approved products
-    const { data: approvedProducts, error: approvedError } = await supabase
-      .from("products")
-      .select("productID, name, moderation_status")
-      .eq("moderation_status", "approved")
-      .limit(10);
-
-    if (approvedError) {
-      results.approvedError = approvedError.message;
-    } else {
-      results.approved = {
-        count: approvedProducts.length,
-        samples: approvedProducts.slice(0, 3),
-      };
-    }
-
-    // Get rejected products
-    const { data: rejectedProducts, error: rejectedError } = await supabase
-      .from("products")
-      .select("productID, name, moderation_status")
-      .eq("moderation_status", "rejected")
-      .limit(10);
-
-    if (rejectedError) {
-      results.rejectedError = rejectedError.message;
-    } else {
-      results.rejected = {
-        count: rejectedProducts.length,
-        samples: rejectedProducts.slice(0, 3),
-      };
-    }
-
-    // Get archived products
-    const { data: archivedProducts, error: archivedError } = await supabase
-      .from("products")
-      .select("productID, name, moderation_status")
-      .eq("moderation_status", "archived")
-      .limit(10);
-
-    if (archivedError) {
-      results.archivedError = archivedError.message;
-    } else {
-      results.archived = {
-        count: archivedProducts.length,
-        samples: archivedProducts.slice(0, 3),
-      };
-    }
-
-    // Return results
-    res.status(200).json({
-      success: true,
-      results,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error("Error in debug products endpoint:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
+      error: "Error analyzing image with OpenAI Vision API",
+      details: error.message,
     });
   }
 });
 
-// Add a direct diagnosis route for product statuses
-app.get("/api/diagnose-products", async (req, res) => {
-  try {
-    console.log(
-      `[${new Date().toISOString()}] GET /api/diagnose-products accessed`
-    );
-
-    const results = {};
-
-    // Check for pending (NULL or pending)
-    const { data: pendingProducts, error: pendingError } = await supabase
-      .from("products")
-      .select("productID, name, moderation_status")
-      .or("moderation_status.is.null,moderation_status.eq.pending");
-
-    if (pendingError) {
-      results.pendingError = pendingError.message;
-    } else {
-      results.pending = {
-        count: pendingProducts.length,
-        samples: pendingProducts.slice(0, 5).map((p) => ({
-          id: p.productID,
-          name: p.name,
-          status: p.moderation_status || "NULL",
-        })),
-      };
-    }
-
-    // Check for approved
-    const { data: approvedProducts, error: approvedError } = await supabase
-      .from("products")
-      .select("productID, name, moderation_status")
-      .eq("moderation_status", "approved");
-
-    if (approvedError) {
-      results.approvedError = approvedError.message;
-    } else {
-      results.approved = {
-        count: approvedProducts.length,
-        samples: approvedProducts.slice(0, 5).map((p) => ({
-          id: p.productID,
-          name: p.name,
-          status: p.moderation_status,
-        })),
-      };
-    }
-
-    // Check for rejected
-    const { data: rejectedProducts, error: rejectedError } = await supabase
-      .from("products")
-      .select("productID, name, moderation_status")
-      .eq("moderation_status", "rejected");
-
-    if (rejectedError) {
-      results.rejectedError = rejectedError.message;
-    } else {
-      results.rejected = {
-        count: rejectedProducts.length,
-        samples: rejectedProducts.slice(0, 5).map((p) => ({
-          id: p.productID,
-          name: p.name,
-          status: p.moderation_status,
-        })),
-      };
-    }
-
-    // Check for archived
-    const { data: archivedProducts, error: archivedError } = await supabase
-      .from("products")
-      .select("productID, name, moderation_status")
-      .eq("moderation_status", "archived");
-
-    if (archivedError) {
-      results.archivedError = archivedError.message;
-    } else {
-      results.archived = {
-        count: archivedProducts.length,
-        samples: archivedProducts.slice(0, 5).map((p) => ({
-          id: p.productID,
-          name: p.name,
-          status: p.moderation_status,
-        })),
-      };
-    }
-
-    // Check for products with invalid moderation_status
-    const { data: invalidProducts, error: invalidError } = await supabase
-      .from("products")
-      .select("productID, name, moderation_status")
-      .not(
-        "moderation_status",
-        "in",
-        '("approved","rejected","archived","pending")'
-      )
-      .not("moderation_status", "is", null);
-
-    if (invalidError) {
-      results.invalidError = invalidError.message;
-    } else {
-      results.invalid = {
-        count: invalidProducts.length,
-        samples: invalidProducts.slice(0, 5).map((p) => ({
-          id: p.productID,
-          name: p.name,
-          status: p.moderation_status,
-        })),
-      };
-    }
-
-    // Return results
-    res.status(200).json({
-      success: true,
-      results,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error("Error in diagnose-products endpoint:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
+// Start the server
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`- Local URL: http://localhost:${PORT}`);
+  console.log(`- API Test: http://localhost:${PORT}/api/test`);
+  console.log(`- Environment: ${process.env.NODE_ENV || "development"}`);
 });
-
-module.exports = { app, server };

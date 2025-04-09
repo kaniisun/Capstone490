@@ -234,12 +234,13 @@ const UploadProduct = () => {
             category: product.category.toLowerCase(),
             price: parseFloat(product.price),
             image: imageUrl, // Store the full public URL
-            status: product.status,
+            status: "available",
             is_bundle: product.is_bundle,
             flag: product.flag,
             created_at: new Date().toISOString(),
             modified_at: new Date().toISOString(),
             is_deleted: false, // Explicitly set is_deleted to false for new products
+            moderation_status: "pending", // Add moderation status
           },
         ])
         .select();
@@ -387,8 +388,9 @@ const UploadProduct = () => {
                         }}
                       >
                         <MenuItem value="furniture">Furniture</MenuItem>
-                        <MenuItem value="personal">Personal</MenuItem>
-                        <MenuItem value="books">Books</MenuItem>
+
+                        <MenuItem value="textbooks">Textbooks</MenuItem>
+
                         <MenuItem value="electronics">Electronics</MenuItem>
                         <MenuItem value="clothing">Clothing</MenuItem>
                         <MenuItem value="miscellaneous">Miscellaneous</MenuItem>

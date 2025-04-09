@@ -93,6 +93,48 @@ async function searchProducts(supabase, searchQuery) {
       }
     }
 
+    // Check for specific category searches and enforce strict category matching
+    const specificCategorySearch = searchQuery
+      .toLowerCase()
+      .match(/show me\s+(\w+)/i);
+    if (specificCategorySearch && specificCategorySearch[1]) {
+      const requestedCategory = specificCategorySearch[1].toLowerCase();
+
+      // Map of user-friendly category terms to database category values
+      const categoryMap = {
+        textbooks: "textbooks",
+        textbook: "textbooks",
+        books: "textbooks",
+        book: "textbooks",
+        electronics: "electronics",
+        electronic: "electronics",
+        furniture: "furniture",
+        clothing: "clothing",
+        clothes: "clothing",
+        misc: "miscellaneous",
+        miscellaneous: "miscellaneous",
+      };
+
+      // If this is a specific category search, filter products to only that category
+      if (categoryMap[requestedCategory]) {
+        const targetCategory = categoryMap[requestedCategory];
+        console.log(
+          `Enforcing strict category match for "${requestedCategory}" → "${targetCategory}"`
+        );
+
+        // Filter products to only include items from the requested category
+        products = products.filter(
+          (product) =>
+            product.category &&
+            product.category.toLowerCase() === targetCategory
+        );
+
+        console.log(
+          `After category filtering: ${products.length} products remain`
+        );
+      }
+    }
+
     // IMPROVED FALLBACK: Always show something for general searches
     if (products.length === 0) {
       // Build a simpler query that searches all text fields
