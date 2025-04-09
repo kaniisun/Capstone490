@@ -387,7 +387,7 @@ const UploadProduct = () => {
                         }}
                       >
                         <MenuItem value="furniture">Furniture</MenuItem>
-                        <MenuItem value="personal">Personal</MenuItem>
+                        {/* <MenuItem value="personal">Personal</MenuItem> */}
                         <MenuItem value="books">Books</MenuItem>
                         <MenuItem value="electronics">Electronics</MenuItem>
                         <MenuItem value="clothing">Clothing</MenuItem>
