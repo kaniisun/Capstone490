@@ -398,7 +398,7 @@ const Header = () => {
                   Orders
                 </MenuItem>
 
-                <MenuItem
+                {/* <MenuItem
                   onClick={() => handleNavigate("/cart")}
                   className="menu-item"
                 >
@@ -406,7 +406,7 @@ const Header = () => {
                     <ShoppingCartIcon fontSize="small" />
                   </ListItemIcon>
                   Cart
-                </MenuItem>
+                </MenuItem> */}
 
                 <MenuItem
                   onClick={() => handleNavigate("/favorites")}

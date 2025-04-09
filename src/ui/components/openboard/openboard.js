@@ -2251,7 +2251,7 @@ const OpenBoard = () => {
         {
           reporter_id: userID,
           reported_id: messageToReport.creator_id,
-          reported_item_id: messageToReport,
+          reported_item_id: messageToReport.open_board_id,
           report_type: "post",
           status: "open",
           report: reportReason,
