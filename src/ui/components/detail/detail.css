@@ -655,7 +655,8 @@
 }
 
 .detail-condition,
-.detail-status {
+.detail-status,
+.detail-bundle-tag {
   font-size: 0.9rem;
   color: #0f2044;
   display: flex;
@@ -666,6 +667,13 @@
   border-radius: 4px;
   border-left: 2px solid #ffb71b;
   box-shadow: 0 2px 4px rgba(15, 32, 68, 0.05);
+}
+
+/* Special styling for bundle tag */
+.detail-bundle-tag {
+  background-color: #fff0c2; /* Light gold background */
+  border-left: 2px solid #ffb71b; /* UNCG gold border */
+  font-weight: 600;
 }
 
 .detail-description {

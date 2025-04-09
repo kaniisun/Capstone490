@@ -7,6 +7,8 @@ const API_CONFIG = {
 
   ENDPOINTS: {
     CHAT: "/api/chat",
+    ANALYZE_IMAGE: "/api/analyze-image",
+    TEST_VISION: "/api/test-vision",
     MODERATE_PRODUCTS: "/api/moderate-products",
     MODERATE_PRODUCT: "/api/moderate-product",
     DELETE_PRODUCT: "/api/delete-product",

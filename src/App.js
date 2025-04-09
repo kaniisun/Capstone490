@@ -187,8 +187,8 @@ function AppContent() {
                 <Route path="/connection-test" element={<ConnectionTester />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/update-password" element={<UpdatePassword />} />
-                 {/* New confirmation route */}
-                 <Route
+                {/* New confirmation route */}
+                <Route
                   path="/confirmation"
                   element={
                     <ProtectedRoute>

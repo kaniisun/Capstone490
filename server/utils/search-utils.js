@@ -136,18 +136,19 @@ function formatPriceFilter(priceFilter) {
 function extractCategoryTerms(query) {
   const query_lower = query.toLowerCase();
   const categoryKeywords = {
-    laptop: [
-      "laptop",
-      "laptops",
-      "computer",
-      "computers",
-      "notebook",
+    laptop: ["laptop", "laptops", "computer", "computers", "notebook"],
+    electronics: [
+      "electronics",
+      "electronic",
+      "device",
+      "gadget",
+      "tech",
       "macbook",
+      "mac",
     ],
-    electronics: ["electronics", "electronic", "device", "gadget", "tech"],
     furniture: ["furniture", "chair", "table", "desk", "sofa", "couch"],
     clothing: ["clothing", "clothes", "shirt", "pants", "dress", "jacket"],
-    book: ["book", "books", "textbook", "novel", "reading"],
+    textbooks: ["textbook", "textbooks", "book", "books", "novel", "reading"],
     music: ["guitar", "instrument", "music", "musical"],
     sport: ["sport", "sports", "exercise", "fitness", "bike", "bicycle"],
     home: ["home", "kitchen", "appliance", "decor"],

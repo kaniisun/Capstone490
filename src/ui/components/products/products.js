@@ -76,7 +76,7 @@ function Products() {
       const productsResult = await supabase
         .from("products")
         .select("*")
-        .eq("status", "Available")
+        .or("status.eq.Available,status.eq.available") // Check for both uppercase and lowercase status
         .eq("is_deleted", false)
         .eq("moderation_status", "approved");
 
@@ -88,6 +88,17 @@ function Products() {
         setLoading(false);
         return;
       }
+
+      // Add debug logging to check status values
+      console.log(
+        "All products before filtering:",
+        allProducts.map((p) => ({
+          id: p.productID,
+          name: p.name,
+          status: p.status,
+          moderation: p.moderation_status,
+        }))
+      );
 
       // Apply all filters on the client side for more reliable filtering
       let filteredProducts = allProducts;
@@ -269,7 +280,10 @@ function Products() {
                           }
                         >
                           {/* Product name */}
-                          <div className="products-product-name">
+                          <div
+                            className="products-product-name"
+                            title={product.name}
+                          >
                             {product.name}
                           </div>
 
@@ -278,7 +292,7 @@ function Products() {
                             ${parseFloat(product.price).toFixed(2)}
                           </p>
 
-                          {/* Tags container for status and bundle */}
+                          {/* Tags container for status */}
                           <div className="product-tags">
                             {/* Status tag */}
                             <span
@@ -286,13 +300,14 @@ function Products() {
                                 product.status || "available"
                               ).toLowerCase()}`}
                             >
-                              {product.status || "Available"}
+                              {product.status === "available" ||
+                              product.status === "Available"
+                                ? "Available"
+                                : product.status === "sold" ||
+                                  product.status === "Sold"
+                                ? "Sold"
+                                : product.status || "Available"}
                             </span>
-
-                            {/* Bundle tag - only show if it's a bundle */}
-                            {product.is_bundle && (
-                              <span className="bundle-tag">Bundle</span>
-                            )}
                           </div>
                         </div>
                       </div>

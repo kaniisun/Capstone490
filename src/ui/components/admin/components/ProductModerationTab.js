@@ -37,7 +37,7 @@ import {
 } from "@mui/icons-material";
 import { supabase } from "../../../../supabaseClient";
 import { getFormattedImageUrl } from "../../ChatSearch/utils/imageUtils";
-import API_CONFIG from '../../../../config/api.js';
+import API_CONFIG from "../../../../config/api.js";
 
 const ProductModerationTab = ({ setSnackbar }) => {
   // State for products
@@ -90,12 +90,14 @@ const ProductModerationTab = ({ setSnackbar }) => {
       // Make API request with properly encoded query parameters
       const encodedStatus = encodeURIComponent(filterStatus);
       const response = await fetch(
-        API_CONFIG.getUrl(`${API_CONFIG.ENDPOINTS.MODERATE_PRODUCTS}?status=${encodedStatus}`),
+        API_CONFIG.getUrl(
+          `${API_CONFIG.ENDPOINTS.MODERATE_PRODUCTS}?status=${encodedStatus}`
+        ),
         {
           method: "GET",
           headers: headers,
         }
-     );
+      );
 
       // Check if content type is JSON
       const contentType = response.headers.get("content-type");
@@ -360,6 +362,51 @@ const ProductModerationTab = ({ setSnackbar }) => {
       case "pending":
       default:
         return "warning";
+    }
+  };
+
+  // Debug function to check product database directly - useful for troubleshooting
+  const checkProductsDatabase = async () => {
+    try {
+      console.log("Directly checking products database...");
+
+      const { data: allProducts, error: allError } = await supabase
+        .from("products")
+        .select("productID, name, status, moderation_status, userID")
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (allError) {
+        console.error("Error checking all products:", allError);
+        return;
+      }
+
+      console.log("Latest 20 products:", allProducts);
+
+      // Check status distributions
+      if (allProducts && allProducts.length > 0) {
+        const moderationStatusCounts = {};
+        const statusCounts = {};
+
+        allProducts.forEach((product) => {
+          // Count moderation statuses
+          const modStatus = product.moderation_status || "null";
+          moderationStatusCounts[modStatus] =
+            (moderationStatusCounts[modStatus] || 0) + 1;
+
+          // Count availability statuses
+          const status = product.status || "null";
+          statusCounts[status] = (statusCounts[status] || 0) + 1;
+        });
+
+        console.log("Moderation status distribution:", moderationStatusCounts);
+        console.log("Status distribution:", statusCounts);
+      }
+
+      return allProducts;
+    } catch (error) {
+      console.error("Error in checkProductsDatabase:", error);
     }
   };
 
