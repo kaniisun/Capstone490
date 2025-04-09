@@ -63,22 +63,41 @@ export const useUserManagement = (
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${
+            (await supabase.auth.getSession()).data.session?.access_token || ""
+          }`,
         },
         body: JSON.stringify(data),
       });
 
-      // If we get HTML back instead of JSON, throw an error
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("text/html")) {
-        console.warn(`Received HTML response instead of JSON from ${endpoint}`);
-        throw new Error("Received HTML response instead of JSON");
+      // Always read the response body as text first to avoid "body stream already read" errors
+      const responseText = await response.text();
+
+      // Try to parse the response as JSON
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        // If parsing fails, check if we got HTML instead of JSON
+        if (
+          responseText.includes("<!DOCTYPE html>") ||
+          responseText.includes("<html>")
+        ) {
+          console.warn(
+            `Received HTML response instead of JSON from ${endpoint}`
+          );
+          throw new Error("Received HTML response instead of JSON");
+        }
+        // Otherwise, it's some other parsing error
+        throw new Error(`Failed to parse response: ${parseError.message}`);
       }
 
+      // Check for errors in the parsed response
       if (!response.ok) {
         throw new Error(`API call failed with status: ${response.status}`);
       }
 
-      return await response.json();
+      return result;
     } catch (error) {
       console.warn(`Proxy API call to ${endpoint} failed:`, error.message);
       console.warn("Attempting direct API call to backend server...");
@@ -92,19 +111,39 @@ export const useUserManagement = (
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${
+              (await supabase.auth.getSession()).data.session?.access_token ||
+              ""
+            }`,
           },
           body: JSON.stringify(data),
         });
 
+        // Always read the response body as text first
+        const directResponseText = await directResponse.text();
+
+        // Try to parse the response as JSON
+        let directResult;
+        try {
+          directResult = JSON.parse(directResponseText);
+        } catch (parseError) {
+          console.error(
+            `Failed to parse direct response: ${parseError.message}`
+          );
+          throw new Error(
+            `Failed to parse direct response: ${parseError.message}`
+          );
+        }
+
+        // Check for errors in the parsed response
         if (!directResponse.ok) {
           throw new Error(
             `Direct API call failed with status: ${directResponse.status}`
           );
         }
 
-        const result = await directResponse.json();
-        console.log(`Direct API call succeeded:`, result);
-        return result;
+        console.log(`Direct API call succeeded:`, directResult);
+        return directResult;
       } catch (directError) {
         console.error(
           `Direct API call to ${endpoint} also failed:`,

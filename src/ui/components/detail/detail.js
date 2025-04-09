@@ -16,6 +16,14 @@ import "./detail.css";
 // Import favorite utilities
 import { isFavorite, toggleFavorite } from "../../../utils/favoriteUtils";
 import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
+// Import message prevention utilities
+import {
+  shouldPreventMessage,
+  markMessageSent,
+  getPreventionKey,
+} from "../messageArea/messageHelper";
+// Import snackbar for notifications
+import { useSnackbar } from "notistack";
 
 export const Detail = () => {
   const { id } = useParams();
@@ -27,6 +35,8 @@ export const Detail = () => {
   // Add favorited state
   const [favorited, setFavorited] = useState(false);
   const navigate = useNavigate();
+  // Add snackbar
+  const { enqueueSnackbar } = useSnackbar();
 
   // fetch current user ID
   useEffect(() => {
@@ -176,8 +186,8 @@ export const Detail = () => {
       return;
     }
 
-    console.log('Starting confirmation process...');
-    console.log('Product data:', product);
+    console.log("Starting confirmation process...");
+    console.log("Product data:", product);
 
     try {
       // Prepare product data for confirmation
@@ -185,31 +195,153 @@ export const Detail = () => {
         ...product,
         sellerID: product.userID,
         sellerName: `${product.users.firstName} ${product.users.lastName}`,
-        sellerEmail: 'N/A',
-        sellerPhone: 'N/A'
+        sellerEmail: "N/A",
+        sellerPhone: "N/A",
       };
 
-      console.log('Navigating to confirmation with data:', confirmationData);
+      console.log("Navigating to confirmation with data:", confirmationData);
 
       // Navigate to confirmation page with product data
-      navigate('/confirmation', {
+      navigate("/confirmation", {
         state: {
-          product: confirmationData
-        }
+          product: confirmationData,
+        },
       });
     } catch (error) {
-      console.error('Error in handleConfirmPurchase:', error);
+      console.error("Error in handleConfirmPurchase:", error);
       // Still try to navigate even if there's an error
-      navigate('/confirmation', {
+      navigate("/confirmation", {
         state: {
           product: {
             ...product,
             sellerID: product.userID,
             sellerName: `${product.users.firstName} ${product.users.lastName}`,
-            sellerEmail: 'N/A',
-            sellerPhone: 'N/A'
-          }
+            sellerEmail: "N/A",
+            sellerPhone: "N/A",
+          },
+        },
+      });
+    }
+  };
+
+  // Handle Chat with Seller with duplicate prevention
+  const handleChatWithSeller = () => {
+    // First, check if user is logged in
+    if (!userId) {
+      enqueueSnackbar("Please login to contact the seller", {
+        variant: "warning",
+      });
+      navigate("/login");
+      return;
+    }
+
+    // Don't allow users to message themselves
+    if (userId === product.userID) {
+      enqueueSnackbar("You cannot message yourself about your own product", {
+        variant: "info",
+      });
+      return;
+    }
+
+    try {
+      // Create a key to identify this specific product contact event
+      const contactKey = `contact_${product.userID}_${product.productID}`;
+
+      // Store product context in localStorage for message persistence
+      localStorage.setItem(
+        "lastProductContext",
+        JSON.stringify({
+          timestamp: Date.now(),
+          productId: product.productID,
+          name: product.name,
+          price: product.price,
+          userID: product.userID,
+        })
+      );
+
+      console.log(
+        "Product contact initiated for:",
+        product.name,
+        product.productID
+      );
+
+      // Check if we've already clicked this button in the last few seconds
+      if (
+        window.__recentSellerClicks &&
+        window.__recentSellerClicks[contactKey]
+      ) {
+        console.log(
+          "Preventing duplicate Chat with Seller click for:",
+          product.name
+        );
+        return;
+      }
+
+      // Mark this conversation as initiated to prevent duplicates
+      if (!window.__recentSellerClicks) window.__recentSellerClicks = {};
+      window.__recentSellerClicks[contactKey] = true;
+
+      // Clear the click tracking after a reasonable timeout
+      setTimeout(() => {
+        if (window.__recentSellerClicks) {
+          delete window.__recentSellerClicks[contactKey];
         }
+      }, 5000);
+
+      // Check if we should prevent this message based on our helper
+      if (shouldPreventMessage(userId, product.userID, product)) {
+        console.log(
+          "Message already sent for this product, redirecting without duplicate"
+        );
+        enqueueSnackbar(
+          "You've already contacted this seller about this product",
+          {
+            variant: "info",
+          }
+        );
+
+        // Navigate to existing conversation using state instead of query params
+        navigate("/messaging/" + product.userID, {
+          state: {
+            productDetails: {
+              id: product.productID,
+              productID: product.productID,
+              name: product.name,
+              price: product.price,
+              image: product.image,
+              userID: product.userID,
+            },
+          },
+        });
+        return;
+      }
+
+      // Mark this message as sent to prevent future duplicates
+      markMessageSent(userId, product.userID, product);
+
+      // Navigate to messaging page with product info - using state instead of URL params
+      navigate("/messaging/" + product.userID, {
+        state: {
+          productDetails: {
+            id: product.productID,
+            productID: product.productID,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            userID: product.userID,
+          },
+        },
+      });
+    } catch (err) {
+      console.error("Error initiating seller contact:", err);
+      // Fallback navigation with minimal params using state
+      navigate("/messaging/" + product.userID, {
+        state: {
+          productDetails: {
+            id: product.productID,
+            productID: product.productID,
+          },
+        },
       });
     }
   };
@@ -249,9 +381,7 @@ export const Detail = () => {
             </div>
             <button
               className="detail-chat-button"
-              onClick={() => {
-                navigate(`/messaging/${product.userID}`);
-              }}
+              onClick={handleChatWithSeller}
             >
               <FontAwesomeIcon icon={faComments} />
               Chat with Seller
@@ -289,15 +419,19 @@ export const Detail = () => {
             </div>
 
             <div className="detail-actions">
-              <button className="detail-cart-button" onClick={handleConfirmPurchase}>
+              <button
+                className="detail-cart-button"
+                onClick={handleConfirmPurchase}
+              >
                 <FontAwesomeIcon icon={faCartShopping} />
                 Confirm Purchase
               </button>
 
               {/* Add Favorite button */}
               <button
-                className={`detail-favorite-button ${favorited ? "favorited" : ""
-                  }`}
+                className={`detail-favorite-button ${
+                  favorited ? "favorited" : ""
+                }`}
                 onClick={handleToggleFavorite}
                 aria-label={
                   favorited ? "Remove from favorites" : "Add to favorites"

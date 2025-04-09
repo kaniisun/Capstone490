@@ -31,6 +31,7 @@ import { extractProductsFromMessage } from "./utils/productParser";
 import Markdown from "markdown-to-jsx";
 import ProductCard from "./components/ProductCard";
 import API_CONFIG from "../../../config/api.js";
+import { markMessageSent } from "../messageArea/messageHelper";
 
 const API_URL = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CHAT);
 
@@ -93,28 +94,6 @@ export default function ChatInterface() {
     window.scrollTo(0, pagePositionRef.current);
   };
 
-  // New function to handle a user wanting to contact a seller about a product
-  const handleContactSeller = (product) => {
-    if (!product) return;
-
-    // Save window scroll position
-    const windowScrollY = window.scrollY;
-
-    setSelectedProduct(product);
-
-    // Add the messaging confirmation to the chat
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: `Would you like to send a message to the seller about the ${product.name}? If so, what would you like to say?`,
-      },
-    ]);
-
-    // Restore window scroll position
-    window.scrollTo(0, windowScrollY);
-  };
-
   // Define a more robust scroll lock function
   const forcePreventPageScroll = (callback) => {
     // Store position
@@ -148,6 +127,100 @@ export default function ChatInterface() {
         setTimeout(() => observer.disconnect(), 300);
       }
     }, 0);
+  };
+
+  // New function to handle a user wanting to contact a seller about a product
+  const handleContactSeller = async (product) => {
+    if (!product) return;
+
+    // Get seller ID from product's userID
+    const sellerId = product.userID;
+    if (!sellerId) return;
+
+    // Get current user ID
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      console.error("No user ID found in localStorage");
+      return;
+    }
+
+    // Use a simple track in memory approach
+    if (!window.__sentMessages) window.__sentMessages = new Set();
+
+    // Create a unique conversation key
+    const conversationKey = `${userId}_${sellerId}_${
+      product.productID || product.id
+    }`;
+
+    // Check if we've already sent a message in this session
+    if (window.__sentMessages.has(conversationKey)) {
+      console.log("Already initiated this conversation in current session");
+      // Just navigate without sending another message
+      window.location.href = `/messaging/${sellerId}?productId=${
+        product.productID || product.id
+      }`;
+      return;
+    }
+
+    try {
+      // Track that we've initiated this conversation
+      window.__sentMessages.add(conversationKey);
+
+      // Create initial message
+      const initialMessage = `Hi, I'm interested in your ${product.name}. Is this still available?`;
+
+      if (product.image) {
+        initialMessage += `\n\n<div style="margin-top:10px; margin-bottom:10px; max-width:250px;">
+          <img src="${product.image}" alt="${product.name}" style="max-width:100%; border-radius:8px; border:1px solid #eee;" />
+        </div>\n\nLooking forward to your response!`;
+      }
+
+      // Save this info for the messaging page
+      sessionStorage.setItem(
+        "last_product_contacted",
+        JSON.stringify({
+          productId: product.productID || product.id,
+          sellerId: sellerId,
+          initialMessageSent: true,
+        })
+      );
+
+      // Send the message first
+      await supabase.from("messages").insert([
+        {
+          sender_id: userId,
+          receiver_id: sellerId,
+          content: initialMessage,
+          status: "active",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      console.log("Successfully sent initial message");
+
+      // Mark conversation as initiated
+      markMessageSent(userId, sellerId, product);
+
+      // Save window scroll position
+      const windowScrollY = window.scrollY;
+
+      // Construct URL with both seller ID and product ID for context
+      const messagesUrl = `/messaging/${sellerId}?productId=${
+        product.productID || product.id
+      }`;
+
+      // Navigate to messages
+      window.location.href = messagesUrl;
+
+      // Restore window scroll position
+      window.scrollTo(0, windowScrollY);
+    } catch (error) {
+      console.error("Error sending initial message:", error);
+      // Still redirect even if message fails
+      window.location.href = `/messaging/${sellerId}?productId=${
+        product.productID || product.id
+      }`;
+    }
   };
 
   // Update handleCategoryClick to be more aggressive about scroll prevention

@@ -19,12 +19,10 @@ export const Home = () => {
   const location = useLocation();
   const { user, checkEmailVerification } = useAuth();
 
- 
- // Scroll to top on initial page load only
-useEffect(() => {
-  window.scrollTo(0, 0);
-}, []);
-
+  // Scroll to top on initial page load only
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   // Check for verification success in URL parameters
   useEffect(() => {
@@ -46,9 +44,9 @@ useEffect(() => {
         checkEmailVerification();
 
         // Check the session directly
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const sessionResult = await supabase.auth.getSession();
+        const session = sessionResult.data?.session;
+
         if (!session) {
           console.log(
             "No valid session found after verification, redirecting to login"
@@ -78,7 +76,7 @@ useEffect(() => {
     const fetchProducts = async () => {
       try {
         // Fetch products that are available, not flagged, not deleted, and approved
-        const { data, error } = await supabase
+        const result = await supabase
           .from("products")
           .select("*")
           .eq("status", "Available") // Only get available products
@@ -87,6 +85,10 @@ useEffect(() => {
           .eq("moderation_status", "approved") // Only show approved products
           .order("created_at", { ascending: false }) // Get newest first
           .limit(10); // Limit to 10 products
+
+        // Store data and error from the response
+        const data = result.data;
+        const error = result.error;
 
         if (error) {
           console.error("Error fetching products:", error);

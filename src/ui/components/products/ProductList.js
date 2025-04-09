@@ -51,13 +51,15 @@ function ProductList({ filters }) {
       }
 
       //Execute the query and get response
-      const { data, error } = await query;
+      const result = await query;
+      const data = result.data;
+      const error = result.error;
 
       //Handle errors from the query
       if (error) {
         setError("Error fetching products"); //Set error message if query fails
       } else {
-        setProducts(data); //Update products state with fetched data
+        setProducts(data || []); //Update products state with fetched data
       }
 
       //Update loading state to show that fetching is complete
