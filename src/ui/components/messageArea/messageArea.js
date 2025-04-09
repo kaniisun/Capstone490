@@ -426,6 +426,20 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
         const directProductContext = isProductContext();
         console.log("Product context from URL:", directProductContext);
 
+        // Check localStorage for this specific product inquiry to prevent duplicates
+        const preventionKey = `product_inquiry_${userID}_${receiver.userID}_${
+          productDetails.id || productDetails.productID
+        }`;
+
+        if (localStorage.getItem(preventionKey)) {
+          console.log(
+            "Already sent product inquiry for this product according to localStorage"
+          );
+          initialMessageRef.current = true;
+          localStorage.removeItem(lockKey);
+          return;
+        }
+
         // Before trying to send a message, check if one already exists in the database
         // First, find the conversation if it exists
         const { data: existingConversation, error: convError } = await supabase
@@ -462,6 +476,9 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
               );
               initialMessageRef.current = true;
 
+              // Mark in localStorage to prevent future duplicates
+              localStorage.setItem(preventionKey, "true");
+
               // Update the local messages array
               setMessages(existingMessages);
 
@@ -487,6 +504,9 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
           );
           initialMessageRef.current = true;
           localStorage.removeItem(lockKey);
+
+          // Mark in localStorage to prevent future duplicates
+          localStorage.setItem(preventionKey, "true");
           return;
         }
 
@@ -606,6 +626,9 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
               console.log("Successfully sent product message to database");
               // Only now set the initialMessageRef flag since we succeeded
               initialMessageRef.current = true;
+
+              // Mark in localStorage to prevent future duplicates
+              localStorage.setItem(preventionKey, "true");
 
               // Add the real message from the database to our state
               setMessages((prevMessages) => [...prevMessages, data[0]]);
@@ -1282,6 +1305,23 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
         `Attempting permanent deletion of ${deletedIds.size} tracked messages`
       );
 
+      // First, clean up any temporary product message IDs
+      // These have format "temp-product-{timestamp}" and should not be sent to the database
+      const tempProductIdPattern = /^temp-product-\d+$/;
+
+      // Remove any temporary IDs from the tracking systems
+      Array.from(deletedIds).forEach((id) => {
+        if (tempProductIdPattern.test(id)) {
+          console.log(`Removing temporary product ID from tracking: ${id}`);
+          deletedIds.delete(id);
+          if (window.__deletedMessageIds) window.__deletedMessageIds.delete(id);
+          if (localDeletedMessageIds) localDeletedMessageIds.delete(id);
+        }
+      });
+
+      // Save updated deleted IDs list to localStorage
+      saveDeletedIdsToLocalStorage();
+
       // Convert Set to Array for Supabase in() function and filter out invalid UUIDs
       const idsToDelete = Array.from(deletedIds).filter((id) => {
         // Simple UUID validation - must be string and match basic UUID format
@@ -1633,13 +1673,22 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
                             msg.content.includes(
                               `Hi, I'm interested in your ${productDetails.name}`
                             )
-                              ? // Remove img tag but keep the rest of the message
+                              ? // Remove all div/img tags related to product images
                                 msg.content
                                   .replace(
-                                    /<div style="margin-top[^>]*>[\s\S]*?<\/div>/g,
+                                    /<div[^>]*style=["']margin-top[^>]*>[\s\S]*?<img[^>]*\/>[\s\S]*?<\/div>/g,
                                     ""
                                   )
-                                  .replace(/\n/g, "<br/>")
+                                  .replace(
+                                    /<div[^>]*>[\s\S]*?<img[^>]*\/>[\s\S]*?<\/div>/g,
+                                    ""
+                                  )
+                                  .replace(
+                                    /Looking forward to your response!?/g,
+                                    ""
+                                  )
+                                  .replace(/\n+/g, "<br/>")
+                                  .replace(/<br\/><br\/>/g, "<br/>")
                               : // Keep original content for regular messages
                                 msg.content.replace(/\n/g, "<br/>"),
                         }}
