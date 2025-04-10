@@ -177,14 +177,30 @@ const EditProduct = () => {
       // Upload new image if one was selected
       if (product.imageFile) {
         const fileExt = product.imageFile.name.split(".").pop();
-        const fileName = `${productID}_${Date.now()}.${fileExt}`;
-        const filePath = `uploads/${fileName}`; // Use the uploads folder to match other uploads
 
-        console.log("Uploading image with details:");
-        console.log("- File name:", product.imageFile.name);
-        console.log("- File type:", product.imageFile.type);
-        console.log("- File size:", product.imageFile.size, "bytes");
-        console.log("- Target path:", filePath);
+        // Generate a safe and unique filename with timestamp
+        const timestamp = Date.now();
+        const safeFilename = product.imageFile.name
+          .split(".")[0]
+          .replace(/[^a-z0-9]/gi, "_")
+          .toLowerCase()
+          .substring(0, 20);
+        const fileName = `${timestamp}-${safeFilename}-${productID.substring(
+          0,
+          8
+        )}.${fileExt}`;
+
+        // Use the uploads folder for consistent storage
+        const filePath = `uploads/${fileName}`;
+
+        console.log("Uploading edited product image:", {
+          originalName: product.imageFile.name,
+          timestamp: timestamp,
+          productID: productID,
+          fileSize: Math.round(product.imageFile.size / 1024) + "KB",
+          fileType: product.imageFile.type,
+          targetPath: filePath,
+        });
 
         // Extract MIME type from file or determine from extension
         let contentType = product.imageFile.type;
@@ -272,7 +288,7 @@ const EditProduct = () => {
           condition: product.condition.toLowerCase(),
           category: product.category.toLowerCase(),
           price: parseFloat(product.price),
-          image: imageUrl,
+          image: imageUrl, // Store the full public URL in the image field only
           status: product.status,
           is_bundle: product.is_bundle,
           modified_at: new Date().toISOString(),

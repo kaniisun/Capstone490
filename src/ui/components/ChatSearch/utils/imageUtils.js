@@ -1,156 +1,81 @@
 import { supabase } from "../../../../supabaseClient.js";
 
 /**
- * Formats image URLs from Supabase Storage
- *
- * @param {string} imagePath - The image path or URL
- * @returns {string} The properly formatted image URL
+ * Image Utility Functions
+ * Provides consistent handling of product images across the application
  */
-export function getFormattedImageUrl(imagePath) {
-  // Return placeholder for empty paths
-  if (!imagePath || imagePath === "" || imagePath === "null") {
-    console.log("Empty image path, using placeholder");
-    return "https://via.placeholder.com/150?text=No+Image";
+
+/**
+ * Gets the best available image URL for a product with proper fallbacks
+ * @param {Object} product - The product object
+ * @returns {string|null} The best available image URL
+ */
+export const getProductImageUrl = (product) => {
+  if (!product) return null;
+
+  // Only check for the image field since imageUrl doesn't exist in the database
+  if (product.image) {
+    return product.image;
   }
 
-  // Log the original image path for debugging
-  console.log("getFormattedImageUrl processing:", imagePath);
+  // Return null if no image is available
+  return null;
+};
 
-  try {
-    // If it's already a full URL (including Supabase storage URL), return it
-    if (imagePath.startsWith("http")) {
-      console.log("Image is already a full URL:", imagePath);
+/**
+ * Formats an image URL to ensure it uses the proper format
+ * Legacy function maintained for backward compatibility
+ * @param {string} url - The image URL to format
+ * @returns {string|null} Formatted URL or null if invalid
+ */
+export const getFormattedImageUrl = (url) => {
+  if (!url) return null;
 
-      // Check if URL already has uploads/ in it to avoid duplication
-      if (imagePath.includes("uploads/uploads/")) {
-        // Fix duplicate uploads/ in path
-        console.log("Found duplicate 'uploads/' in URL, fixing...");
-        return imagePath.replace("uploads/uploads/", "uploads/");
-      }
-
-      // If this is the Nintendo Switch image with the specific format that's failing
-      if (
-        imagePath.includes("4acc1983-951b-49e5-9ea3-0357496f68e7") &&
-        imagePath.includes("product-images/uploads/")
-      ) {
-        console.log("Nintendo Switch specific image detected, using as is");
-        return imagePath;
-      }
-
-      // Don't modify URLs that already have the uploads/ path
-      if (imagePath.includes("product-images/uploads/")) {
-        console.log("URL already includes correct uploads/ path");
-        return imagePath;
-      }
-
-      // Special case fix for problematic images
-      if (!imagePath.includes("uploads/")) {
-        // If URL doesn't include uploads folder but should, try to fix it
-        const urlParts = imagePath.split("/");
-        const fileName = urlParts[urlParts.length - 1];
-
-        if (fileName && !imagePath.includes("uploads/")) {
-          console.log(
-            "Potentially problematic URL detected, trying to fix by adding uploads/ prefix"
-          );
-
-          // Extract the base URL without the filename
-          const baseUrl = imagePath.substring(
-            0,
-            imagePath.lastIndexOf("/") + 1
-          );
-          const fixedUrl = `${baseUrl}uploads/${fileName}`;
-
-          console.log("Fixed URL:", fixedUrl);
-          return fixedUrl;
-        }
-      }
-
-      return imagePath;
-    }
-
-    // Normalize the path (handle uploads/ prefix if needed)
-    let normalizedPath = imagePath;
-
-    // Prevent duplicate uploads/ prefixes
-    if (normalizedPath.startsWith("uploads/uploads/")) {
-      console.log("Found duplicate uploads/ prefix, removing one");
-      normalizedPath = normalizedPath.replace("uploads/uploads/", "uploads/");
-    }
-
-    // If path doesn't start with 'uploads/' but we know images are in that folder,
-    // add the prefix (this handles cases where only the filename was stored)
-    if (
-      !normalizedPath.startsWith("uploads/") &&
-      !normalizedPath.includes("/")
-    ) {
-      console.log("Adding 'uploads/' prefix to path");
-      normalizedPath = `uploads/${normalizedPath}`;
-    }
-
-    console.log("Normalized path:", normalizedPath);
-
-    // Get the public URL using Supabase
-    const { data } = supabase.storage
-      .from("product-images")
-      .getPublicUrl(normalizedPath);
-
-    if (data?.publicUrl) {
-      const url = data.publicUrl;
-      console.log("Generated public URL:", url);
-
-      // Final check for duplicate uploads/
-      if (url.includes("uploads/uploads/")) {
-        const fixedUrl = url.replace("uploads/uploads/", "uploads/");
-        console.log("Fixed duplicate 'uploads/' in final URL:", fixedUrl);
-        return fixedUrl;
-      }
-
-      return url;
-    }
-
-    // Fallback: construct URL manually if getPublicUrl fails
-    const supabaseUrl =
-      process.env.REACT_APP_SUPABASE_URL ||
-      "https://vfjcutqzhhcvqjqjzwaf.supabase.co";
-
-    let fallbackUrl;
-
-    // Try both with and without uploads/ prefix
-    if (normalizedPath.startsWith("uploads/")) {
-      fallbackUrl = `${supabaseUrl}/storage/v1/object/public/product-images/${normalizedPath}`;
-    } else {
-      // If the path doesn't start with uploads/, try both versions
-      const directPath = `${supabaseUrl}/storage/v1/object/public/product-images/${normalizedPath}`;
-      const uploadsPath = `${supabaseUrl}/storage/v1/object/public/product-images/uploads/${normalizedPath}`;
-
-      console.log("Trying multiple path variants:");
-      console.log("1. Direct path:", directPath);
-      console.log("2. With uploads/ prefix:", uploadsPath);
-
-      // Check if the normalized path already has the user ID in it
-      if (normalizedPath.includes("4acc1983-951b-49e5-9ea3-0357496f68e7")) {
-        console.log("Using direct path for Nintendo Switch image");
-        fallbackUrl = directPath;
-      } else {
-        // Use the uploads path as fallback
-        fallbackUrl = uploadsPath;
-      }
-    }
-
-    // Final check for duplicate uploads/
-    if (fallbackUrl.includes("uploads/uploads/")) {
-      fallbackUrl = fallbackUrl.replace("uploads/uploads/", "uploads/");
-      console.log("Fixed duplicate 'uploads/' in fallback URL");
-    }
-
-    console.log("Using fallback URL:", fallbackUrl);
-    return fallbackUrl;
-  } catch (error) {
-    console.error("Error formatting image URL:", error);
-    return "https://via.placeholder.com/150?text=Error+Loading+Image";
+  // If URL already includes the bucket name and has https protocol, return as is
+  if (url.includes("product-images") && url.startsWith("http")) {
+    return url;
   }
-}
+
+  // If URL is a relative path in the uploads directory, convert to full Supabase URL
+  if (url.startsWith("uploads/")) {
+    // Log for debugging
+    console.log("Converting relative path to full URL:", url);
+
+    // Determine the base storage URL (could be environment-specific)
+    const storageUrl = process.env.REACT_APP_SUPABASE_URL
+      ? `${process.env.REACT_APP_SUPABASE_URL}/storage/v1/object/public/`
+      : "https://your-supabase-instance.supabase.co/storage/v1/object/public/";
+
+    return `${storageUrl}product-images/${url}`;
+  }
+
+  // Return the original URL if we can't determine the format
+  return url;
+};
+
+/**
+ * Handles image loading errors by replacing with a placeholder
+ * @param {React.SyntheticEvent<HTMLImageElement>} event - The error event
+ * @param {string} placeholderSrc - URL to placeholder image
+ */
+export const handleImageError = (
+  event,
+  placeholderSrc = "/placeholder.png"
+) => {
+  const imgElement = event.target;
+  if (imgElement instanceof HTMLImageElement) {
+    // Prevent infinite error loop
+    imgElement.onerror = null;
+
+    // Show placeholder
+    imgElement.src = placeholderSrc;
+
+    // Log error for debugging
+    console.warn("Image failed to load, using placeholder:", {
+      originalSrc: imgElement.getAttribute("data-original-src") || "unknown",
+    });
+  }
+};
 
 /**
  * Fetches and tests a list of images from the server
@@ -352,3 +277,10 @@ export async function fixImageContentType(imagePath) {
     };
   }
 }
+
+// Export default for convenience
+export default {
+  getProductImageUrl,
+  getFormattedImageUrl,
+  handleImageError,
+};

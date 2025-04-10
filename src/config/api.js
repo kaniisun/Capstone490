@@ -1,64 +1,93 @@
-// src/config/api.js
-const API_CONFIG = {
-  BASE_URL:
-    process.env.NODE_ENV === "development"
-      ? "http://localhost:3001"
-      : "https://marketplace-backend-8tag.onrender.com",
+/**
+ * API Configuration
+ * Central management of API endpoints and base URLs for different environments
+ */
 
-  ENDPOINTS: {
-    CHAT: "/api/chat",
-    ANALYZE_IMAGE: "/api/analyze-image",
-    TEST_VISION: "/api/test-vision",
-    MODERATE_PRODUCTS: "/api/moderate-products",
-    MODERATE_PRODUCT: "/api/moderate-product",
-    DELETE_PRODUCT: "/api/delete-product",
-    UPDATE_USER_ROLE: "/api/update-user-role",
-    ENFORCE_ACCOUNT_STATUS: "/api/enforce-account-status",
-    MAKE_ADMIN: "/api/make-admin",
-    SOFT_DELETE: "/api/soft-delete",
-    REINSTATE: "/api/reinstate",
-    TEST: "/api/test",
-    HEALTH_CHECK: "/api/health-check",
-    DB_TEST: "/api/db-test",
-    DIAGNOSTICS: "/api/diagnostics",
-    DEBUG_PRODUCTS: "/api/debug-products",
-    DIAGNOSE_PRODUCTS: "/api/diagnose-products",
-  },
+// Determine environment
+const ENV = process.env.REACT_APP_ENV || process.env.NODE_ENV || "development";
+const DEBUG = process.env.REACT_APP_DEBUG === "true" || false;
 
-  // Helper function to get full URL for an endpoint
-  getUrl: function (endpoint) {
-  // Ensure proper URL joining for all platforms
-  let base = this.BASE_URL;
-  let path = endpoint;
-  
-  // Remove trailing slashes from base
-  base = base.replace(/\/+$/, '');
-  
-  // Remove leading slashes from path
-  path = path.replace(/^\/+/, '');
-  
-  // Join with a single slash
-  return `${base}/${path}`;
-},
-
-  // Default fetch options to be used across all API calls
-  defaultFetchOptions: {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-  },
-
-  // Configuration options
-  TIMEOUT: 10000,
-  WITH_CREDENTIALS: true,
+// Base URL configurations for different environments
+const BASE_URLS = {
+  development: process.env.REACT_APP_API_URL || "http://localhost:3001",
+  test: process.env.REACT_APP_API_URL || "http://localhost:3001",
+  production:
+    process.env.REACT_APP_API_URL || "https://api.spartanmarketplace.com",
 };
 
-// Temporary debug logging - remove after confirming fix works
-console.log("[API Config] Environment:", process.env.NODE_ENV);
-console.log("[API Config] Base URL:", API_CONFIG.BASE_URL);
-console.log("[API Config] Test URL:", API_CONFIG.getUrl("/api/test"));
-console.log("[API Config] Chat URL:", API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CHAT));
+// Get the appropriate base URL for the current environment
+const BASE_URL =
+  process.env.REACT_APP_API_URL || BASE_URLS[ENV] || BASE_URLS.development;
 
-export default API_CONFIG;
+// API endpoint paths (without base URL)
+const ENDPOINTS = {
+  CHAT: "/api/chat",
+  ANALYZE_IMAGE: "/api/vision/analyze", // Updated path to match server route
+  LISTINGS: "/api/products",
+  USER: "/api/user",
+  MODERATE_PRODUCTS: "/api/moderate-products",
+  MODERATE_PRODUCT: "/api/moderate-product",
+};
+
+// OpenAI configuration
+// See latest model documentation: https://platform.openai.com/docs/models/gpt-4
+const OPENAI_CONFIG = {
+  MODEL_VERSION: process.env.REACT_APP_OPENAI_MODEL_VERSION || "gpt-4-turbo",
+};
+
+/**
+ * Logs debug information if debug mode is enabled
+ * @param {string} message - Debug message
+ * @param {any} data - Optional data to log
+ */
+const logDebug = (message, data) => {
+  if (!DEBUG) return;
+  if (data) {
+    console.log(`[API Config] ${message}`, data);
+  } else {
+    console.log(`[API Config] ${message}`);
+  }
+};
+
+// Log configuration on initialization
+logDebug("API Configuration", {
+  environment: ENV,
+  baseUrl: BASE_URL,
+  debugMode: DEBUG,
+  openaiModel: OPENAI_CONFIG.MODEL_VERSION,
+});
+
+/**
+ * Gets the full URL for an API endpoint
+ * @param {string} endpoint - The endpoint path or full URL
+ * @returns {string} Full URL
+ */
+const getUrl = (endpoint) => {
+  // If the endpoint is already a full URL, return it as is
+  if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+    return endpoint;
+  }
+
+  // If BASE_URL is undefined or null, log a warning and use a fallback
+  if (!BASE_URL) {
+    console.warn(
+      "API base URL is undefined, using fallback URL: http://localhost:3001"
+    );
+    return `http://localhost:3001${endpoint}`;
+  }
+
+  // Otherwise, prepend the base URL
+  const url = `${BASE_URL}${endpoint}`;
+  logDebug(`Resolved API URL: ${url}`);
+  return url;
+};
+
+// Export the API configuration
+export default {
+  ENV,
+  DEBUG,
+  BASE_URL,
+  ENDPOINTS,
+  OPENAI_CONFIG,
+  getUrl,
+};
