@@ -76,7 +76,7 @@ function Login() {
 
       // Validate email format
       if (!email.includes("@")) {
-        setError("Please enter a valid email address");
+        setError("Please enter a valid email address.");
         setLoading(false);
         return;
       }

@@ -779,9 +779,12 @@ const Account = () => {
                             type="submit"
                             disabled={updating}
                             sx={{
+                              flex: 1,
                               borderRadius: 1,
                               textTransform: "none",
                               py: 1,
+                              px: 3,
+                              minWidth: 160,
                               bgcolor: "#0f2044", // UNCG Blue
                               "&:hover": {
                                 bgcolor: "#1a365d",
@@ -806,9 +809,12 @@ const Account = () => {
                           <Button
                             variant="outlined"
                             sx={{
+                              flex: 1,
                               borderRadius: 1,
                               textTransform: "none",
                               py: 1,
+                              px: 3,
+                              minWidth: 160,
                               borderColor: "#0f2044",
                               color: "#0f2044",
                               "&:hover": {
