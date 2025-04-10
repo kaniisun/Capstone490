@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../../../supabaseClient";
 import "./messages.css";
 import { Snackbar, Alert } from "@mui/material";
+import SendIcon from "@mui/icons-material/Send";
 import {
   shouldPreventMessage,
   markMessageSent,
@@ -16,6 +17,7 @@ import {
   clearPreventionFlags,
 } from "./messageHelper";
 import { useSnackbar } from "notistack";
+
 
 // Create a local reference to the deletedMessageIds from messageHelper
 // to avoid the "not defined" errors
@@ -1834,7 +1836,7 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
                     : ""
                 }
               >
-                Send
+                <SendIcon />
               </button>
             </div>
           </div>

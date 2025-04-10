@@ -2323,7 +2323,8 @@ export default function ChatInterface() {
                 borderRadius: 2,
                 "&:hover": {
                   bgcolor: theme.palette.primary.light,
-                  color: "white",
+                  color: "#ffb71b",
+                  borderColor: "#ffb71b",
                 },
               }}
             />
@@ -2359,7 +2360,8 @@ export default function ChatInterface() {
                 borderRadius: 2,
                 "&:hover": {
                   bgcolor: theme.palette.primary.light,
-                  color: "white",
+                  color: "#ffb71b",
+                  borderColor: "#ffb71b",
                 },
               }}
             />
@@ -2395,7 +2397,8 @@ export default function ChatInterface() {
                 borderRadius: 2,
                 "&:hover": {
                   bgcolor: theme.palette.primary.light,
-                  color: "white",
+                  color: "#ffb71b",
+                  borderColor: "#ffb71b",
                 },
               }}
             />
@@ -2431,7 +2434,8 @@ export default function ChatInterface() {
                 borderRadius: 2,
                 "&:hover": {
                   bgcolor: theme.palette.primary.light,
-                  color: "white",
+                  color: "#ffb71b",
+                  borderColor: "#ffb71b",
                 },
               }}
             />
@@ -2467,7 +2471,8 @@ export default function ChatInterface() {
                 borderRadius: 2,
                 "&:hover": {
                   bgcolor: theme.palette.primary.light,
-                  color: "white",
+                  color: "#ffb71b",
+                  borderColor: "#ffb71b",
                 },
               }}
             />
@@ -2517,8 +2522,55 @@ export default function ChatInterface() {
               />
             </Box>
 
+
             {/* Image upload button */}
             <Tooltip title="Upload product image to create a listing with AI">
+
+            {/* Action buttons container */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                flexShrink: 0,
+              }}
+            >
+              {/* Image upload button */}
+              <Tooltip title="Upload product image to create a listing with AI">
+                <IconButton
+                  color="primary"
+                  component="label"
+                  disabled={isLoading}
+                  sx={{
+                    backgroundColor: theme.palette.grey[200],
+                    "&:hover": {
+                      backgroundColor: theme.palette.grey[300],
+                    },
+                    width: 48,
+                    height: 48,
+                    padding: 0,
+                    flexShrink: 0,
+                    marginTop: "20px",
+                    mb: 2,
+                  }}
+                  aria-label="Upload image for listing"
+                >
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleImageUpload(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  <AddPhotoAlternateIcon />
+                </IconButton>
+              </Tooltip>
+
+              {/* Send button */}
+
               <IconButton
                 color="primary"
                 component="label"
@@ -2532,7 +2584,9 @@ export default function ChatInterface() {
                   height: 48,
                   padding: 0,
                   flexShrink: 0,
+
                   marginTop: "20px",
+
                 }}
                 aria-label="Upload image for listing"
               >
