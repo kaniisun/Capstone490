@@ -281,20 +281,31 @@ const MessageHome = () => {
           lg={9}
           className="message-area-container"
         >
-          <Paper className="message-area-paper">
-            {receiver ? (
-              <MessageArea
-                user={user}
-                receiver={receiver}
-                onCloseChat={handleCloseChat}
-                productDetails={productDetails}
-              />
-            ) : (
-              <div className="select-user-message">
-                <p>Select a user to start a conversation</p>
-              </div>
-            )}
-          </Paper>
+          <Paper className="message-area-paper"
+
+           elevation={0}
+           sx={{
+             boxShadow: "none",
+             border: "none",
+           }}
+          
+          >
+  {receiver ? (
+    <MessageArea
+      user={user}
+      receiver={receiver}
+      onCloseChat={handleCloseChat}
+      productDetails={productDetails}
+    />
+  ) : (
+    <div className="select-user-message"
+    >
+      
+      <p>Select a user to start a conversation</p>
+    </div>
+  )}
+</Paper>
+
         </Grid>
       </Grid>
     </div>

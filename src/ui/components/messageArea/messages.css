@@ -5,6 +5,7 @@
   flex-direction: column;
   background-color: #ffffff;
   height: 100%;
+  overflow: hidden;
   box-shadow: 0 2px 4px rgba(15, 32, 68, 0.1);
 }
 
@@ -104,7 +105,9 @@
   font-size: 1rem;
   transition: all 0.2s ease;
   background-color: #ffffff;
+  margin-right: 10px;
 }
+
 
 .message-area-message-input input:focus {
   outline: none;
@@ -113,26 +116,34 @@
 }
 
 .message-area-message-input button {
-  flex: 0.4;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  background-color: #ffb71b;
-  color: #0f2044;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%; /* Circle shape */
+  background-color: #ffb71b; /* Match primary theme */
+  color: white;
   border: none;
-  border-radius: 8px;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 600;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
 }
 
-.message-area-message-input button:hover:not(:disabled) {
-  background-color: #ffc44c;
-  transform: translateY(-1px);
+.message-area-message-input button:hover {
+  background-color: #ffb71bb5;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .message-area-message-input button:disabled {
-  background-color: #e9ecef;
+  background-color: #ccc;
+  color: #0f2044;
   cursor: not-allowed;
+  box-shadow: none;
 }
+
 
 .message-buttons {
   display: flex;
@@ -600,4 +611,24 @@
     transform: scale(0.8);
     opacity: 0.5;
   }
+}
+.message-area-paper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.select-user-message {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: #666;
+  background-color: #f8f9fa;
+  border: none;
+  border-radius: 12px;
 }
