@@ -13,6 +13,7 @@ import {
   getProductImageUrl,
   handleImageError,
 } from "../ChatSearch/utils/imageUtils";
+import API_CONFIG from "../../../config/api.js";
 
 // Material-UI imports
 import {
@@ -251,7 +252,7 @@ const Account = () => {
         throw new Error("You must be logged in to delete a product");
       }
 
-      const response = await fetch("http://localhost:3001/api/delete-product", {
+      const response = await fetch(API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.DELETE_PRODUCT), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

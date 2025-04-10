@@ -24,6 +24,8 @@ import {
 } from "../messageArea/messageHelper";
 // Import snackbar for notifications
 import { useSnackbar } from "notistack";
+// Add API_CONFIG import if not already present
+import API_CONFIG from "../../../config/api.js";
 
 export const Detail = () => {
   const { id } = useParams();
@@ -150,16 +152,19 @@ export const Detail = () => {
         throw new Error("You must be logged in to delete a product");
       }
 
-      const response = await fetch("http://localhost:3001/api/delete-product", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.session.access_token}`,
-        },
-        body: JSON.stringify({
-          productId: id,
-        }),
-      });
+      const response = await fetch(
+        API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.DELETE_PRODUCT),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.session.access_token}`,
+          },
+          body: JSON.stringify({
+            productId: id,
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -402,7 +407,9 @@ export const Detail = () => {
             <div className="detail-content">
               <div className="detail-metadata">
                 <p className="detail-condition">
-                  Condition: {product.condition?.charAt(0).toUpperCase() + product.condition?.slice(1)}
+                  Condition:{" "}
+                  {product.condition?.charAt(0).toUpperCase() +
+                    product.condition?.slice(1)}
                 </p>
                 <p className="detail-status">Status: {product.status}</p>
 
