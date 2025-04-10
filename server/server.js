@@ -9,6 +9,7 @@ require("dotenv").config();
 const moderateProductsRoutes = require("./api/moderate-products");
 const moderateProductRoute = require("./api/moderate-product");
 const deleteProductRoute = require("./api/delete-product");
+const visionRoutes = require("./routes/visionRoutes");
 
 /*
  * IMPORTANT NOTE FOR CLIENT-SERVER COMMUNICATION:
@@ -26,6 +27,9 @@ const deleteProductRoute = require("./api/delete-product");
  * - POST /make-admin - Promote a user to admin
  * - POST /soft-delete - Soft delete a user
  * - POST /reinstate - Reinstate a soft-deleted user
+ *
+ * Vision API Endpoints:
+ * - POST /api/vision/analyze - Analyze an image and return product details
  */
 
 // Import utility modules
@@ -107,6 +111,10 @@ app.use(
 
 app.use(express.json());
 
+// Increase body parser limit for image uploads
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ limit: "25mb", extended: true }));
+
 // Add a root route handler
 app.get("/", (req, res) => {
   res.json({
@@ -121,6 +129,7 @@ app.get("/", (req, res) => {
 app.use("/api/moderate-products", moderateProductsRoutes);
 app.use("/api/moderate-product", moderateProductRoute);
 app.use("/api/delete-product", deleteProductRoute);
+app.use("/api/vision", visionRoutes);
 
 // Enhanced request logging middleware
 app.use((req, res, next) => {
@@ -156,6 +165,9 @@ app.use((req, res, next) => {
 // Configuration constants
 const STRICT_MODE = true; // Set to true to prevent ANY hallucination possibility
 const ENABLE_VERIFICATION = true; // Enable verification
+// OpenAI configuration constants
+// See latest model documentation: https://platform.openai.com/docs/models/gpt-4
+const OPENAI_MODEL_VERSION = process.env.OPENAI_MODEL_VERSION || "gpt-4-turbo";
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -1124,7 +1136,7 @@ app.post("/api/analyze-image", async (req, res) => {
     try {
       // Call OpenAI Vision API with optimized settings for faster responses
       const completion = await openai.chat.completions.create({
-        model: "gpt-4-turbo", // Use the latest model
+        model: OPENAI_MODEL_VERSION, // Use configurable model version
         messages: [
           {
             role: "user",
@@ -1185,6 +1197,28 @@ app.post("/api/analyze-image", async (req, res) => {
         "Error details:",
         openaiError.response?.data || "No detailed error data"
       );
+
+      // Add specialized error handling for model not found
+      if (
+        openaiError.message.includes("model_not_found") ||
+        openaiError.message.includes("does not exist") ||
+        openaiError.message.includes("The model")
+      ) {
+        console.error(
+          `Model error using '${OPENAI_MODEL_VERSION}':`,
+          openaiError.message
+        );
+        return res.status(500).json({
+          error: "OpenAI Vision API Error",
+          message:
+            "The image processing model was recently updated. We're fixing it. Please try again later.",
+          details:
+            process.env.NODE_ENV === "development"
+              ? openaiError.message
+              : undefined,
+        });
+      }
+
       return res.status(500).json({
         error: "OpenAI Vision API Error",
         message: openaiError.message,

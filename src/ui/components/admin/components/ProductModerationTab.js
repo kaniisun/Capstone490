@@ -36,7 +36,11 @@ import {
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { supabase } from "../../../../supabaseClient";
-import { getFormattedImageUrl } from "../../ChatSearch/utils/imageUtils";
+import {
+  getFormattedImageUrl,
+  getProductImageUrl,
+  handleImageError,
+} from "../../ChatSearch/utils/imageUtils";
 import API_CONFIG from "../../../../config/api.js";
 
 const ProductModerationTab = ({ setSnackbar }) => {
@@ -661,20 +665,26 @@ const ProductModerationTab = ({ setSnackbar }) => {
           {detailsDialog.product && (
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                <Box
-                  component="img"
-                  src={
-                    getFormattedImageUrl(detailsDialog.product.image) ||
-                    "/placeholder.png"
-                  }
-                  alt={detailsDialog.product.name}
-                  sx={{
-                    width: "100%",
-                    height: 300,
-                    objectFit: "contain",
-                    mb: 2,
-                  }}
-                />
+                <Box sx={{ mb: 2 }}>
+                  <img
+                    src={
+                      getProductImageUrl(detailsDialog.product) ||
+                      "/placeholder.png"
+                    }
+                    alt={detailsDialog.product.name}
+                    style={{
+                      width: "100%",
+                      height: 300,
+                      objectFit: "contain",
+                    }}
+                    onError={(e) => {
+                      if (e.target instanceof HTMLImageElement) {
+                        e.target.onerror = null;
+                        e.target.src = "/placeholder.png";
+                      }
+                    }}
+                  />
+                </Box>
               </Grid>
               <Grid item xs={12} md={6}>
                 <Typography variant="h6" gutterBottom>
