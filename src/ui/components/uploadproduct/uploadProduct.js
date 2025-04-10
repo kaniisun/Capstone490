@@ -278,28 +278,34 @@ const UploadProduct = () => {
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 6 }}>
       <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
-        <Box
-          sx={{
-            mb: 3,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Typography variant="h5" component="h1" fontWeight="500">
-            Upload New Product
-          </Typography>
-          <IconButton
-            color="primary"
-            onClick={() => navigate("/account")}
-            sx={{ borderRadius: 1 }}
-          >
-            <ArrowBackIcon />
-            <Typography variant="body2" sx={{ ml: 0.5 }}>
-              Back
-            </Typography>
-          </IconButton>
-        </Box>
+      <Box
+  sx={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    mb: 3,
+  }}
+>
+  <Typography variant="h5" component="h1" fontWeight="500">
+    Upload New Product
+  </Typography>
+
+  <Button
+    onClick={() => navigate("/account")}
+    startIcon={<ArrowBackIcon />}
+    sx={{
+      textTransform: "none",
+      fontWeight: 500,
+      borderRadius: 1,
+      ml: "auto",
+      width: "fit-content",
+    }}
+  >
+    Back
+  </Button>
+</Box>
+
+
         <Divider sx={{ mb: 4 }} />
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
