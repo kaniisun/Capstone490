@@ -234,7 +234,13 @@ const UserList = ({
                     <Badge
                       badgeContent={unreadCounts[user.userID]}
                       color="error"
-                      sx={{ ml: 1 }}
+                      sx={{
+                        ml: 1,
+                        "& .MuiBadge-badge": {
+                          backgroundColor: "#ffb71b",
+                          color: "black", // for contrast/readability
+                        },
+                      }}
                     >
                       <MailIcon fontSize="small" />
                     </Badge>
