@@ -2580,6 +2580,7 @@ export default function ChatInterface() {
                     backgroundColor: theme.palette.action.disabledBackground,
                     color: theme.palette.action.disabled,
                   },
+                  mb: 2,
                   width: 48,
                   height: 48,
                   padding: 0,
