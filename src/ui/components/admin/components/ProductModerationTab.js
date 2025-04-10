@@ -288,7 +288,7 @@ const ProductModerationTab = ({ setSnackbar }) => {
 
       // Call API to moderate product
       const response = await fetch(
-        "http://localhost:3001/api/moderate-product",
+        API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.MODERATE_PRODUCT),
         {
           method: "POST",
           headers: {
