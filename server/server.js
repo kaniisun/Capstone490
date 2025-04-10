@@ -100,8 +100,8 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === "production"
-        ? ["https://spartan-marketplace.onrender.com"]
-        : ["http://localhost:3000"],
+        ? ["https://spartan-marketplace.onrender.com", "http://localhost:3000"]
+        : ["http://localhost:3000", "http://localhost:3001"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
     credentials: true,
