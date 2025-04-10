@@ -2522,10 +2522,6 @@ export default function ChatInterface() {
               />
             </Box>
 
-
-            {/* Image upload button */}
-            <Tooltip title="Upload product image to create a listing with AI">
-
             {/* Action buttons container */}
             <Box
               sx={{
@@ -2535,7 +2531,7 @@ export default function ChatInterface() {
                 flexShrink: 0,
               }}
             >
-              {/* Image upload button */}
+              {/* First image upload button */}
               <Tooltip title="Upload product image to create a listing with AI">
                 <IconButton
                   color="primary"
@@ -2570,71 +2566,33 @@ export default function ChatInterface() {
               </Tooltip>
 
               {/* Send button */}
-
               <IconButton
                 color="primary"
-                component="label"
-                disabled={isLoading || isProcessing}
+                type="submit"
+                disabled={isLoading || !input.trim() || isProcessing}
                 sx={{
-                  backgroundColor: theme.palette.grey[200],
+                  backgroundColor: theme.palette.primary.main,
+                  color: "white",
                   "&:hover": {
-                    backgroundColor: theme.palette.grey[300],
+                    backgroundColor: theme.palette.primary.dark,
+                  },
+                  "&.Mui-disabled": {
+                    backgroundColor: theme.palette.action.disabledBackground,
+                    color: theme.palette.action.disabled,
                   },
                   width: 48,
                   height: 48,
                   padding: 0,
                   flexShrink: 0,
-
-                  marginTop: "20px",
-
                 }}
-                aria-label="Upload image for listing"
               >
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      // Call handleImageUpload with the file
-                      handleImageUpload(e.target.files[0]);
-                      // Reset input value immediately to ensure onChange fires even with same file
-                      e.target.value = "";
-                    }
-                  }}
-                />
-                <AddPhotoAlternateIcon />
+                {isLoading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  <SendIcon />
+                )}
               </IconButton>
-            </Tooltip>
-
-            {/* Send button */}
-            <IconButton
-              color="primary"
-              type="submit"
-              disabled={isLoading || !input.trim() || isProcessing}
-              sx={{
-                backgroundColor: theme.palette.primary.main,
-                color: "white",
-                "&:hover": {
-                  backgroundColor: theme.palette.primary.dark,
-                },
-                "&.Mui-disabled": {
-                  backgroundColor: theme.palette.action.disabledBackground,
-                  color: theme.palette.action.disabled,
-                },
-                width: 48,
-                height: 48,
-                padding: 0,
-                flexShrink: 0,
-              }}
-            >
-              {isLoading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                <SendIcon />
-              )}
-            </IconButton>
+            </Box>
           </Box>
         </Box>
       </Paper>
