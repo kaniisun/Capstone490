@@ -1,14 +1,11 @@
-/* Add these new styles at the top of your existing CSS file */
 .products-page-container {
   display: flex;
   gap: 24px;
   padding: 20px;
   min-height: 100vh;
-  background-image: linear-gradient(
-      to right,
+  background-image: linear-gradient(to right,
       rgba(245, 245, 245, 0.1) 1px,
-      transparent 1px
-    ),
+      transparent 1px),
     linear-gradient(to bottom, rgba(245, 245, 245, 0.1) 1px, transparent 1px);
   background-size: 20px 20px;
 }
@@ -23,6 +20,11 @@
   height: fit-content;
   position: sticky;
   top: 20px;
+  transition: box-shadow 0.3s ease;
+}
+
+.filters-sidebar:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .filter-section {
@@ -43,6 +45,12 @@
   margin-bottom: 12px;
   color: #333;
   cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.checkbox-group label:hover,
+.radio-group label:hover {
+  color: #0f2044;
 }
 
 .checkbox-group input[type="checkbox"],
@@ -96,6 +104,12 @@
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  transition: border-color 0.2s ease;
+}
+
+.price-inputs input:focus {
+  border-color: #0f2044;
+  outline: none;
 }
 
 .products-main-content {
@@ -103,6 +117,12 @@
   padding: 20px;
   background: white;
   border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.products-main-content:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* FILTER  */
@@ -113,7 +133,6 @@
 
 .filter-list {
   display: flex;
-
   flex-direction: column;
   gap: 20px;
 }
@@ -121,7 +140,6 @@
 .filter-list label {
   display: flex;
   flex-direction: column;
-
   gap: 8px;
 }
 
@@ -131,6 +149,13 @@
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  transition: border-color 0.2s ease;
+}
+
+.filter-list select:focus,
+.filter-list input[type="range"]:focus {
+  border-color: #0f2044;
+  outline: none;
 }
 
 /* PRODUCTS */
@@ -172,25 +197,25 @@
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 20px;
   padding: 10px;
 }
 
 /* Polaroid-style Product Card Design with color */
 .product {
-  padding: 15px 15px 40px 15px;
-  margin: 15px;
+  padding: 12px 12px 35px 12px;
+  margin: 12px;
   border-radius: 2px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  width: 250px;
+  width: 240px;
   height: auto;
-  min-height: 400px;
+  min-height: 360px;
   text-align: center;
   position: relative;
   cursor: pointer;
   background-color: white !important;
   border: 1px solid #e8e8e8;
-  transition: all 0.25s ease;
+  transition: all 0.3s ease;
   transform: rotate(-1.5deg);
   display: flex;
   flex-direction: column;
@@ -218,8 +243,8 @@
 /* Product image container styled as a Polaroid photo */
 .product-image-container {
   width: calc(100% - 10px);
-  height: 180px;
-  margin: 0 auto 15px auto;
+  height: 170px;
+  margin: 0 auto 12px auto;
   overflow: hidden;
   border-radius: 1px;
   position: relative;
@@ -227,11 +252,7 @@
   align-items: center;
   justify-content: center;
   background-color: white;
-}
-
-/* Remove the white border around the image */
-.product-image-container::before {
-  content: none; /* Remove the white border */
+  transition: transform 0.3s ease;
 }
 
 /* Image styling - fill the container */
@@ -242,6 +263,10 @@
   transition: transform 0.3s ease;
   position: relative;
   z-index: 0;
+}
+
+.product:hover .product-image {
+  transform: scale(1.05);
 }
 
 /* Colorful accent at top of card */
@@ -262,7 +287,8 @@
   justify-content: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: auto; /* Push tags to the bottom of the container */
+  margin-top: auto;
+  /* Push tags to the bottom of the container */
   padding-top: 5px;
   width: 100%;
 }
@@ -281,6 +307,7 @@
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   margin: 0 3px 4px 3px;
+  transition: all 0.2s ease;
 }
 
 /* Status colors with more vibrant coloring */
@@ -306,13 +333,18 @@
 .product-info {
   padding: 0 8px;
   height: auto;
-  min-height: 120px;
+  min-height: 100px;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 8px;
+  transition: transform 0.3s ease;
+}
+
+.product:hover .product-info {
+  transform: translateY(-5px);
 }
 
 /* Product name styling for Polaroid caption */
@@ -325,28 +357,32 @@
   display: block;
   max-width: 100%;
   height: auto;
-  min-height: 2.8em;
-  line-height: 1.4;
+  min-height: 2.6em;
+  line-height: 1.3;
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   padding: 0 5px;
+  transition: color 0.2s ease;
 }
 
-/* Remove the problematic negative margin */
-.products-product-name {
-  /* margin-bottom: -57px; */ /* This was causing the issue - removing it */
-  position: relative;
-  z-index: 1;
+.product:hover .products-product-name {
+  color: #0f2044;
 }
 
 /* Price styling for Polaroid */
 .price {
   color: #0f2044;
   font-weight: 700;
-  font-size: 1.1rem;
-  margin: 5px 0;
+  font-size: 1rem;
+  margin: 4px 0;
   position: relative;
   z-index: 1;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.product:hover .price {
+  transform: scale(1.05);
+  color: #ff9800;
 }
 
 /* Use ::after for shadow and development effect */
@@ -361,6 +397,11 @@
   border-radius: 50%;
   z-index: -1;
   filter: blur(3px);
+  transition: opacity 0.3s ease;
+}
+
+.product:hover::after {
+  opacity: 0.5;
 }
 
 /* Use data-spot attribute selector for the film development spot */
@@ -378,19 +419,25 @@
 /* Adjust favorite heart for Polaroid style */
 .favorite-icon-container {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 10px;
+  right: 10px;
   z-index: 20;
   background-color: rgba(255, 255, 255, 0.9);
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.favorite-icon-container:hover {
+  transform: scale(1.1);
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* No-products message in the new brighter style */
@@ -408,6 +455,12 @@
   transform: rotate(-0.5deg);
   border: 1px solid #e8e8e8;
   position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.no-products-message:hover {
+  transform: translateY(-5px) rotate(0deg);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 /* Add the same vibrant gradient to the no-products message */
@@ -420,11 +473,6 @@
   height: 8px;
   background: linear-gradient(90deg, #3f87f5, #4caf50, #ff9800);
   z-index: 5;
-}
-
-/* Remove the pin image from the no-products message */
-.no-products-message::before {
-  display: none;
 }
 
 /* Page numbers */
@@ -453,6 +501,7 @@
 .page-number:hover:not(.active) {
   background-color: #f7f9fc;
   border-color: #d0d0d0;
+  transform: translateY(-2px);
 }
 
 .page-number.active {
@@ -488,15 +537,10 @@
 }
 
 /* Favorite icon styles */
-.favorite-icon-container:hover {
-  transform: scale(1.1);
-  background-color: rgba(255, 255, 255, 0.9);
-}
-
 .favorite-icon {
-  font-size: 18px;
+  font-size: 16px;
   color: #999;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .favorite-icon.favorite-active {
@@ -511,16 +555,7 @@
   color: #c2185b;
 }
 
-/* Make sure the product position is relative for absolute positioning of the icon */
-.product {
-  position: relative;
-}
-
-/* Update the pin icon to be hidden */
-.pin-icon {
-  display: none;
-}
-
+/* Condition tag */
 .condition {
   font-size: 0.75rem;
   color: #888;
@@ -548,167 +583,31 @@
   text-align: center;
 }
 
-/* Modern Structured Product Card Design for All Listings */
-/* This will be the new card design that replaces the sticky note for All Listings */
-.structured-product {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
-  width: 260px;
-  height: 320px;
-  position: relative;
-  margin: 12px;
-  overflow: hidden;
+/* Loading Spinner Container */
+.loading-spinner-container {
   display: flex;
-  flex-direction: column;
-}
-
-.structured-product:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-}
-
-/* Folded corner effect */
-.structured-product::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 20px;
-  height: 20px;
-  background: linear-gradient(135deg, transparent 50%, #f0f0f0 50%);
-  border-radius: 0 0 8px 0;
-}
-
-/* Product image container */
-.structured-image-container {
-  width: 100%;
-  height: 160px;
-  background-color: #f7f9fc;
-  overflow: hidden;
-  border-radius: 8px 8px 0 0;
-  display: flex;
-  align-items: center;
   justify-content: center;
+  padding: 1.5rem;
 }
 
-.structured-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.structured-image:hover {
-  transform: scale(1.05);
-}
-
-/* Product info container */
-.structured-info {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.structured-info h3 {
-  margin: 0 0 8px 0;
-  font-size: 1rem;
-  color: #333;
-  font-weight: 600;
-  line-height: 1.3;
-  /* Ensure title doesn't overflow */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  height: 2.6rem;
-}
-
-.structured-price {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: #0f2044;
-  margin: 0 0 8px 0;
-}
-
-/* Metadata section with status and condition */
-.product-metadata {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.metadata-tag {
-  font-size: 0.75rem;
-  padding: 3px 8px;
-  border-radius: 4px;
-  background-color: #f2f4f8;
-  color: #606060;
-  display: inline-flex;
-  align-items: center;
-}
-
-/* Bundle tag for structured cards */
-.structured-bundle-tag {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background-color: rgba(15, 32, 68, 0.9);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  z-index: 2;
-}
-
-/* Favorite button positioning for structured cards */
-.structured-product .favorite-icon-container {
-  top: 10px;
-  right: 10px;
-  background-color: white;
-}
-
-/* Bottom action bar in the structured-product card */
-.product-actions {
-  margin-top: auto;
+/* Pagination Container with Product Range Info */
+.pagination-with-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  padding: 0 1rem;
+  transition: opacity 0.3s ease;
 }
 
-.product-actions button {
-  background: none;
-  border: none;
-  color: #555;
-  font-size: 0.75rem;
-  cursor: pointer;
-  padding: 4px 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+/* Product Range Info Text */
+.product-range-info {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
 }
 
-.product-actions button:hover {
-  color: #0f2044;
-}
-
-/* Add sticky note shadow effect */
-.product::after {
-  content: "";
-  position: absolute;
-  bottom: 3px;
-  right: 3px;
-  left: 3px;
-  height: 10px;
-  background: rgba(0, 0, 0, 0.08);
-  border-radius: 50%;
-  z-index: -1;
-  filter: blur(3px);
+.pagination-with-info:hover .product-range-info {
+  color: rgba(0, 0, 0, 0.8);
 }
