@@ -8,7 +8,11 @@ import { useAuth } from "../../../contexts/AuthContext";
 import "./account.css";
 import placeholderImage from "../../../assets/placeholder.js";
 import fallbackImage from "../../../assets/placeholder-fallback.js";
-import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
+import {
+  getFormattedImageUrl,
+  getProductImageUrl,
+  handleImageError,
+} from "../ChatSearch/utils/imageUtils";
 
 // Material-UI imports
 import {
@@ -1061,45 +1065,26 @@ const Account = () => {
                                         product.image
                                       )}
                                       <img
-                                        src={getProductImageUrl(product)}
+                                        src={
+                                          getProductImageUrl(product) ||
+                                          "/placeholder.png"
+                                        }
                                         alt={product.name}
                                         style={{
-                                          maxWidth: "100%",
-                                          maxHeight: "100%",
-                                          objectFit: "contain",
+                                          width: "100%",
+                                          height: "100%",
+                                          objectFit: "cover",
+                                          borderRadius: "8px",
                                         }}
-                                        onLoad={() =>
-                                          console.log(
-                                            `Image for ${product.name} loaded successfully`
+                                        onError={(e) =>
+                                          handleImageError(
+                                            e,
+                                            "/placeholder.png"
                                           )
                                         }
-                                        onError={(e) => {
-                                          console.error(
-                                            `Error loading image for ${product.name}:`,
-                                            product.image
-                                          );
-                                          if (
-                                            e.target instanceof HTMLImageElement
-                                          ) {
-                                            e.target.onerror = null;
-                                            // Try placeholder image first
-                                            if (
-                                              e.target.src !== placeholderImage
-                                            ) {
-                                              console.log(
-                                                `Falling back to placeholder for ${product.name}`
-                                              );
-                                              e.target.src = placeholderImage;
-                                            }
-                                            // If placeholder also fails, use fallback
-                                            else {
-                                              console.log(
-                                                `Falling back to fallback image for ${product.name}`
-                                              );
-                                              e.target.src = fallbackImage;
-                                            }
-                                          }
-                                        }}
+                                        data-original-src={getProductImageUrl(
+                                          product
+                                        )}
                                       />
                                     </Box>
                                     <Box sx={{ flexGrow: 1 }}>
@@ -1296,45 +1281,23 @@ const Account = () => {
                                       product.image
                                     )}
                                     <img
-                                      src={getProductImageUrl(product)}
+                                      src={
+                                        getProductImageUrl(product) ||
+                                        "/placeholder.png"
+                                      }
                                       alt={product.name}
                                       style={{
-                                        maxWidth: "100%",
-                                        maxHeight: "100%",
-                                        objectFit: "contain",
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit: "cover",
+                                        borderRadius: "8px",
                                       }}
-                                      onLoad={() =>
-                                        console.log(
-                                          `Product card image for ${product.name} loaded successfully`
-                                        )
+                                      onError={(e) =>
+                                        handleImageError(e, "/placeholder.png")
                                       }
-                                      onError={(e) => {
-                                        console.error(
-                                          `Error loading image for ${product.name}:`,
-                                          product.image
-                                        );
-                                        if (
-                                          e.target instanceof HTMLImageElement
-                                        ) {
-                                          e.target.onerror = null;
-                                          // Try placeholder image first
-                                          if (
-                                            e.target.src !== placeholderImage
-                                          ) {
-                                            console.log(
-                                              `Falling back to placeholder for ${product.name}`
-                                            );
-                                            e.target.src = placeholderImage;
-                                          }
-                                          // If placeholder also fails, use fallback
-                                          else {
-                                            console.log(
-                                              `Falling back to fallback image for ${product.name}`
-                                            );
-                                            e.target.src = fallbackImage;
-                                          }
-                                        }
-                                      }}
+                                      data-original-src={getProductImageUrl(
+                                        product
+                                      )}
                                     />
                                   </Box>
 
@@ -1701,41 +1664,21 @@ const Account = () => {
                             }}
                           >
                             <img
-                              src={getProductImageUrl(product)}
+                              src={
+                                getProductImageUrl(product) ||
+                                "/placeholder.png"
+                              }
                               alt={product.name}
                               style={{
-                                maxWidth: "100%",
-                                maxHeight: "100%",
-                                objectFit: "contain",
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                borderRadius: "8px",
                               }}
-                              onLoad={() =>
-                                console.log(
-                                  `Image for ${product.name} loaded successfully`
-                                )
+                              onError={(e) =>
+                                handleImageError(e, "/placeholder.png")
                               }
-                              onError={(e) => {
-                                console.error(
-                                  `Error loading image for ${product.name}:`,
-                                  product.image
-                                );
-                                if (e.target instanceof HTMLImageElement) {
-                                  e.target.onerror = null;
-                                  // Try placeholder image first
-                                  if (e.target.src !== placeholderImage) {
-                                    console.log(
-                                      `Falling back to placeholder for ${product.name}`
-                                    );
-                                    e.target.src = placeholderImage;
-                                  }
-                                  // If placeholder also fails, use fallback
-                                  else {
-                                    console.log(
-                                      `Falling back to fallback image for ${product.name}`
-                                    );
-                                    e.target.src = fallbackImage;
-                                  }
-                                }
-                              }}
+                              data-original-src={getProductImageUrl(product)}
                             />
                           </Box>
 

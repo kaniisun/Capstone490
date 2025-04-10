@@ -21,6 +21,26 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { isFavorite, toggleFavorite } from "../../../utils/favoriteUtils";
 import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
 
+/**
+ * Gets the best available image URL for a product
+ * @param {Object} product - The product object
+ * @returns {string|null} The best available image URL
+ */
+const getProductImageUrl = (product) => {
+  // Check for the new explicit imageUrl field first
+  if (product.imageUrl) {
+    return product.imageUrl;
+  }
+
+  // Fall back to the legacy image field
+  if (product.image) {
+    return product.image;
+  }
+
+  // Return null if no image is available
+  return null;
+};
+
 function Products() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -249,8 +269,7 @@ function Products() {
                         >
                           <img
                             src={
-                              getFormattedImageUrl(product.image) ||
-                              placeholderImage
+                              getProductImageUrl(product) || placeholderImage
                             }
                             alt={product.name}
                             className="product-image"
