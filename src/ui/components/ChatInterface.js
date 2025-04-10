@@ -1,9 +1,21 @@
+import React, { useCallback } from "react";
+import toast from "react-hot-toast";
+import {
+  markMessageSent,
+  shouldPreventMessage,
+} from "./messageArea/messageHelper";
+
+// Declare the global property for the linter
+// @ts-ignore
+window.__recentSellerClicks = window.__recentSellerClicks || {};
+
 // Prevent duplicate clicking on Contact Seller
 const handleContactSeller = useCallback((product) => {
   // Create a key to identify this specific product contact event
   const contactKey = `contact_${product.userID}_${product.id}`;
 
   // Check if we've already clicked this button in the last few seconds
+  // @ts-ignore
   if (window.__recentSellerClicks && window.__recentSellerClicks[contactKey]) {
     console.log("Preventing duplicate Contact Seller click for:", product.name);
     return;
@@ -28,12 +40,16 @@ const handleContactSeller = useCallback((product) => {
   }
 
   // Mark this conversation as initiated to prevent duplicates
+  // @ts-ignore
   if (!window.__recentSellerClicks) window.__recentSellerClicks = {};
+  // @ts-ignore
   window.__recentSellerClicks[contactKey] = true;
 
   // Clear the click tracking after a reasonable timeout
   setTimeout(() => {
+    // @ts-ignore
     if (window.__recentSellerClicks) {
+      // @ts-ignore
       delete window.__recentSellerClicks[contactKey];
     }
   }, 5000); // 5 seconds debounce
@@ -69,3 +85,5 @@ const handleContactSeller = useCallback((product) => {
   window.history.pushState({}, "", url);
   window.dispatchEvent(new PopStateEvent("popstate"));
 }, []);
+
+export { handleContactSeller };
