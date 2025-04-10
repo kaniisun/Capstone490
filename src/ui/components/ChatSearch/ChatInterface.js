@@ -1,6 +1,6 @@
 // Add these imports at the top
 import React from "react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "../../../supabaseClient.js";
 import {
   Box,
@@ -39,6 +39,21 @@ import Markdown from "markdown-to-jsx";
 import ProductCard from "./components/ProductCard";
 import API_CONFIG from "../../../config/api.js";
 import { markMessageSent } from "../messageArea/messageHelper";
+import ImageUploadUI from "./components/ImageUploadUI";
+import ListingEditor from "./components/ListingEditor";
+import {
+  validateImage,
+  optimizeImage,
+  fileToBase64,
+} from "../../../services/imageProcessingService";
+import {
+  uploadFile,
+  generateProductImagePath,
+} from "../../../services/storageService";
+import apiService from "../../../services/apiService";
+import { createProduct } from "../../../services/productService";
+import { v4 as uuidv4 } from "uuid";
+import LoadingOverlay from "./components/LoadingOverlay";
 
 const API_URL = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.CHAT);
 
@@ -102,6 +117,135 @@ const keyframes = `
   }
 `;
 
+// Add this flag near the top of your component (inside the ChatInterface function)
+// to enable detailed state logging for debugging
+const DEBUG = false;
+
+// Add these utility functions to your component
+/**
+ * Creates a debug log message if debug mode is enabled
+ * @param {string} message - Debug message
+ * @param {any} data - Optional data to log
+ */
+const debugLog = (message, data) => {
+  if (!DEBUG) return;
+  if (data) {
+    console.log(`[ImageUpload] ${message}`, data);
+  } else {
+    console.log(`[ImageUpload] ${message}`);
+  }
+};
+
+/**
+ * Resets a file input element to allow the same file to be selected again
+ * @param {React.RefObject<HTMLInputElement>} inputRef - Reference to file input element
+ */
+const resetFileInput = (inputRef) => {
+  if (inputRef && inputRef.current) {
+    inputRef.current.value = "";
+    debugLog("File input reset");
+  }
+};
+
+/**
+ * Generates a unique filename for Supabase storage
+ * @param {File} file - Original file object
+ * @returns {string} Unique filename
+ */
+const generateUniqueFilename = (file) => {
+  const timestamp = Date.now();
+  const uniqueId = uuidv4().split("-")[0]; // Use first part of UUID for brevity
+  const fileExt = file.name.split(".").pop().toLowerCase();
+
+  // Clean the filename to ensure it's safe for storage
+  const safeName = file.name
+    .split(".")[0]
+    .replace(/[^a-z0-9]/gi, "_")
+    .toLowerCase()
+    .substring(0, 20);
+
+  // Create the full path with uploads directory
+  const path = `uploads/${timestamp}-${safeName}-${uniqueId}.${fileExt}`;
+
+  // Log the path generation for debugging
+  console.log("Generated unique filename:", {
+    originalName: file.name,
+    timestamp: timestamp,
+    uniqueId: uniqueId,
+    extension: fileExt,
+    finalPath: path,
+    fileSize: Math.round(file.size / 1024) + "KB",
+    fileType: file.type,
+  });
+
+  return path;
+};
+
+// Add this component at an appropriate place in your file for error messaging
+const ErrorMessage = ({ error, onRetry, onClose }) => {
+  // Determine error type and message
+  const isConnectionError =
+    error &&
+    (error.message.includes("connect to the server") ||
+      error.message.includes("internet connection") ||
+      error.message.includes("timed out") ||
+      error.message.includes("ERR_CONNECTION_REFUSED") ||
+      error.message === "Failed to fetch");
+
+  const message = isConnectionError
+    ? "Something went wrong with the server. Please try again later or check your internet connection."
+    : error?.message || "An unexpected error occurred";
+
+  return (
+    <Box
+      sx={{
+        padding: 2,
+        backgroundColor: "#FEE2E2", // Light red background
+        borderRadius: 1,
+        mb: 2,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
+    >
+      <Typography
+        variant="body1"
+        color="error"
+        sx={{ fontWeight: "medium", mb: 1, textAlign: "center" }}
+      >
+        {message}
+      </Typography>
+
+      <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
+        {onRetry && (
+          <Button
+            size="small"
+            variant="outlined"
+            color="error"
+            onClick={onRetry}
+          >
+            Try Again
+          </Button>
+        )}
+
+        {onClose && (
+          <Button size="small" variant="text" color="inherit" onClick={onClose}>
+            Dismiss
+          </Button>
+        )}
+      </Box>
+    </Box>
+  );
+};
+
+// Add a declaration for the enhanced error interface
+/**
+ * @typedef {Object} EnhancedError
+ * @property {string} message - User-friendly error message
+ * @property {Error} originalError - Original error that was caught
+ * @property {string} stack - Error stack trace
+ */
+
 export default function ChatInterface() {
   const theme = useTheme();
   const [messages, setMessages] = useState([
@@ -123,12 +267,22 @@ export default function ChatInterface() {
   const [generatedListing, setGeneratedListing] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // Add these new state variables for loading and processing
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStage, setProcessingStage] = useState("idle");
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingError, setProcessingError] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const pagePositionRef = useRef(0);
   const scrollLockTimeoutRef = useRef(null);
   const scrollBlockerRef = useRef(null);
+
+  // Add a new file input ref at the component level (add this near other refs)
+  const fileInputRef = useRef(null);
 
   // Get the session
   useEffect(() => {
@@ -246,12 +400,27 @@ export default function ChatInterface() {
     }, 0);
   };
 
-  // Function to handle image upload and analysis
-  const handleImageUpload = (file) => {
-    if (!file) return;
+  // Add or replace the handleImageUpload function with this updated version
+  /**
+   * Handles the full image upload, processing, and modal display flow
+   * @param {File} file - The image file to process
+   */
+  const handleImageUpload = async (file) => {
+    // Guard clause - if no file, exit early
+    if (!file) {
+      debugLog("No file provided");
+      return;
+    }
+
+    debugLog("Image upload initiated", {
+      fileName: file.name,
+      size: Math.round(file.size / 1024) + "KB",
+      type: file.type,
+    });
 
     // Check if user is logged in
     if (!session || !session.user) {
+      debugLog("User not logged in - showing login prompt");
       setMessages((prev) => [
         ...prev,
         {
@@ -260,294 +429,313 @@ export default function ChatInterface() {
             "To create a listing, you need to be logged in. Please sign in or create an account to continue.",
         },
       ]);
+
+      // Reset file input
+      resetFileInput(fileInputRef);
       return;
     }
 
-    // Store the file for later use
-    setUploadedImage(file);
-
-    // Create a stable data URL from the file that will persist
-    let stableImageUrl = null;
     try {
-      // Create a FileReader to get a data URL that won't be revoked
+      // Reset states and start processing
+      setProcessingError(null);
+      setGeneratedListing(null);
+      setUploadedImage(null);
+      setIsProcessing(true);
+      setProcessingStage("optimizing");
+      setProcessingProgress(10);
+
+      // Create image preview
       const reader = new FileReader();
       reader.onload = (e) => {
-        // This data URL will be stable and won't be revoked when scope ends
-        stableImageUrl = e.target.result;
-        console.log("Created stable data URL for image");
-
-        // Continue with analysis after getting stable URL
-        continueWithAnalysis(file, stableImageUrl);
+        setImagePreview(e.target.result);
+        setProcessingProgress(20);
       };
-      reader.onerror = () => {
-        console.error("Error creating stable image URL");
-        continueWithAnalysis(file, null);
-      };
-
-      // Start reading the file as data URL
       reader.readAsDataURL(file);
-    } catch (e) {
-      console.error("Error in stable URL creation:", e);
-      // Continue anyway with the file
-      continueWithAnalysis(file, null);
+
+      // Upload to Supabase
+      setProcessingStage("uploading");
+      setProcessingProgress(30);
+      debugLog("Starting Supabase upload");
+      const imageUrl = await uploadImageToSupabase(file);
+
+      if (!imageUrl) {
+        throw new Error("Failed to get image URL after upload");
+      }
+
+      // Store file reference for later use
+      setUploadedImage(file);
+      setProcessingProgress(50);
+
+      // Now process the image with OpenAI Vision
+      setProcessingStage("processing");
+      debugLog("Starting OpenAI Vision processing", { imageUrl });
+      const productData = await processImageWithVision(imageUrl, file);
+
+      // Processing complete
+      setProcessingProgress(100);
+      setProcessingStage("done");
+      setIsProcessing(false);
+
+      // Store generated listing
+      debugLog("Setting generated listing data", productData);
+      setGeneratedListing(productData);
+
+      // Open modal to show results
+      debugLog("Opening listing modal");
+      setImageUploadOpen(true);
+    } catch (error) {
+      // Handle errors
+      debugLog("Error in image upload process", {
+        message: error.message,
+        stack: error.stack,
+      });
+
+      console.error("Image upload error:", error);
+
+      setProcessingStage("error");
+      setProcessingError(error.message);
+
+      // Allow user to retry from the error overlay
+      // We'll keep isProcessing true so the overlay remains visible
+    } finally {
+      // Always reset the file input so the same file can be selected again
+      resetFileInput(fileInputRef);
     }
   };
 
-  // Helper function to continue image analysis after URL creation attempt
-  const continueWithAnalysis = (file, stableImageUrl) => {
-    // Set a timeout to prevent infinite loading
-    const analysisTimeout = setTimeout(() => {
-      setIsAnalyzing(false);
-      setImageUploadOpen(false);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "The image analysis took too long. Please try again with a smaller image or check your internet connection.",
+  // Add a handler for retrying after an error
+  const handleRetryUpload = () => {
+    if (!uploadedImage) {
+      // If no previous image, close the overlay
+      setIsProcessing(false);
+      return;
+    }
+
+    // Retry with the same image
+    setProcessingError(null);
+    setProcessingStage("uploading");
+    setProcessingProgress(0);
+    handleImageUpload(uploadedImage);
+  };
+
+  // Add a handler for canceling the upload process
+  const handleCancelUpload = () => {
+    setIsProcessing(false);
+    setProcessingStage("idle");
+    setProcessingProgress(0);
+    setProcessingError(null);
+    setUploadedImage(null);
+    setImagePreview(null);
+    // Close any open dialogs
+    setImageUploadOpen(false);
+  };
+
+  /**
+   * Uploads an image to Supabase storage
+   * @param {File} file - The image file to upload
+   * @returns {Promise<string>} Public URL of the uploaded image
+   */
+  const uploadImageToSupabase = async (file) => {
+    try {
+      debugLog("Upload to Supabase started");
+
+      // Generate a unique filename to prevent collisions
+      const filePath = generateUniqueFilename(file);
+      debugLog("Generated unique filename", filePath);
+
+      // Upload to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: true,
+          contentType: file.type || "image/jpeg",
+        });
+
+      if (uploadError) {
+        debugLog("Supabase upload error", uploadError);
+        throw new Error(`Error uploading image: ${uploadError.message}`);
+      }
+
+      debugLog("Supabase upload successful");
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(filePath);
+
+      if (!urlData || !urlData.publicUrl) {
+        throw new Error("Failed to get public URL for uploaded image");
+      }
+
+      const publicUrl = urlData.publicUrl;
+      debugLog("Got public URL", publicUrl);
+
+      // Verify the URL is accessible
+      const checkResponse = await fetch(publicUrl, { method: "HEAD" });
+      if (!checkResponse.ok) {
+        debugLog("URL verification failed", checkResponse.status);
+        throw new Error(`Image URL not accessible: ${checkResponse.status}`);
+      }
+
+      debugLog("URL verification successful");
+      return publicUrl;
+    } catch (error) {
+      debugLog("Supabase upload failed", error);
+      throw new Error(`Failed to upload image: ${error.message}`);
+    }
+  };
+
+  /**
+   * Processes an image URL with OpenAI Vision API
+   * @param {string} imageUrl - Public URL of the image
+   * @param {File} originalFile - Original file for reference
+   * @returns {Promise<Object>} Product data from OpenAI
+   */
+  const processImageWithVision = async (imageUrl, originalFile) => {
+    try {
+      debugLog("OpenAI Vision processing started", { imageUrl });
+
+      // Get the correct API URL from our configuration
+      const apiUrl = API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.ANALYZE_IMAGE);
+      debugLog("Using API endpoint", apiUrl);
+
+      // Create a timeout promise to handle unresponsive servers
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(
+          () => reject(new Error("Request timed out after 30 seconds")),
+          30000
+        );
+      });
+
+      // Create the actual fetch request
+      const fetchPromise = fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: session?.access_token
+            ? `Bearer ${session.access_token}`
+            : undefined,
         },
-      ]);
-    }, 30000); // 30 second timeout
+        body: JSON.stringify({
+          image_url: imageUrl, // Send URL instead of base64 string
+        }),
+      });
 
-    // Immediately open the dialog with loading state
-    setIsAnalyzing(true);
-    setImageUploadOpen(true);
+      // Race the fetch against the timeout
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
 
-    // Optimize the image before uploading
-    const optimizeAndAnalyzeImage = () => {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          // Create an image object to get dimensions
-          const img = new Image();
-          img.onload = async () => {
-            try {
-              // Create a canvas for image optimization
-              const canvas = document.createElement("canvas");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({
+          message: `Server returned ${response.status} ${
+            response.statusText || "Unknown Error"
+          }`,
+        }));
+        throw new Error(errorData.message || `API Error: ${response.status}`);
+      }
 
-              // Determine optimal dimensions (max 1200px width/height while preserving aspect ratio)
-              let width = img.width;
-              let height = img.height;
-              const maxDimension = 1200;
+      debugLog("API response received");
+      const data = await response.json();
 
-              if (width > maxDimension || height > maxDimension) {
-                if (width > height) {
-                  height = Math.round((height * maxDimension) / width);
-                  width = maxDimension;
-                } else {
-                  width = Math.round((width * maxDimension) / height);
-                  height = maxDimension;
-                }
-              }
+      // Handle different API response formats
+      let productData;
 
-              // Set canvas dimensions
-              canvas.width = width;
-              canvas.height = height;
-
-              // Draw and optimize image
-              const ctx = canvas.getContext("2d");
-              ctx.fillStyle = "#FFFFFF";
-              ctx.fillRect(0, 0, width, height);
-              ctx.drawImage(img, 0, 0, width, height);
-
-              // Get optimized image data
-              const optimizedImageData = canvas.toDataURL("image/jpeg", 0.85);
-              const base64Image = optimizedImageData.split(",")[1];
-
-              console.log("Image optimized, size:", base64Image.length);
-
-              // Call the Vision API
-              const response = await fetch(
-                API_CONFIG.getUrl(API_CONFIG.ENDPOINTS.ANALYZE_IMAGE),
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Accept: "application/json",
-                    Authorization: session?.access_token
-                      ? `Bearer ${session.access_token}`
-                      : undefined,
-                  },
-                  body: JSON.stringify({
-                    image: base64Image,
-                  }),
-                }
-              );
-
-              if (!response.ok) {
-                const errorData = await response
-                  .json()
-                  .catch(() => ({ message: "Unknown error occurred" }));
-                throw new Error(
-                  errorData.message || `API Error: ${response.status}`
-                );
-              }
-
-              const data = await response.json();
-
-              // Modified validation to handle different API response formats
-              // Check if the response is an OpenAI response (containing role and content)
-              // or a wrapper containing a message property or a direct JSON object
-              let messageToProcess;
-
-              if (data && data.role && data.content) {
-                // The API returned an OpenAI response object directly
-                console.log("Direct OpenAI response format received");
-                messageToProcess = data;
-              } else if (
-                data &&
-                data.message &&
-                typeof data.message === "object"
-              ) {
-                // The API returned a wrapped message object
-                console.log("Wrapped message format received");
-                messageToProcess = data.message;
-              } else if (data && typeof data === "object") {
-                // Direct JSON object returned (likely product data)
-                console.log("Direct JSON product data received:", data);
-
-                // Debug the uploaded image
-                console.log("Uploaded image file:", uploadedImage);
-                console.log(
-                  "File type:",
-                  uploadedImage ? uploadedImage.type : "unknown"
-                );
-                console.log(
-                  "File size:",
-                  uploadedImage ? uploadedImage.size : "unknown"
-                );
-
-                // Use the stable URL created earlier or fallback to optimized data
-                let imageUrl = stableImageUrl || optimizedImageData;
-                console.log(
-                  "Using image URL for listing:",
-                  imageUrl ? "Valid URL exists" : "No valid URL"
-                );
-
-                // Convert to a message format
-                messageToProcess = {
-                  role: "assistant",
-                  content: `I've analyzed your image and created a product listing:\n\n**${
-                    data.name || "Product"
-                  }**\n\n${data.description || ""}\n\nPrice: $${
-                    data.price || "0"
-                  }\nCondition: ${
-                    data.condition || "Not specified"
-                  }\nCategory: ${data.category || "miscellaneous"}`,
-                };
-
-                // Store for dialog form with preprocessed image information
-                setGeneratedListing({
-                  ...data,
-                  imageFile: uploadedImage,
-                  // Use the stable image URL we created
-                  image: imageUrl,
-                });
-
-                // Update dialog state while keeping it open
-                setIsAnalyzing(false);
-                clearTimeout(analysisTimeout); // Clear the timeout since we're handling the result
-
-                // Add chat message
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    role: "assistant",
-                    content: `I've analyzed your image and created a product listing for **${
-                      data.name || "your item"
-                    }**. You can now review and edit the details before creating the listing.`,
-                  },
-                ]);
-
-                // Return early since we're showing the listing form
-                return;
-              } else {
-                // Invalid response format
-                console.error("Invalid API response format:", data);
-                throw new Error("Received invalid response from API");
-              }
-
-              // Process the response for products
-              const { message: processedMessage, products } =
-                processMessageForProducts(messageToProcess);
-
-              // Check if products were found in the response
-              const hasProducts = products && products.length > 0;
-
-              // For search queries with no products, suggest using category buttons
-              if (
-                messageToProcess.toLowerCase().includes("show me") &&
-                !hasProducts
-              ) {
-                processedMessage.content +=
-                  "\n\nTry browsing by category using the buttons below.";
-              }
-
-              // Add AI response to chat
-              setMessages((prev) => [...prev, processedMessage]);
-
-              // Focus the input without scrolling
-              if (inputRef.current) {
-                inputRef.current.focus({ preventScroll: true });
-              }
-
-              // Set products if any were found
-              if (hasProducts) {
-                setSelectedProduct(products[0]);
-              }
-            } catch (error) {
-              console.error("Error in image processing:", error);
-              setIsAnalyzing(false);
-              setImageUploadOpen(false);
-              setMessages((prev) => [
-                ...prev,
-                {
-                  role: "assistant",
-                  content: `Error analyzing image: ${error.message}. Please try again.`,
-                },
-              ]);
+      if (data && typeof data === "object") {
+        if (data.name && data.description && data.price !== undefined) {
+          // Direct product data format
+          debugLog("Response format: direct product data");
+          productData = data;
+        } else if (data.role && typeof data.content === "string") {
+          // OpenAI response object
+          debugLog("Response format: OpenAI direct format");
+          try {
+            // Try to extract JSON from the content
+            const jsonMatch = data.content.match(/{[\s\S]*}/);
+            if (jsonMatch) {
+              productData = JSON.parse(jsonMatch[0]);
+            } else {
+              throw new Error("Could not parse product data from response");
             }
-          };
-
-          // Ensure result is a string (it should be when using readAsDataURL)
-          if (typeof reader.result === "string") {
-            img.src = reader.result;
-          } else {
-            throw new Error("Failed to read image as data URL");
+          } catch (parseError) {
+            debugLog("Failed to parse response", parseError);
+            throw new Error("Invalid product data from API");
           }
-        } catch (error) {
-          console.error("Error in image analysis:", error);
-          setIsAnalyzing(false);
-          setImageUploadOpen(false);
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: `Error processing image: ${error.message}. Please try again.`,
-            },
-          ]);
+        } else if (
+          data.message &&
+          typeof data.message === "object" &&
+          data.message.content
+        ) {
+          // Wrapped message object
+          debugLog("Response format: wrapped message object");
+          try {
+            // Try to extract JSON from the content
+            const jsonMatch = data.message.content.match(/{[\s\S]*}/);
+            if (jsonMatch) {
+              productData = JSON.parse(jsonMatch[0]);
+            } else {
+              throw new Error("Could not parse product data from response");
+            }
+          } catch (parseError) {
+            debugLog("Failed to parse response", parseError);
+            throw new Error("Invalid product data from API");
+          }
+        } else {
+          debugLog("Unknown response format", data);
+          throw new Error("Invalid response format from API");
         }
-      };
+      } else {
+        debugLog("Invalid response format", data);
+        throw new Error("Invalid response format from API");
+      }
 
-      reader.onerror = () => {
-        console.error("FileReader error");
-        setIsAnalyzing(false);
-        setImageUploadOpen(false);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content:
-              "Error reading the image file. Please try a different image.",
-          },
-        ]);
-      };
+      // Ensure we have the minimum required fields
+      if (
+        !productData.name ||
+        !productData.description ||
+        productData.price === undefined
+      ) {
+        debugLog("Missing required fields in product data", productData);
+        throw new Error("Missing required product details in API response");
+      }
 
-      reader.readAsDataURL(file);
-    };
+      // Add image URL and original file to product data
+      debugLog("Adding image info to product data");
+      productData.image = imageUrl;
+      productData.imageFile = originalFile;
 
-    // Start the optimization and analysis process
-    optimizeAndAnalyzeImage();
+      return productData;
+    } catch (error) {
+      debugLog("OpenAI Vision processing failed", error);
+
+      // Create user-friendly error messages for common connection issues
+      let userMessage = "Failed to analyze image";
+
+      if (
+        error.message === "Failed to fetch" ||
+        error.message.includes("ERR_CONNECTION_REFUSED")
+      ) {
+        userMessage =
+          "Could not connect to the server. Please check your internet connection or try again later.";
+      } else if (error.message.includes("timed out")) {
+        userMessage =
+          "Server took too long to respond. Please try again later.";
+      } else if (error.message.includes("NetworkError")) {
+        userMessage = "Network error. Please check your internet connection.";
+      } else if (
+        error.message.includes("model_not_found") ||
+        error.message.includes("does not exist") ||
+        error.message.includes("The model") ||
+        error.message.includes("image processing model")
+      ) {
+        userMessage =
+          "The image processing model was recently updated. We're fixing it. Please try again later.";
+        console.error("OpenAI model error:", error.message);
+      }
+
+      // Just throw a new error with the user-friendly message
+      throw new Error(userMessage);
+    }
   };
 
   // Function to handle listing submission
@@ -555,114 +743,35 @@ export default function ChatInterface() {
     if (!generatedListing || !session?.user?.id) return;
 
     try {
+      debugLog("Starting listing submission");
       setIsLoading(true);
-      console.log("Starting listing creation for user:", session.user.id);
 
       // Store user ID in localStorage for consistent access
       localStorage.setItem("userId", session.user.id);
 
-      // First upload the image to Supabase storage
-      let imageUrl = "";
-      if (generatedListing.image) {
-        try {
-          // Ensure the file has a proper extension
-          let fileToUpload;
-          let originalName = "image.jpg";
+      // We already have the image URL from our upload, so no need to upload again
+      let imageUrl = generatedListing.image;
 
-          // Handle different image sources
-          if (
-            generatedListing.imageFile &&
-            (generatedListing.imageFile instanceof File ||
-              generatedListing.imageFile instanceof Blob)
-          ) {
-            // We have a valid File/Blob object
-            fileToUpload = generatedListing.imageFile;
-            originalName = generatedListing.imageFile.name || "image.jpg";
-            console.log("Using existing File/Blob object for upload");
-          } else if (typeof generatedListing.image === "string") {
-            // We have a string URL (either data URL or object URL)
-            try {
-              console.log("Converting image URL to blob for upload");
-              const response = await fetch(generatedListing.image);
-              if (!response.ok) throw new Error("Failed to fetch image data");
-
-              fileToUpload = await response.blob();
-
-              // Try to get a file extension from the content type
-              const contentType = response.headers.get("content-type");
-              if (contentType) {
-                const ext = contentType.split("/").pop();
-                if (ext) originalName = `image.${ext}`;
-              }
-            } catch (fetchError) {
-              console.error("Error fetching image from URL:", fetchError);
-              throw new Error(
-                "Could not process the image URL. Please try again with a different image."
-              );
-            }
-          } else {
-            throw new Error("No valid image source found");
-          }
-
-          if (!fileToUpload || fileToUpload.size === 0) {
-            throw new Error("Invalid or empty image file");
-          }
-
-          const fileExtension =
-            originalName.split(".").pop().toLowerCase() || "jpg";
-
-          // Create a clean filename with timestamp to prevent collisions
-          const timestamp = Date.now();
-          const cleanFileName = `uploads/${timestamp}-product.${fileExtension}`;
-
-          console.log(
-            "Preparing to upload image:",
-            cleanFileName,
-            "Size:",
-            fileToUpload.size
-          );
-
-          // Upload to Supabase storage with the correct path
-          const { data: uploadData, error: uploadError } =
-            await supabase.storage
-              .from("product-images")
-              .upload(cleanFileName, fileToUpload, {
-                cacheControl: "3600",
-                contentType: fileToUpload.type || "image/jpeg",
-                upsert: true,
-              });
-
-          if (uploadError) {
-            console.error("Storage upload error:", uploadError);
-            throw new Error(`Error uploading image: ${uploadError.message}`);
-          }
-
-          console.log("Image uploaded successfully, getting public URL");
-
-          // Get the public URL
-          const { data: urlData } = supabase.storage
-            .from("product-images")
-            .getPublicUrl(cleanFileName);
-
-          if (!urlData || !urlData.publicUrl) {
-            throw new Error("Failed to get public URL for uploaded image");
-          }
-
-          imageUrl = urlData.publicUrl;
-          console.log("Final image URL:", imageUrl);
-        } catch (error) {
-          console.error("Error in image upload process:", error);
-          // Don't rethrow - continue without image rather than failing completely
-          console.warn("Continuing without image due to upload error");
+      // But verify it's still valid
+      try {
+        debugLog("Verifying image URL", imageUrl);
+        const checkResponse = await fetch(imageUrl, { method: "HEAD" });
+        if (!checkResponse.ok) {
+          debugLog("Image URL verification failed", checkResponse.status);
+          throw new Error(`Image URL not accessible: ${checkResponse.status}`);
         }
+      } catch (urlError) {
+        debugLog("Image URL check failed", urlError);
+        throw new Error(`Failed to verify image URL: ${urlError.message}`);
       }
 
-      // Product data with user ID explicitly set
+      // Prepare the product data
+      debugLog("Preparing product data for database");
       const productData = {
         name: generatedListing.name,
         price: parseFloat(generatedListing.price),
         description: generatedListing.description,
-        image: imageUrl, // This will be empty string if image upload failed
+        image: imageUrl,
         condition: generatedListing.condition,
         category: generatedListing.category,
         status: "available",
@@ -672,31 +781,28 @@ export default function ChatInterface() {
         hide: false,
         moderation_status: "pending",
         is_deleted: false,
-        created_at: new Date().toISOString(),
-        modified_at: new Date().toISOString(),
       };
 
-      console.log("Creating product with data:", productData);
-      console.log("Image URL being saved to database:", imageUrl);
+      debugLog("Creating product in database", productData);
 
-      // Create the product in the database
+      // Insert into the database
       const { data: insertedData, error: productError } = await supabase
         .from("products")
         .insert([productData])
         .select();
 
       if (productError) {
-        console.error("Database error creating product:", productError);
+        debugLog("Database error creating product", productError);
         throw new Error(`Error creating product: ${productError.message}`);
       }
 
-      // Verify the saved product data
       if (!insertedData || insertedData.length === 0) {
+        debugLog("No data returned from database insert");
         throw new Error("Product was not created properly");
       }
 
       const savedProduct = insertedData[0];
-      console.log("Product created successfully:", savedProduct);
+      debugLog("Product created successfully", savedProduct);
 
       // Close dialog and reset state
       setImageUploadOpen(false);
@@ -711,8 +817,12 @@ export default function ChatInterface() {
           content: `Your listing for "${generatedListing.name}" has been created and is pending approval. You can view it in your <a href="/account" style="color: #1976d2; text-decoration: underline;">account page</a> once approved.`,
         },
       ]);
+
+      debugLog("Listing submission completed successfully");
     } catch (error) {
+      debugLog("Error creating listing", error);
       console.error("Error creating listing:", error);
+
       setMessages((prev) => [
         ...prev,
         {
@@ -722,6 +832,9 @@ export default function ChatInterface() {
       ]);
     } finally {
       setIsLoading(false);
+
+      // Ensure file input is reset
+      resetFileInput(fileInputRef);
     }
   };
 
@@ -740,19 +853,19 @@ export default function ChatInterface() {
       return;
     }
 
-    // Use a simple track in memory approach
-    const sentMessagesKey = "sentMessagesTracker";
-    if (!window[sentMessagesKey]) {
-      window[sentMessagesKey] = new Set();
-    }
-
     // Create a unique conversation key
     const conversationKey = `${userId}_${sellerId}_${
       product.productID || product.id
     }`;
 
+    // Use sessionStorage to track sent messages
+    const sentMessagesKey = "sentMessagesTracker";
+    const sentMessages = JSON.parse(
+      sessionStorage.getItem(sentMessagesKey) || "[]"
+    );
+
     // Check if we've already sent a message in this session
-    if (window[sentMessagesKey].has(conversationKey)) {
+    if (sentMessages.includes(conversationKey)) {
       console.log("Already initiated this conversation in current session");
       // Just navigate without sending another message
       window.location.href = `/messaging/${sellerId}?productId=${
@@ -763,13 +876,14 @@ export default function ChatInterface() {
 
     try {
       // Track that we've initiated this conversation
-      window[sentMessagesKey].add(conversationKey);
+      sentMessages.push(conversationKey);
+      sessionStorage.setItem(sentMessagesKey, JSON.stringify(sentMessages));
 
-      // Create initial message
-      let messageContent = `Hi, I'm interested in your ${product.name}. Is this still available?`;
+      // Create initial message with let instead of const
+      let initialMessage = `Hi, I'm interested in your ${product.name}. Is this still available?`;
 
       if (product.image) {
-        messageContent += `\n\n<div style="margin-top:10px; margin-bottom:10px; max-width:250px;">
+        initialMessage += `\n\n<div style="margin-top:10px; margin-bottom:10px; max-width:250px;">
           <img src="${product.image}" alt="${product.name}" style="max-width:100%; border-radius:8px; border:1px solid #eee;" />
         </div>\n\nLooking forward to your response!`;
       }
@@ -789,7 +903,7 @@ export default function ChatInterface() {
         {
           sender_id: userId,
           receiver_id: sellerId,
-          content: messageContent,
+          content: initialMessage,
           status: "active",
           created_at: new Date().toISOString(),
         },
@@ -837,29 +951,8 @@ export default function ChatInterface() {
     // 2. Store the current scroll position immediately
     const originalScrollPosition = window.scrollY;
 
-    // 3. Create the category search message with consistent casing
-    let normalizedCategory = category.toLowerCase();
-
-    // Map common category names to ensure consistency
-    const categoryMapping = {
-      electronics: "electronics",
-      furniture: "furniture",
-      textbooks: "textbooks",
-      books: "textbooks",
-      clothing: "clothing",
-      miscellaneous: "misc",
-      misc: "misc",
-    };
-
-    // Use the mapped category if available, otherwise use the original
-    normalizedCategory =
-      categoryMapping[normalizedCategory] || normalizedCategory;
-
-    // Create the message using the original category name from the chip for display
+    // 3. Create the category search message
     const message = `Show me ${category}`;
-    console.log(
-      `Searching for category: ${category} (normalized: ${normalizedCategory})`
-    );
 
     // 4. Use our enhanced scroll prevention approach
     forcePreventPageScroll(() => {
@@ -923,51 +1016,14 @@ export default function ChatInterface() {
     const currentInput = input.trim();
     if (!currentInput) return;
 
-    // Store the input to use for consistent messaging
-    const displayInput = currentInput;
-
-    // Check if this is a category search and normalize if needed
-    let searchInput = currentInput;
-    const showMeMatch = currentInput.match(/show me\s+(\w+)/i);
-    if (showMeMatch && showMeMatch[1]) {
-      const categoryToSearch = showMeMatch[1].toLowerCase();
-      // Map common category names to ensure consistency
-      const categoryMapping = {
-        electronics: "electronics",
-        furniture: "furniture",
-        textbooks: "textbooks",
-        books: "textbooks",
-        clothing: "clothing",
-        miscellaneous: "misc",
-        misc: "misc",
-      };
-
-      // Use the mapped category if available
-      const normalizedCategory =
-        categoryMapping[categoryToSearch] || categoryToSearch;
-      if (normalizedCategory !== categoryToSearch) {
-        console.log(
-          `Normalized category search: ${categoryToSearch} -> ${normalizedCategory}`
-        );
-        // Replace the category in the search input but keep the display input the same
-        searchInput = currentInput.replace(
-          new RegExp(categoryToSearch, "i"),
-          normalizedCategory
-        );
-      }
-    }
-
     // Add user message to chat without scroll manipulation
-    const userMessage = { role: "user", content: displayInput };
+    const userMessage = { role: "user", content: currentInput };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
     try {
-      // Send message to API with potentially normalized search terms
-      console.log("Sending API request with message:", searchInput);
-      console.log("API URL:", API_URL);
-
+      // Send message to API
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
@@ -979,39 +1035,58 @@ export default function ChatInterface() {
         },
         credentials: "include",
         body: JSON.stringify({
-          messages: [...messages, { role: "user", content: searchInput }],
+          messages: [...messages, userMessage],
           userId: session?.user?.id || "anonymous",
         }),
       });
 
       if (!response.ok) {
-        console.error(
-          "API response not OK:",
-          response.status,
-          response.statusText
-        );
         throw new Error("API request failed");
       }
 
       const data = await response.json();
-      console.log("API response data:", data);
 
-      // Handle different response formats
+      // Modified validation to handle different API response formats
+      // Check if the response is an OpenAI response (containing role and content)
+      // or a wrapper containing a message property
       let messageToProcess;
-      if (data && data.role && data.content) {
-        // Direct OpenAI format (most likely case)
-        console.log("Received direct OpenAI response format");
-        messageToProcess = data;
-      } else if (data && data.message && typeof data.message === "object") {
-        // Wrapped message format
-        console.log("Received wrapped message format");
-        messageToProcess = data.message;
+      if (data && typeof data === "object") {
+        if (data.role && typeof data.content === "string") {
+          // The API returned an OpenAI response object directly
+          console.log("Direct OpenAI response format received");
+          messageToProcess = data;
+        } else if (
+          data.message &&
+          typeof data.message === "object" &&
+          data.message.content
+        ) {
+          // The API returned a wrapped message object
+          console.log("Wrapped message format received");
+          messageToProcess = data.message;
+        } else if (data.message && typeof data.message === "string") {
+          // The API returned a string message
+          console.log("String message format received");
+          messageToProcess = {
+            role: "assistant",
+            content: data.message,
+          };
+        } else {
+          // Try to convert the data to a usable format
+          console.log("Attempting to convert API response to usable format");
+          const dataStr = JSON.stringify(data);
+          messageToProcess = {
+            role: "assistant",
+            content: `I'm sorry, but I couldn't process your request properly. Please try again.`,
+          };
+          console.error("API returned unexpected data format:", dataStr);
+        }
       } else {
-        console.error("Invalid API response:", data);
+        // Invalid response format
+        console.error("Invalid API response format:", data);
         throw new Error("Received invalid response from API");
       }
 
-      // Process the response for products
+      // Process the response for products - add null/undefined check
       const { message: processedMessage, products } =
         processMessageForProducts(messageToProcess);
 
@@ -1288,14 +1363,11 @@ export default function ChatInterface() {
       };
     }
 
-    console.log("Processing message for products:", message);
-
     // Check if the message contains the verified products marker
     if (
       message.content.includes("VERIFIED_PRODUCTS_START") &&
       message.content.includes("VERIFIED_PRODUCTS_END")
     ) {
-      console.log("Found VERIFIED_PRODUCTS markers in response");
       // Extract the verified products JSON
       // Found verified products marker in message
       const productsJson = message.content
@@ -1304,9 +1376,6 @@ export default function ChatInterface() {
 
       try {
         const products = JSON.parse(productsJson);
-        console.log(
-          `Successfully parsed ${products.length} products from VERIFIED_PRODUCTS`
-        );
 
         // Save products to localStorage for favorites functionality
         console.log("Saving search results to localStorage:", products);
@@ -1590,402 +1659,239 @@ export default function ChatInterface() {
   }, []);
 
   // Create product listing dialog component
-  const ListingDialog = () => (
-    <Dialog
-      open={imageUploadOpen}
-      onClose={() => !isAnalyzing && setImageUploadOpen(false)}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: "8px",
-          overflow: "hidden",
-          boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.15)",
-          "& .MuiDialogTitle-root": {
-            padding: "16px 24px",
-            borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
-          },
-          "& .MuiDialogContent-root": {
-            padding: "24px",
-          },
-          "& .MuiDialogActions-root": {
-            padding: "16px 24px",
-            borderTop: "1px solid rgba(0, 0, 0, 0.08)",
-          },
-          className: "fade-in-animation",
+  const ListingDialog = () => {
+    // Set up handlers that don't change on re-renders
+    const handleDialogClose = useCallback(() => {
+      debugLog("Dialog close requested");
+
+      // Don't allow closing during analysis
+      if (isAnalyzing) {
+        debugLog("Close prevented - analysis in progress");
+        return;
+      }
+
+      debugLog("Closing dialog");
+      setImageUploadOpen(false);
+
+      // Use a delay to ensure smooth transition
+      setTimeout(() => {
+        debugLog("Resetting state after dialog close");
+        setGeneratedListing(null);
+        setUploadedImage(null);
+        setIsAnalyzing(false);
+
+        // Ensure file input is reset
+        resetFileInput(fileInputRef);
+      }, 300);
+    }, [isAnalyzing]);
+
+    // Memoize other handlers
+    const handleImageAnalyzed = useCallback((productData) => {
+      debugLog("Image analysis completed", productData);
+
+      setIsAnalyzing(false);
+      setGeneratedListing(productData);
+    }, []);
+
+    const handleListingSubmitted = useCallback((savedProduct) => {
+      debugLog("Listing submitted successfully", savedProduct);
+
+      setImageUploadOpen(false);
+      setGeneratedListing(null);
+      setUploadedImage(null);
+
+      // Show success message in chat
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `✅ Your listing for "${savedProduct.name}" has been created and is now awaiting moderation. You can view it in your <a href="/account" style="color: #1976d2; text-decoration: underline;">account page</a> once approved.`,
         },
-      }}
-      BackdropProps={{
-        sx: {
-          backgroundColor: "rgba(0, 0, 0, 0.5)", // Darkens and narrows the backdrop shadow
-          backdropFilter: "blur(1px)",
+      ]);
+
+      // Ensure file input is reset
+      resetFileInput(fileInputRef);
+    }, []);
+
+    const handleAnalysisError = useCallback((error) => {
+      debugLog("Analysis error in dialog", error);
+
+      setIsAnalyzing(false);
+      setImageUploadOpen(false);
+
+      // Show error message in chat
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `Error analyzing image: ${error.message}. Please try again with a different image.`,
         },
-      }}
-      sx={{
-        "& .MuiBackdrop-root": {
-          opacity: "0.5 !important",
-        },
-      }}
-      transitionDuration={{
-        enter: 200,
-        exit: 150,
-      }}
-    >
-      <DialogTitle>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="h6">Create Listing from Image</Typography>
-          {!isAnalyzing && (
-            <IconButton
-              onClick={() => setImageUploadOpen(false)}
-              size="small"
-              aria-label="Close dialog"
-              sx={{
-                color: "rgba(0, 0, 0, 0.54)",
-                padding: "8px",
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                transition:
-                  "background-color 150ms cubic-bezier(0.4, 0, 0.2, 1)",
-                "&:hover": {
-                  backgroundColor: "rgba(0, 0, 0, 0.04)",
-                  color: "rgba(0, 0, 0, 0.87)",
-                  boxShadow: "none !important",
-                },
-                "& .MuiSvgIcon-root": {
-                  fontSize: "20px",
-                  transition: "color 150ms cubic-bezier(0.4, 0, 0.2, 1)",
-                },
-                boxShadow: "none !important", // Force override any shadow
-                outline: "none",
-                border: "none",
-                "&::after": {
-                  display: "none !important", // Prevent any pseudo-elements from appearing
-                },
-                ".MuiTouchRipple-root": {
-                  boxShadow: "none !important",
-                },
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          )}
-        </Box>
-      </DialogTitle>
-      <DialogContent
-        dividers
+      ]);
+
+      // Ensure file input is reset
+      resetFileInput(fileInputRef);
+    }, []);
+
+    const handleCancel = useCallback(() => {
+      debugLog("Dialog cancel requested");
+
+      setImageUploadOpen(false);
+      setGeneratedListing(null);
+      setUploadedImage(null);
+      setIsAnalyzing(false);
+
+      // Ensure file input is reset
+      resetFileInput(fileInputRef);
+    }, []);
+
+    // Log current dialog state for debugging
+    useEffect(() => {
+      debugLog("Dialog state", {
+        open: imageUploadOpen,
+        isAnalyzing,
+        hasGeneratedListing: !!generatedListing,
+      });
+    }, [imageUploadOpen, isAnalyzing, generatedListing]);
+
+    return (
+      <Dialog
+        open={imageUploadOpen}
+        onClose={handleDialogClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: "8px",
+            overflow: "hidden",
+            boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.15)",
+            "& .MuiDialogTitle-root": {
+              padding: "16px 24px",
+              borderBottom: "1px solid rgba(0, 0, 0, 0.08)",
+            },
+            "& .MuiDialogContent-root": {
+              padding: "24px",
+            },
+            "& .MuiDialogActions-root": {
+              padding: "16px 24px",
+              borderTop: "1px solid rgba(0, 0, 0, 0.08)",
+            },
+            className: "fade-in-animation",
+          },
+        }}
+        BackdropProps={{
+          sx: {
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backdropFilter: "blur(1px)",
+          },
+        }}
         sx={{
-          padding: 0,
-          minHeight: "400px",
-          position: "relative",
+          "& .MuiBackdrop-root": {
+            opacity: "0.5 !important",
+          },
+        }}
+        transitionDuration={{
+          enter: 200,
+          exit: 150,
         }}
       >
-        {isAnalyzing ? (
+        <DialogTitle>
           <Box
-            className="loading-container"
             sx={{
               display: "flex",
-              flexDirection: "column",
+              justifyContent: "space-between",
               alignItems: "center",
-              justifyContent: "center",
-              py: 4,
-              px: 2,
-              height: "100%",
-              width: "100%",
-              position: "absolute",
-              top: 0,
-              left: 0,
-              zIndex: 10,
-              backgroundColor: "#fff",
             }}
           >
-            <Typography variant="h6" sx={{ mb: 1, textAlign: "center" }}>
-              Analyzing your image with AI...
+            <Typography variant="h6">
+              {generatedListing
+                ? "Edit Product Listing"
+                : "Create Listing from Image"}
             </Typography>
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={{ mb: 2, textAlign: "center" }}
-            >
-              We're identifying the item and generating product details
-            </Typography>
-
-            {/* Progress bar with animation */}
-            <Box
-              sx={{
-                width: "100%",
-                maxWidth: "400px",
-                mb: 2,
-              }}
-            >
-              <Box
+            {!isAnalyzing && (
+              <IconButton
+                onClick={handleDialogClose}
+                size="small"
+                aria-label="Close dialog"
                 sx={{
-                  width: "100%",
-                  height: "4px",
-                  backgroundColor: "#e0e0e0",
-                  borderRadius: "2px",
-                  position: "relative",
-                  overflow: "hidden",
+                  color: "rgba(0, 0, 0, 0.54)",
+                  padding: "8px",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  transition:
+                    "background-color 150ms cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
+                    backgroundColor: "rgba(0, 0, 0, 0.04)",
+                    color: "rgba(0, 0, 0, 0.87)",
+                    boxShadow: "none !important",
+                  },
+                  "& .MuiSvgIcon-root": {
+                    fontSize: "20px",
+                    transition: "color 150ms cubic-bezier(0.4, 0, 0.2, 1)",
+                  },
+                  boxShadow: "none !important",
+                  outline: "none",
+                  border: "none",
+                  "&::after": {
+                    display: "none !important",
+                  },
+                  ".MuiTouchRipple-root": {
+                    boxShadow: "none !important",
+                  },
                 }}
               >
-                <Box
-                  className="progress-bar-animation"
-                  sx={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    bottom: 0,
-                    width: "30%",
-                    backgroundColor: theme.palette.primary.main,
-                  }}
-                />
-              </Box>
-            </Box>
-
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ textAlign: "center" }}
-            >
-              This usually takes 5-10 seconds
-            </Typography>
-
-            {/* Show image preview if available */}
-            {uploadedImage && (
-              <Box
-                className="pulse-animation"
-                sx={{
-                  mt: 3,
-                  p: 2,
-                  border: "1px solid #e0e0e0",
-                  borderRadius: "8px",
-                  width: "100%",
-                  maxWidth: "300px",
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ display: "block", mb: 1, textAlign: "center" }}
-                >
-                  Processing your image:
-                </Typography>
-                <img
-                  src={URL.createObjectURL(uploadedImage)}
-                  alt="Uploaded"
-                  style={{
-                    width: "100%",
-                    height: "auto",
-                    borderRadius: "4px",
-                    objectFit: "contain",
-                    maxHeight: "200px",
-                  }}
-                />
-              </Box>
+                <CloseIcon />
+              </IconButton>
             )}
           </Box>
-        ) : (
-          generatedListing && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={5}>
-                <Box
-                  sx={{
-                    width: "100%",
-                    mb: { xs: 2, md: 0 },
-                  }}
-                  className="fade-in-animation"
-                >
-                  <img
-                    src={generatedListing.image}
-                    alt="Product preview"
-                    style={{
-                      width: "100%",
-                      maxHeight: "300px",
-                      objectFit: "contain",
-                      borderRadius: "8px",
-                      border: "1px solid #e0e0e0",
-                    }}
-                  />
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 1 }}
-                  >
-                    Image will be uploaded with your listing
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={7}>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  <TextField
-                    label="Product Name"
-                    fullWidth
-                    value={generatedListing.name}
-                    onChange={(e) =>
-                      setGeneratedListing((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                    required
-                    sx={{
-                      animation: "slideIn 0.4s ease-out",
-                      "@keyframes slideIn": {
-                        "0%": {
-                          opacity: 0,
-                          transform: "translateX(20px)",
-                        },
-                        "100%": {
-                          opacity: 1,
-                          transform: "translateX(0)",
-                        },
-                      },
-                    }}
-                    className="slide-in-animation"
-                  />
-                  <TextField
-                    label="Description"
-                    fullWidth
-                    multiline
-                    rows={4}
-                    value={generatedListing.description}
-                    onChange={(e) =>
-                      setGeneratedListing((prev) => ({
-                        ...prev,
-                        description: e.target.value,
-                      }))
-                    }
-                    required
-                    sx={{
-                      animation: "slideIn 0.5s ease-out",
-                    }}
-                    className="slide-in-animation"
-                  />
-                  <TextField
-                    label="Price"
-                    fullWidth
-                    type="number"
-                    value={generatedListing.price}
-                    onChange={(e) =>
-                      setGeneratedListing((prev) => ({
-                        ...prev,
-                        price: e.target.value,
-                      }))
-                    }
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">$</InputAdornment>
-                      ),
-                    }}
-                    required
-                    sx={{
-                      animation: "slideIn 0.6s ease-out",
-                    }}
-                    className="slide-in-animation"
-                  />
-                  <TextField
-                    select
-                    label="Condition"
-                    fullWidth
-                    value={generatedListing.condition}
-                    onChange={(e) =>
-                      setGeneratedListing((prev) => ({
-                        ...prev,
-                        condition: e.target.value,
-                      }))
-                    }
-                    required
-                    sx={{
-                      animation: "slideIn 0.7s ease-out",
-                    }}
-                    className="slide-in-animation"
-                  >
-                    <MenuItem value="new">New</MenuItem>
-                    <MenuItem value="like_new">Like New</MenuItem>
-                    <MenuItem value="good">Good</MenuItem>
-                    <MenuItem value="fair">Fair</MenuItem>
-                    <MenuItem value="poor">Poor</MenuItem>
-                  </TextField>
-                  <TextField
-                    select
-                    label="Category"
-                    fullWidth
-                    value={generatedListing.category}
-                    onChange={(e) =>
-                      setGeneratedListing((prev) => ({
-                        ...prev,
-                        category: e.target.value,
-                      }))
-                    }
-                    required
-                    sx={{
-                      animation: "slideIn 0.8s ease-out",
-                    }}
-                    className="slide-in-animation"
-                  >
-                    <MenuItem value="electronics">Electronics</MenuItem>
-                    <MenuItem value="furniture">Furniture</MenuItem>
-                    <MenuItem value="textbooks">Textbooks</MenuItem>
-                    <MenuItem value="clothing">Clothing</MenuItem>
-                    <MenuItem value="miscellaneous">Miscellaneous</MenuItem>
-                  </TextField>
-                </Box>
-              </Grid>
-            </Grid>
-          )
-        )}
-      </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2 }}>
-        {!isAnalyzing && (
-          <>
-            <Button
-              onClick={() => setImageUploadOpen(false)}
-              color="inherit"
-              sx={{
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  backgroundColor: "rgba(0, 0, 0, 0.04)",
-                },
-              }}
-              className="fade-in-animation"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleListingSubmit}
-              variant="contained"
-              color="primary"
-              disabled={isLoading}
-              startIcon={
-                isLoading && <CircularProgress size={20} color="inherit" />
-              }
-              sx={{
-                boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  boxShadow: "0 6px 12px rgba(0, 0, 0, 0.15)",
-                  transform: "translateY(-2px)",
-                },
-                "&:active": {
-                  boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                  transform: "translateY(1px)",
-                },
-              }}
-              className="fade-in-animation"
-            >
-              {isLoading ? "Creating..." : "Create Listing"}
-            </Button>
-          </>
-        )}
-      </DialogActions>
-    </Dialog>
-  );
+        </DialogTitle>
+        <DialogContent
+          dividers
+          sx={{
+            padding: 0,
+            minHeight: "400px",
+            position: "relative",
+          }}
+        >
+          {isAnalyzing ? (
+            // Processing state - show the upload UI with loading state
+            <ImageUploadUI
+              onImageAnalyzed={handleImageAnalyzed}
+              onError={handleAnalysisError}
+              onCancel={handleCancel}
+              session={session}
+              initialImage={uploadedImage}
+            />
+          ) : generatedListing ? (
+            // Generated listing state - show the editor
+            <ListingEditor
+              productData={generatedListing}
+              session={session}
+              onSubmit={handleListingSubmitted}
+              onCancel={handleCancel}
+              onError={handleAnalysisError}
+            />
+          ) : (
+            // Initial state - show the upload UI
+            <ImageUploadUI
+              onImageAnalyzed={handleImageAnalyzed}
+              onError={handleAnalysisError}
+              onCancel={handleCancel}
+              session={session}
+              initialImage={uploadedImage}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  // Add effect to log generatedListing for debugging
+  useEffect(() => {
+    if (generatedListing && generatedListing.image) {
+      console.log("Generated listing image URL:", generatedListing.image);
+    }
+  }, [generatedListing]);
 
   // Final return statement with restored original layout but keeping simplified handlers
   return (
@@ -2390,12 +2296,35 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={(e) => handleCategoryClick("electronics", e)}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "electronics";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
                   bgcolor: theme.palette.primary.light,
-                  color: "white",
+                  color: "#ffb71b",
+                  borderColor: "#ffb71b",
                 },
               }}
             />
@@ -2404,12 +2333,35 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={(e) => handleCategoryClick("furniture", e)}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "furniture";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
                   bgcolor: theme.palette.primary.light,
-                  color: "white",
+                  color: "#ffb71b",
+                  borderColor: "#ffb71b",
                 },
               }}
             />
@@ -2418,12 +2370,35 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={(e) => handleCategoryClick("textbooks", e)}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "textbooks";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
                   bgcolor: theme.palette.primary.light,
-                  color: "white",
+                  color: "#ffb71b",
+                  borderColor: "#ffb71b",
                 },
               }}
             />
@@ -2432,12 +2407,35 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={(e) => handleCategoryClick("clothing", e)}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "clothing";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
                   bgcolor: theme.palette.primary.light,
-                  color: "white",
+                  color: "#ffb71b",
+                  borderColor: "#ffb71b",
                 },
               }}
             />
@@ -2446,12 +2444,35 @@ export default function ChatInterface() {
               size="small"
               variant="outlined"
               color="primary"
-              onClick={(e) => handleCategoryClick("miscellaneous", e)}
+              onClick={(e) => {
+                // Prevent default behavior
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+
+                // Just set the input value, don't submit
+                const category = "miscellaneous";
+                const message = `Show me ${category}`;
+                setInput(message);
+
+                // Update DOM input directly
+                if (inputRef.current) {
+                  inputRef.current.value = message;
+                  // Focus without scrolling
+                  inputRef.current.focus({ preventScroll: true });
+                }
+
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+              }}
               sx={{
                 borderRadius: 2,
                 "&:hover": {
                   bgcolor: theme.palette.primary.light,
-                  color: "white",
+                  color: "#ffb71b",
+                  borderColor: "#ffb71b",
                 },
               }}
             />
@@ -2464,6 +2485,7 @@ export default function ChatInterface() {
               alignItems: "center",
               width: "100%",
               gap: 1,
+              position: "relative", // Add this to ensure proper overlay positioning
             }}
           >
             {/* Text input field */}
@@ -2500,6 +2522,10 @@ export default function ChatInterface() {
               />
             </Box>
 
+
+            {/* Image upload button */}
+            <Tooltip title="Upload product image to create a listing with AI">
+
             {/* Action buttons container */}
             <Box
               sx={{
@@ -2525,6 +2551,7 @@ export default function ChatInterface() {
                     padding: 0,
                     flexShrink: 0,
                     marginTop: "20px",
+                    mb: 2,
                   }}
                   aria-label="Upload image for listing"
                 >
@@ -2543,36 +2570,85 @@ export default function ChatInterface() {
               </Tooltip>
 
               {/* Send button */}
+
               <IconButton
                 color="primary"
-                type="submit"
-                disabled={isLoading || !input.trim()}
+                component="label"
+                disabled={isLoading || isProcessing}
                 sx={{
-                  backgroundColor: theme.palette.primary.main,
-                  color: "white",
+                  backgroundColor: theme.palette.grey[200],
                   "&:hover": {
-                    backgroundColor: theme.palette.primary.dark,
-                  },
-                  "&.Mui-disabled": {
-                    backgroundColor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
+                    backgroundColor: theme.palette.grey[300],
                   },
                   width: 48,
                   height: 48,
                   padding: 0,
                   flexShrink: 0,
+
+                  marginTop: "20px",
+
                 }}
+                aria-label="Upload image for listing"
               >
-                {isLoading ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  <SendIcon />
-                )}
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      // Call handleImageUpload with the file
+                      handleImageUpload(e.target.files[0]);
+                      // Reset input value immediately to ensure onChange fires even with same file
+                      e.target.value = "";
+                    }
+                  }}
+                />
+                <AddPhotoAlternateIcon />
               </IconButton>
-            </Box>
+            </Tooltip>
+
+            {/* Send button */}
+            <IconButton
+              color="primary"
+              type="submit"
+              disabled={isLoading || !input.trim() || isProcessing}
+              sx={{
+                backgroundColor: theme.palette.primary.main,
+                color: "white",
+                "&:hover": {
+                  backgroundColor: theme.palette.primary.dark,
+                },
+                "&.Mui-disabled": {
+                  backgroundColor: theme.palette.action.disabledBackground,
+                  color: theme.palette.action.disabled,
+                },
+                width: 48,
+                height: 48,
+                padding: 0,
+                flexShrink: 0,
+              }}
+            >
+              {isLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                <SendIcon />
+              )}
+            </IconButton>
           </Box>
         </Box>
       </Paper>
+
+      {/* Add the processing overlay */}
+      <LoadingOverlay
+        isVisible={isProcessing}
+        stage={processingStage}
+        progress={processingProgress}
+        imagePreview={imagePreview}
+        error={processingError}
+        onRetry={handleRetryUpload}
+        onCancel={handleCancelUpload}
+      />
 
       <ListingDialog />
     </Container>

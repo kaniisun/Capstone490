@@ -127,15 +127,29 @@ const UploadProduct = () => {
 
       if (product.imageFile) {
         const fileExt = product.imageFile.name.split(".").pop();
-        const fileName = `${userId}_${Date.now()}.${fileExt}`;
-        // Use the 'uploads' folder since that's where your images appear to be saving
+
+        // Generate a safe and unique filename with timestamp
+        const timestamp = Date.now();
+        const safeFilename = product.imageFile.name
+          .split(".")[0]
+          .replace(/[^a-z0-9]/gi, "_")
+          .toLowerCase()
+          .substring(0, 20);
+        const fileName = `${timestamp}-${safeFilename}-${userId.substring(
+          0,
+          8
+        )}.${fileExt}`;
+
+        // Use the 'uploads' folder for consistent storage
         const filePath = `uploads/${fileName}`;
 
-        console.log("Uploading image with details:");
-        console.log("- File name:", product.imageFile.name);
-        console.log("- File type:", product.imageFile.type);
-        console.log("- File size:", product.imageFile.size, "bytes");
-        console.log("- Target path:", filePath);
+        console.log("Uploading image with details:", {
+          originalName: product.imageFile.name,
+          timestamp: timestamp,
+          fileSize: Math.round(product.imageFile.size / 1024) + "KB",
+          fileType: product.imageFile.type,
+          targetPath: filePath,
+        });
 
         // Extract MIME type from file or determine from extension
         let contentType = product.imageFile.type;
@@ -233,7 +247,7 @@ const UploadProduct = () => {
             condition: product.condition.toLowerCase(),
             category: product.category.toLowerCase(),
             price: parseFloat(product.price),
-            image: imageUrl, // Store the full public URL
+            image: imageUrl, // Store the full public URL in the image field only
             status: "available",
             is_bundle: product.is_bundle,
             flag: product.flag,
@@ -278,28 +292,34 @@ const UploadProduct = () => {
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 6 }}>
       <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
-        <Box
-          sx={{
-            mb: 3,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Typography variant="h5" component="h1" fontWeight="500">
-            Upload New Product
-          </Typography>
-          <IconButton
-            color="primary"
-            onClick={() => navigate("/account")}
-            sx={{ borderRadius: 1 }}
-          >
-            <ArrowBackIcon />
-            <Typography variant="body2" sx={{ ml: 0.5 }}>
-              Back
-            </Typography>
-          </IconButton>
-        </Box>
+      <Box
+  sx={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    mb: 3,
+  }}
+>
+  <Typography variant="h5" component="h1" fontWeight="500">
+    Upload New Product
+  </Typography>
+
+  <Button
+    onClick={() => navigate("/account")}
+    startIcon={<ArrowBackIcon />}
+    sx={{
+      textTransform: "none",
+      fontWeight: 500,
+      borderRadius: 1,
+      ml: "auto",
+      width: "fit-content",
+    }}
+  >
+    Back
+  </Button>
+</Box>
+
+
         <Divider sx={{ mb: 4 }} />
 
         <Box component="form" onSubmit={handleSubmit} noValidate>

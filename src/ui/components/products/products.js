@@ -5,29 +5,41 @@ import Filter from "../filter/Filter";
 import "./products.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faThumbtack,
   faHeart as solidHeart,
-  faTag,
-  faEye,
-  faInfoCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import { faHeart as regularHeart } from "@fortawesome/free-regular-svg-icons";
 import placeholderImage from "../../../assets/placeholder.js";
-// Add Material UI imports
 import {
   Pagination,
   PaginationItem,
-  Stack,
   Box,
   Typography,
   CircularProgress,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-// Import favorite utilities
 import { isFavorite, toggleFavorite } from "../../../utils/favoriteUtils";
-// Import image utility function
 import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
+
+/**
+ * Gets the best available image URL for a product
+ * @param {Object} product - The product object
+ * @returns {string|null} The best available image URL
+ */
+const getProductImageUrl = (product) => {
+  // Check for the new explicit imageUrl field first
+  if (product.imageUrl) {
+    return product.imageUrl;
+  }
+
+  // Fall back to the legacy image field
+  if (product.image) {
+    return product.image;
+  }
+
+  // Return null if no image is available
+  return null;
+};
 
 function Products() {
   const location = useLocation();
@@ -198,7 +210,7 @@ function Products() {
             narrow your search.
           </p>
           {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+            <Box className="loading-spinner-container">
               <CircularProgress />
             </Box>
           ) : (
@@ -241,11 +253,10 @@ function Products() {
                                 ? solidHeart
                                 : regularHeart
                             }
-                            className={`favorite-icon ${
-                              isFavorite(product.productID)
-                                ? "favorite-active"
-                                : ""
-                            }`}
+                            className={`favorite-icon ${isFavorite(product.productID)
+                              ? "favorite-active"
+                              : ""
+                              }`}
                           />
                         </div>
 
@@ -258,8 +269,7 @@ function Products() {
                         >
                           <img
                             src={
-                              getFormattedImageUrl(product.image) ||
-                              placeholderImage
+                              getProductImageUrl(product) || placeholderImage
                             }
                             alt={product.name}
                             className="product-image"
@@ -301,12 +311,12 @@ function Products() {
                               ).toLowerCase()}`}
                             >
                               {product.status === "available" ||
-                              product.status === "Available"
+                                product.status === "Available"
                                 ? "Available"
                                 : product.status === "sold" ||
                                   product.status === "Sold"
-                                ? "Sold"
-                                : product.status || "Available"}
+                                  ? "Sold"
+                                  : product.status || "Available"}
                             </span>
                           </div>
                         </div>
@@ -318,17 +328,9 @@ function Products() {
 
               {/* Material UI Pagination Controls */}
               {totalPages > 1 && (
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mt: 4,
-                    mb: 2,
-                  }}
-                >
+                <Box className="pagination-with-info">
                   {/* Product range information on the left */}
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography className="product-range-info">
                     Showing {(currentPage - 1) * itemsPerPage + 1}-
                     {Math.min(
                       currentPage * itemsPerPage,
