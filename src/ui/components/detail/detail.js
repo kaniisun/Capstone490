@@ -402,7 +402,7 @@ export const Detail = () => {
             <div className="detail-content">
               <div className="detail-metadata">
                 <p className="detail-condition">
-                  Condition: {product.condition}
+                  Condition: {product.condition?.charAt(0).toUpperCase() + product.condition?.slice(1)}
                 </p>
                 <p className="detail-status">Status: {product.status}</p>
 

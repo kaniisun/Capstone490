@@ -12,7 +12,7 @@ const BASE_URLS = {
   development: process.env.REACT_APP_API_URL || "http://localhost:3001",
   test: process.env.REACT_APP_API_URL || "http://localhost:3001",
   production:
-    process.env.REACT_APP_API_URL || "https://api.spartanmarketplace.com",
+    process.env.REACT_APP_API_URL ||  "https://marketplace-backend-8tag.onrender.com",
 };
 
 // Get the appropriate base URL for the current environment
