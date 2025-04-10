@@ -9,25 +9,31 @@ const DEBUG = process.env.REACT_APP_DEBUG === "true" || false;
 
 // Base URL configurations for different environments
 const BASE_URLS = {
-  development: process.env.REACT_APP_API_URL || "http://localhost:3001",
-  test: process.env.REACT_APP_API_URL || "http://localhost:3001",
-  production:
-    process.env.REACT_APP_API_URL ||  "https://marketplace-backend-8tag.onrender.com",
+  // Always default to localhost for development
+  development: "http://localhost:3001",
+  test: "http://localhost:3001",
+  // Use the Render URL for production
+  production: "https://marketplace-backend-8tag.onrender.com",
 };
 
 // Get the appropriate base URL for the current environment
+// Allow override with REACT_APP_API_URL if present
 const BASE_URL =
   process.env.REACT_APP_API_URL || BASE_URLS[ENV] || BASE_URLS.development;
 
 // API endpoint paths (without base URL)
 const ENDPOINTS = {
   CHAT: "/api/chat",
-  ANALYZE_IMAGE: "/api/vision/analyze", // Updated path to match server route
+  ANALYZE_IMAGE: "/api/vision/analyze",
   LISTINGS: "/api/products",
   USER: "/api/user",
   MODERATE_PRODUCTS: "/api/moderate-products",
   MODERATE_PRODUCT: "/api/moderate-product",
+  DELETE_PRODUCT: "/api/delete-product",
 };
+
+// Add a console log to make it clear which URL is being used
+console.log(`API Config: Using ${ENV} environment with base URL: ${BASE_URL}`);
 
 // OpenAI configuration
 // See latest model documentation: https://platform.openai.com/docs/models/gpt-4
