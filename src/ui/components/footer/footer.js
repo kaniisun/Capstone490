@@ -93,7 +93,7 @@ const Footer = () => {
             </Typography>
           </Box>
 
-          {/* Quick Links - Very Condensed */}
+          {/* Quick Links */}
           <Box
             sx={{
               display: "flex",

@@ -108,6 +108,13 @@ function SignUp() {
       return;
     }
 
+    // Validate first and last name
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("First and last name are required.");
+      setLoading(false);
+      return;
+    }
+
     // Validate email (must end with @uncg.edu)
     if (!email.endsWith("@uncg.edu")) {
       setError("Only @uncg.edu email addresses are allowed.");
