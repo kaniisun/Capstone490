@@ -6,63 +6,78 @@
  * Extracts products from message content
  * This function detects and extracts product data from message content
  *
- * @param {string} messageContent - The content of a message
+ * @param {string} content - The content of a message
  * @returns {Array} - Array of extracted products or empty array
  */
-export const extractProductsFromMessage = (messageContent) => {
-  try {
-    // First try to extract from VERIFIED_PRODUCTS format (Karpathy approach)
-    const verifiedRegex =
-      /VERIFIED_PRODUCTS_START(\[[\s\S]*?\])VERIFIED_PRODUCTS_END/;
-    const verifiedMatch = messageContent.match(verifiedRegex);
+export function extractProductsFromMessage(content) {
+  if (!content) return [];
 
-    if (verifiedMatch && verifiedMatch[1]) {
-      // Found VERIFIED_PRODUCTS in message
-      const rawProducts = JSON.parse(verifiedMatch[1]);
+  // First, check for verified products data (from Supabase products)
+  // This is the format used for direct database query results
+  if (
+    content.includes("VERIFIED_PRODUCTS_START") &&
+    content.includes("VERIFIED_PRODUCTS_END")
+  ) {
+    try {
+      // Extract the JSON string between the markers
+      const productsJSON = content
+        .split("VERIFIED_PRODUCTS_START")[1]
+        .split("VERIFIED_PRODUCTS_END")[0];
 
-      // Clean products by removing verification codes
-      return rawProducts.map((product) => {
-        const cleanProduct = { ...product };
-        if (cleanProduct._vcode) {
-          // Verify the code format matches our expected pattern
-          if (
-            cleanProduct._vcode.startsWith("VP") &&
-            cleanProduct._vcode.substring(2) ===
-              cleanProduct.productID.toString()
-          ) {
-            // Product verified
-          } else {
-            // Product verification failed
-          }
-          // Remove verification code regardless
-          delete cleanProduct._vcode;
-        }
-        return cleanProduct;
-      });
+      // Parse the JSON into an array of product objects
+      const products = JSON.parse(productsJSON);
+
+      // Log for debugging - important for category search debugging
+      console.log(
+        `Extracted ${products.length} verified products from message`
+      );
+
+      // Log category distribution to help debug category search
+      if (products && products.length > 0) {
+        const categoryDistribution = products.reduce((acc, product) => {
+          const category = (product.category || "unknown").toLowerCase();
+          acc[category] = (acc[category] || 0) + 1;
+          return acc;
+        }, {});
+        console.log("Category distribution:", categoryDistribution);
+      }
+
+      return products;
+    } catch (e) {
+      console.error("Error parsing verified products data:", e);
+      return [];
     }
-
-    // Fall back to DATABASE_PRODUCTS format
-    const dbRegex =
-      /DATABASE_PRODUCTS_START(\[[\s\S]*?\])DATABASE_PRODUCTS_END/;
-    const dbMatch = messageContent.match(dbRegex);
-
-    if (dbMatch && dbMatch[1]) {
-      // Found DATABASE_PRODUCTS in message
-      return JSON.parse(dbMatch[1]);
-    }
-
-    // If no structured data, try to extract markdown tables (simplified)
-    if (messageContent.includes("|") && messageContent.includes("-|-")) {
-      return extractProductsFromMarkdown(messageContent);
-    }
-
-    // Nothing found, return empty array
-    return [];
-  } catch (error) {
-    // Error extracting products
-    return [];
   }
-};
+
+  // Fallback to database products format (alternative format)
+  if (
+    content.includes("DATABASE_PRODUCTS_START") &&
+    content.includes("DATABASE_PRODUCTS_END")
+  ) {
+    try {
+      // Extract the JSON string between the markers
+      const productsJSON = content
+        .split("DATABASE_PRODUCTS_START")[1]
+        .split("DATABASE_PRODUCTS_END")[0];
+
+      // Parse the JSON into an array of product objects
+      const products = JSON.parse(productsJSON);
+      console.log("Extracted database products from message:", products.length);
+      return products;
+    } catch (e) {
+      console.error("Error parsing database products data:", e);
+      return [];
+    }
+  }
+
+  // If no structured data, try to extract markdown tables (simplified)
+  if (content.includes("|") && content.includes("-|-")) {
+    return extractProductsFromMarkdown(content);
+  }
+
+  // Nothing found, return empty array
+  return [];
+}
 
 /**
  * Extract products from markdown tables
