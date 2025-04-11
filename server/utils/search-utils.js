@@ -135,6 +135,76 @@ function formatPriceFilter(priceFilter) {
  */
 function extractCategoryTerms(query) {
   const query_lower = query.toLowerCase();
+
+  // Log the query for debugging
+  console.log("Extracting category terms from:", query_lower);
+
+  // Standard category mapping to ensure consistent categories
+  const categoryNormalization = {
+    // Electronics
+    electronics: "electronics",
+    electronic: "electronics",
+    device: "electronics",
+    gadget: "electronics",
+    tech: "electronics",
+    macbook: "electronics",
+    mac: "electronics",
+    laptop: "electronics",
+    laptops: "electronics",
+    computer: "electronics",
+    computers: "electronics",
+    notebook: "electronics",
+
+    // Furniture
+    furniture: "furniture",
+    chair: "furniture",
+    table: "furniture",
+    desk: "furniture",
+    sofa: "furniture",
+    couch: "furniture",
+
+    // Clothing
+    clothing: "clothing",
+    clothes: "clothing",
+    shirt: "clothing",
+    pants: "clothing",
+    dress: "clothing",
+    jacket: "clothing",
+
+    // Textbooks
+    textbook: "textbooks",
+    textbooks: "textbooks",
+    book: "textbooks",
+    books: "textbooks",
+    novel: "textbooks",
+    reading: "textbooks",
+
+    // Music
+    guitar: "music",
+    instrument: "music",
+    music: "music",
+    musical: "music",
+
+    // Sports
+    sport: "sport",
+    sports: "sport",
+    exercise: "sport",
+    fitness: "sport",
+    bike: "sport",
+    bicycle: "sport",
+
+    // Home
+    home: "home",
+    kitchen: "home",
+    appliance: "home",
+    decor: "home",
+
+    // Miscellaneous
+    misc: "miscellaneous",
+    miscellaneous: "miscellaneous",
+    other: "miscellaneous",
+  };
+
   const categoryKeywords = {
     laptop: ["laptop", "laptops", "computer", "computers", "notebook"],
     electronics: [
@@ -157,6 +227,21 @@ function extractCategoryTerms(query) {
 
   const matchedCategories = [];
 
+  // Check for "show me [category]" pattern first for more precise matching
+  const categorySearchMatch = query_lower.match(/show me\s+(\w+)/i);
+  if (categorySearchMatch && categorySearchMatch[1]) {
+    const requestedCategory = categorySearchMatch[1].toLowerCase();
+
+    // Use the normalized category if available
+    if (categoryNormalization[requestedCategory]) {
+      const normalizedCategory = categoryNormalization[requestedCategory];
+      console.log(
+        `Direct category match: "${requestedCategory}" → "${normalizedCategory}"`
+      );
+      return [normalizedCategory];
+    }
+  }
+
   // Check for category keywords in the query
   for (const [category, keywords] of Object.entries(categoryKeywords)) {
     for (const keyword of keywords) {
@@ -169,6 +254,7 @@ function extractCategoryTerms(query) {
     }
   }
 
+  console.log("Matched categories:", matchedCategories);
   return matchedCategories;
 }
 
