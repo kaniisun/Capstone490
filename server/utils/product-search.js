@@ -25,6 +25,12 @@ async function searchProducts(supabase, searchQuery) {
     searchQuery.toLowerCase().includes("show me") ||
     searchQuery.toLowerCase().includes("what do you have");
 
+  // Log the incoming query and extracted terms for debugging
+  console.log("------ PRODUCT SEARCH DEBUG ------");
+  console.log("Original search query:", searchQuery);
+  console.log("Extracted terms:", extractedTerms);
+  console.log("Is general search:", isGeneralSearch);
+
   try {
     if (!supabase) {
       return [];
@@ -33,6 +39,109 @@ async function searchProducts(supabase, searchQuery) {
     // Generic product search approach that works for any product type
     let products = [];
 
+    // Check for specific category searches first - look for "show me [category]" pattern
+    const specificCategorySearch = searchQuery
+      .toLowerCase()
+      .match(/show me\s+(\w+)/i);
+
+    if (specificCategorySearch && specificCategorySearch[1]) {
+      const requestedCategory = specificCategorySearch[1].toLowerCase().trim();
+      console.log("Detected category search for:", requestedCategory);
+
+      // Map of user-friendly category terms to database category values
+      const categoryMap = {
+        textbooks: "textbooks",
+        textbook: "textbooks",
+        books: "textbooks",
+        book: "textbooks",
+        electronics: "electronics",
+        electronic: "electronics",
+        furniture: "furniture",
+        clothing: "clothing",
+        clothes: "clothing",
+        misc: "miscellaneous",
+        miscellaneous: "miscellaneous",
+      };
+
+      // If this is a specific category search, directly query that category
+      if (categoryMap[requestedCategory]) {
+        const targetCategory = categoryMap[requestedCategory];
+        console.log(
+          `Exact category match: "${requestedCategory}" → "${targetCategory}"`
+        );
+
+        // Create a precise category query with case-insensitive match using ilike
+        let categoryQuery = supabase
+          .from("products")
+          .select("*")
+          .eq("is_deleted", false)
+          .eq("moderation_status", "approved")
+          .or("status.eq.available,status.eq.Available")
+          .ilike("category", targetCategory); // Case-insensitive match on category
+
+        // Apply price filter if present
+        if (priceFilter) {
+          categoryQuery = applyPriceFilter(categoryQuery, priceFilter);
+        }
+
+        // Execute the query WITHOUT any limit
+        const { data: categoryData, error: categoryError } =
+          await categoryQuery;
+
+        if (categoryError) {
+          console.error("Category query error:", categoryError);
+        } else {
+          console.log(
+            `Found ${
+              categoryData?.length || 0
+            } products in category "${targetCategory}"`
+          );
+
+          if (categoryData && categoryData.length > 0) {
+            return categoryData; // Return all products in this category
+          } else {
+            // Return empty array but with metadata for no results handling
+            return {
+              noResults: true,
+              searchedCategory: targetCategory,
+            };
+          }
+        }
+      } else {
+        // Try direct search with the raw category term if not in mapping
+        // This handles cases where user searches for a valid category not in our map
+        console.log(
+          `No mapping for "${requestedCategory}", trying direct search`
+        );
+
+        let directCategoryQuery = supabase
+          .from("products")
+          .select("*")
+          .eq("is_deleted", false)
+          .eq("moderation_status", "approved")
+          .or("status.eq.available,status.eq.Available")
+          .ilike("category", requestedCategory); // Case-insensitive match on raw category
+
+        const { data: directCategoryData, error: directCategoryError } =
+          await directCategoryQuery;
+
+        if (directCategoryError) {
+          console.error("Direct category query error:", directCategoryError);
+        } else if (directCategoryData && directCategoryData.length > 0) {
+          console.log(
+            `Found ${directCategoryData.length} products with direct category "${requestedCategory}"`
+          );
+          return directCategoryData;
+        } else {
+          return {
+            noResults: true,
+            searchedCategory: requestedCategory,
+          };
+        }
+      }
+    }
+
+    // If we're here, then we either don't have a category search or found no results
     // First, try a direct query based on extracted terms
     if (extractedTerms.length > 0) {
       // Build search conditions for name/description fields
@@ -64,7 +173,7 @@ async function searchProducts(supabase, searchQuery) {
       }
     }
 
-    // If no direct matches, try category-based search
+    // If no direct matches, try category-based fuzzy search as a fallback
     if (products.length === 0 && extractedTerms.length > 0) {
       // Create a category-based query
       let categoryQuery = supabase
@@ -90,48 +199,6 @@ async function searchProducts(supabase, searchQuery) {
 
       if (!categoryError && categoryData && categoryData.length > 0) {
         products = categoryData;
-      }
-    }
-
-    // Check for specific category searches and enforce strict category matching
-    const specificCategorySearch = searchQuery
-      .toLowerCase()
-      .match(/show me\s+(\w+)/i);
-    if (specificCategorySearch && specificCategorySearch[1]) {
-      const requestedCategory = specificCategorySearch[1].toLowerCase();
-
-      // Map of user-friendly category terms to database category values
-      const categoryMap = {
-        textbooks: "textbooks",
-        textbook: "textbooks",
-        books: "textbooks",
-        book: "textbooks",
-        electronics: "electronics",
-        electronic: "electronics",
-        furniture: "furniture",
-        clothing: "clothing",
-        clothes: "clothing",
-        misc: "miscellaneous",
-        miscellaneous: "miscellaneous",
-      };
-
-      // If this is a specific category search, filter products to only that category
-      if (categoryMap[requestedCategory]) {
-        const targetCategory = categoryMap[requestedCategory];
-        console.log(
-          `Enforcing strict category match for "${requestedCategory}" → "${targetCategory}"`
-        );
-
-        // Filter products to only include items from the requested category
-        products = products.filter(
-          (product) =>
-            product.category &&
-            product.category.toLowerCase() === targetCategory
-        );
-
-        console.log(
-          `After category filtering: ${products.length} products remain`
-        );
       }
     }
 
@@ -206,8 +273,10 @@ async function searchProducts(supabase, searchQuery) {
       }
     }
 
+    console.log(`Returning ${products.length} products from search`);
     return products || [];
   } catch (error) {
+    console.error("Product search error:", error);
     return [];
   }
 }

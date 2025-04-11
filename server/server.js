@@ -1025,8 +1025,43 @@ app.post("/api/chat", async (req, res) => {
     if (isSearchQuery) {
       console.log("Detected product search query, searching database...");
       try {
+        // Check if this is a "Show me [category]" request
+        const categorySearchMatch = lastMessage
+          .toLowerCase()
+          .match(/show me\s+(\w+)/i);
+        let requestedCategory = null;
+
+        if (categorySearchMatch && categorySearchMatch[1]) {
+          requestedCategory = categorySearchMatch[1].toLowerCase().trim();
+          console.log(`Category search detected for: ${requestedCategory}`);
+        }
+
         // Search for products in the database
-        productSearchResults = await searchProducts(supabase, lastMessage);
+        const searchResults = await searchProducts(supabase, lastMessage);
+
+        // Check if we have a no-results with category metadata
+        if (
+          searchResults &&
+          searchResults.noResults &&
+          searchResults.searchedCategory
+        ) {
+          console.log(
+            `No products found in category: ${searchResults.searchedCategory}`
+          );
+
+          // Create a response for no results case
+          const noResultsMessage = {
+            role: "assistant",
+            content: `Sorry, I couldn't find any products in the "${searchResults.searchedCategory}" category. Would you like to try another category?`,
+          };
+
+          return res.json(noResultsMessage);
+        }
+
+        // Normal processing for product results
+        productSearchResults = Array.isArray(searchResults)
+          ? searchResults
+          : [];
         console.log(
           `Found ${productSearchResults.length} products matching the query`
         );
@@ -1038,12 +1073,31 @@ app.post("/api/chat", async (req, res) => {
             lastMessage
           );
 
-          // Format the AI response with the product data
-          const response = determineSearchResponse(
-            productSearchResults,
-            lastMessage,
-            extractSearchTerms(lastMessage)
-          );
+          // For category searches, create a more accurate response
+          let responseText = "";
+          if (requestedCategory) {
+            // Map for proper capitalization in response
+            const displayCategory =
+              {
+                electronics: "Electronics",
+                furniture: "Furniture",
+                textbooks: "Textbooks",
+                clothing: "Clothing",
+                miscellaneous: "Miscellaneous",
+              }[searchResults[0].category.toLowerCase()] || requestedCategory;
+
+            responseText = `I found ${productSearchResults.length} product${
+              productSearchResults.length === 1 ? "" : "s"
+            } in the "${displayCategory}" category:`;
+          } else {
+            // Use standard response formatting for non-category searches
+            const response = determineSearchResponse(
+              productSearchResults,
+              lastMessage,
+              extractSearchTerms(lastMessage)
+            );
+            responseText = response.responseText;
+          }
 
           // Format product data with verification codes for security
           const productsWithCodes = productSearchResults.map((product) => ({
@@ -1054,9 +1108,7 @@ app.post("/api/chat", async (req, res) => {
           // Create the AI response with the product data embedded
           const aiMessage = {
             role: "assistant",
-            content: `${
-              response.responseText
-            }\n\nVERIFIED_PRODUCTS_START${JSON.stringify(
+            content: `${responseText}\n\nVERIFIED_PRODUCTS_START${JSON.stringify(
               productsWithCodes
             )}VERIFIED_PRODUCTS_END`,
           };
@@ -1065,6 +1117,15 @@ app.post("/api/chat", async (req, res) => {
           return res.json(aiMessage);
         } else {
           console.log("No products found matching the query");
+
+          // Generic no results response for non-category searches
+          if (requestedCategory) {
+            const noResultsMessage = {
+              role: "assistant",
+              content: `Sorry, I couldn't find any products matching "${requestedCategory}". Would you like to try another search?`,
+            };
+            return res.json(noResultsMessage);
+          }
         }
       } catch (searchError) {
         console.error("Error during product search:", searchError);
