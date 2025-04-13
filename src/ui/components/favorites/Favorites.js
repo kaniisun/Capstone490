@@ -30,6 +30,7 @@ import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../../supabaseClient";
+import { green } from "@mui/material/colors";
 
 /**
  * Enhanced Favorites component with a sleek, modern UI
@@ -41,6 +42,7 @@ const Favorites = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   // Load favorites
   useEffect(() => {
@@ -62,7 +64,11 @@ const Favorites = () => {
       // Filter out any test products
       const filteredProducts = products.filter((product) => {
         const id = product.productID || product.id;
-        return !String(id).startsWith("test");
+
+        // Example: filter out test and unavailable items
+        const isTest = String(id).startsWith("test");
+        const isAvailable = product.status?.toLowerCase() === "available";
+        return !isTest && isAvailable;
       });
 
       setFavoriteProducts(filteredProducts);
@@ -104,6 +110,7 @@ const Favorites = () => {
     }
   };
 
+  
   const handleContactSeller = (product) => {
     alert(`Contacting seller about: ${product.name}`);
   };
@@ -217,6 +224,7 @@ const Favorites = () => {
             <Card
               elevation={0}
               sx={{
+                
                 p: { xs: 3, sm: 6 },
                 borderRadius: 3,
                 textAlign: "center",
@@ -226,6 +234,7 @@ const Favorites = () => {
                 flexDirection: "column",
                 alignItems: "center",
                 gap: 2,
+               
               }}
             >
               <ShoppingBagIcon
@@ -277,28 +286,31 @@ const Favorites = () => {
                     pb: isMobile ? 1 : 0,
                   }}
                 >
-                  <Chip
-                    label="All"
-                    color="primary"
-                    variant="filled"
-                    size="small"
-                    sx={{ borderRadius: 2 }}
-                  />
+                 
                   {/* Get unique categories */}
-                  {Array.from(
-                    new Set(
-                      favoriteProducts.map((p) => p.category).filter(Boolean)
-                    )
-                  ).map((category) => (
-                    <Chip
-                      key={category}
-                      label={category}
-                      variant="outlined"
-                      size="small"
-                      sx={{ borderRadius: 2 }}
-                      onClick={() => {}}
-                    />
-                  ))}
+                  <Chip
+  label="All"
+  color={selectedCategory === "All" ? "primary" : "default"}
+  variant={selectedCategory === "All" ? "filled" : "outlined"}
+  size="small"
+  sx={{ borderRadius: 2 }}
+  onClick={() => setSelectedCategory("All")}
+/>
+
+{Array.from(
+  new Set(favoriteProducts.map((p) => p.category).filter(Boolean))
+).map((category) => (
+  <Chip
+    key={category}
+    label={category}
+    color={selectedCategory === category ? "primary" : "default"}
+    variant={selectedCategory === category ? "filled" : "outlined"}
+    size="small"
+    sx={{ borderRadius: 2 }}
+    onClick={() => setSelectedCategory(category)}
+  />
+))}
+
                 </Box>
               )}
 
@@ -313,12 +325,20 @@ const Favorites = () => {
                 }}
               >
                 <Grid container spacing={{ xs: 2, md: 3 }}>
-                  {favoriteProducts.map((product) => {
+                {favoriteProducts
+  .filter(
+    (product) =>
+      selectedCategory === "All" || product.category === selectedCategory
+  )
+  .map((product) => {
+                    
                     const productId = product.productID || product.id;
                     return (
                       <Grid item xs={12} sm={6} md={4} key={productId}>
                         <Box
                           sx={{
+                      
+                            display: "flex",
                             height: "100%",
                             transition: "transform 0.2s ease-in-out",
                             "&:hover": { transform: "translateY(-4px)" },
@@ -329,6 +349,8 @@ const Favorites = () => {
                             onContactClick={handleContactSeller}
                             isFavoritesPage={true}
                             onRemoveFavorite={handleRemoveFromFavorites}
+                            
+
                           />
                         </Box>
                       </Grid>
