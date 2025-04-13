@@ -302,6 +302,8 @@ const ProductCard = ({
                   textOverflow: "ellipsis",
                   lineHeight: 1.2,
                   fontSize: "0.8rem",
+                  minHeight: "2.4em", // 🧩 Add this line
+
                 }}
               >
                 {product.description}
