@@ -776,65 +776,80 @@ const Account = () => {
                         />
                       </Grid>
                       <Grid item xs={12}>
-                        <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            startIcon={<SaveIcon />}
-                            type="submit"
-                            disabled={updating}
-                            sx={{
-                              flex: 1,
-                              borderRadius: 1,
-                              textTransform: "none",
-                              py: 1,
-                              px: 3,
-                              minWidth: 160,
-                              bgcolor: "#0f2044", // UNCG Blue
-                              "&:hover": {
-                                bgcolor: "#1a365d",
-                              },
-                            }}
-                          >
-                            {updating ? (
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1,
-                                }}
-                              >
-                                <CircularProgress size={16} color="inherit" />
-                                <span>Saving...</span>
-                              </Box>
-                            ) : (
-                              "Save Changes"
-                            )}
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            sx={{
-                              flex: 1,
-                              borderRadius: 1,
-                              textTransform: "none",
-                              py: 1,
-                              px: 3,
-                              minWidth: 160,
-                              borderColor: "#0f2044",
-                              color: "#0f2044",
-                              "&:hover": {
-                                borderColor: "#ffc72c",
-                                bgcolor: "rgba(255, 199, 44, 0.04)",
-                              },
-                            }}
-                            startIcon={<LockResetIcon />}
-                            onClick={() =>
-                              setShowPasswordForm(!showPasswordForm)
-                            }
-                          >
-                            {showPasswordForm ? "Cancel" : "Change Password"}
-                          </Button>
-                        </Box>
+                      <Stack direction="row" spacing={2} mt={1}>
+                        {/* Change Password Button */}
+                        <Button
+                          fullWidth
+                          variant="outlined"
+                          startIcon={<LockResetIcon />}
+                          onClick={() => setShowPasswordForm(!showPasswordForm)}
+                          sx={{
+                            borderRadius: 1,
+                            textTransform: "none",
+                            py: 1.5,
+                            px: 3,
+                            minWidth: 160,
+                            borderColor: "#0f2044",
+                            color: "#0f2044",
+                            height: 48,
+                            fontWeight: 500,
+                            "&:hover": {
+                              borderColor: "#ffc72c",
+                              backgroundColor: "rgba(255, 199, 44, 0.04)",
+                            },
+                          }}
+                        >
+                          {showPasswordForm ? "Cancel" : "Change Password"}
+                        </Button>
+
+                        {/* Animated Save Changes Button */}
+                        <Button
+                          fullWidth
+                          type="submit"
+                          variant="contained"
+                          startIcon={
+                            !updating && <SaveIcon />
+                          }
+                          disabled={updating}
+                          sx={{
+                            borderRadius: 1,
+                            textTransform: "none",
+                            py: 1.5,
+                            px: 3,
+                            minWidth: 160,
+                            height: 48,
+                            fontWeight: 500,
+                            backgroundColor: "#0f2044",
+                            color: "white",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 1,
+                            position: "relative",
+                            overflow: "hidden",
+                            "&:hover": {
+                              backgroundColor: "#1a365d",
+                            },
+                          }}
+                        >
+                          <Fade in={updating} timeout={300} unmountOnExit>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                position: "absolute",
+                              }}
+                            >
+                              <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
+                              Saving...
+                            </Box>
+                          </Fade>
+
+                          <Fade in={!updating} timeout={300} unmountOnExit>
+                            <Box component="span">Save Changes</Box>
+                          </Fade>
+                        </Button>
+                      </Stack>
                       </Grid>
                     </Grid>
                   </Box>
