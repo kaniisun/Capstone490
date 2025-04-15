@@ -16,6 +16,8 @@ import {
   IconButton,
   Tooltip,
   useMediaQuery,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import ProductCard from "../ChatSearch/components/ProductCard";
 import {
@@ -43,6 +45,9 @@ const Favorites = () => {
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [justSoldProduct, setJustSoldProduct] = useState(null);
+  const [showSnackbar, setShowSnackbar] = useState(false);
+  
 
   // Load favorites
   useEffect(() => {
@@ -118,6 +123,65 @@ const Favorites = () => {
   const handleBackToSearch = () => {
     navigate("/home");
   };
+
+  
+  useEffect(() => {
+    const loadFavorites = async () => {
+      setLoading(true);
+  
+      const favoriteIds = getFavoriteIds();
+      const previouslySaved = JSON.parse(localStorage.getItem("lastFavorites") || "[]");
+  
+      if (favoriteIds.length === 0) {
+        setFavoriteProducts([]);
+        setLoading(false);
+        localStorage.setItem("lastFavorites", JSON.stringify([]));
+        return;
+      }
+  
+      const products = await getFavoriteProducts(supabase, favoriteIds);
+  
+      const filteredProducts = products.filter((product) => {
+        const isTest = String(product.productID || product.id).startsWith("test");
+        const isAvailable = product.status?.toLowerCase() === "available";
+        return !isTest && isAvailable;
+      });
+  
+      // Detect newly sold item
+      const currentProductIds = filteredProducts.map(p => p.productID || p.id);
+      const lostProducts = previouslySaved.filter(id => !currentProductIds.includes(id));
+  
+      if (lostProducts.length > 0) {
+        const lostProductId = lostProducts[0]; // show only one alert
+        const lostProduct = products.find(p => (p.productID || p.id) === lostProductId);
+        if (lostProduct) {
+          setJustSoldProduct(lostProduct.name);
+          setShowSnackbar(true);
+        }
+        // Remove it from favorites
+        removeFavorite(lostProductId);
+      }
+  
+      setFavoriteProducts(filteredProducts);
+      setLoading(false);
+  
+      // Save current favorites to compare next time
+      localStorage.setItem(
+        "lastFavorites",
+        JSON.stringify(filteredProducts.map((p) => p.productID || p.id))
+      );
+    };
+  
+    loadFavorites();
+  
+    window.addEventListener("storage", (e) => {
+      if (e.key === "favorites") loadFavorites();
+    });
+  
+    return () => window.removeEventListener("storage", () => {});
+  }, []);
+  
+
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -362,6 +426,24 @@ const Favorites = () => {
           )}
         </Box>
       </Fade>
+      <Snackbar
+  open={showSnackbar}
+  autoHideDuration={6000}
+  onClose={() => setShowSnackbar(false)}
+  anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+>
+  <Alert
+    onClose={() => setShowSnackbar(false)}
+    severity="warning"
+    variant="filled"
+    sx={{ borderRadius: 1, bgcolor: "#ffc72c", color: "#000" }}
+  >
+    {justSoldProduct
+      ? `"${justSoldProduct}" is no longer available and has been removed from your favorites.`
+      : "One of your favorites is no longer available."}
+  </Alert>
+</Snackbar>
+
     </Container>
   );
 };
