@@ -26,6 +26,8 @@ import {
 import { useSnackbar } from "notistack";
 // Add API_CONFIG import if not already present
 import API_CONFIG from "../../../config/api.js";
+import { Link } from "react-router-dom";
+
 
 export const Detail = () => {
   const { id } = useParams();
@@ -380,9 +382,13 @@ export const Detail = () => {
               />
             </div>
             <div className="detail-seller-info">
-              <span className="detail-seller-name">
-                Seller: {product.users?.firstName} {product.users?.lastName}
-              </span>
+            <span className="detail-seller-name">
+  Seller:{" "}
+  <Link to={`/users/${product.userID}`} className="seller-link">
+    {product.users?.firstName} {product.users?.lastName}
+  </Link>
+</span>
+
             </div>
             <button
               className="detail-chat-button"

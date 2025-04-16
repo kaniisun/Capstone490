@@ -49,6 +49,9 @@ import About from "./ui/components/footer/About";
 import Privacy from "./ui/components/footer/Privacy";
 import Terms from "./ui/components/footer/Terms";
 import Contact from "./ui/components/footer/Contact";
+import UserProfile from "./ui/components/UserProfile/UserProfile";
+
+
 
 function AppContent() {
   const location = useLocation();
@@ -110,6 +113,14 @@ function AppContent() {
                 <Route path="/contact" element={<Contact />} />
 
                 {/* Protected routes */}
+                <Route
+                  path="/users/:userId"
+                  element={
+                    <ProtectedRoute>
+                      <UserProfile />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/favorites"
                   element={
