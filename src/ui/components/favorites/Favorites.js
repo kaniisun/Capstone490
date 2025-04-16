@@ -47,53 +47,70 @@ const Favorites = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [justSoldProduct, setJustSoldProduct] = useState(null);
   const [showSnackbar, setShowSnackbar] = useState(false);
+
+
   
 
   // Load favorites
   useEffect(() => {
     const loadFavorites = async () => {
       setLoading(true);
-
-      // Get IDs of favorited products
+  
       const favoriteIds = getFavoriteIds();
-
+      const previouslySaved = JSON.parse(localStorage.getItem("lastFavorites") || "[]");
+  
       if (favoriteIds.length === 0) {
         setFavoriteProducts([]);
         setLoading(false);
+        localStorage.setItem("lastFavorites", JSON.stringify([]));
         return;
       }
-
-      // Get product data for those IDs from Supabase
+  
       const products = await getFavoriteProducts(supabase, favoriteIds);
-
-      // Filter out any test products
+  
       const filteredProducts = products.filter((product) => {
-        const id = product.productID || product.id;
-
-        // Example: filter out test and unavailable items
-        const isTest = String(id).startsWith("test");
+        const isTest = String(product.productID || product.id).startsWith("test");
         const isAvailable = product.status?.toLowerCase() === "available";
         return !isTest && isAvailable;
       });
-
-      setFavoriteProducts(filteredProducts);
-      setLoading(false);
-    };
-
-    loadFavorites();
-
-    // Event listener for storage changes
-    const handleStorageChange = (e) => {
-      if (e.key === "favorites") {
-        loadFavorites();
+  
+      const normalizedProducts = filteredProducts.map((p) => ({
+        ...p,
+        category: p.category?.trim().toLowerCase(), // Normalize here too
+      }));
+  
+      // Detect newly sold item
+      const currentProductIds = normalizedProducts.map(p => p.productID || p.id);
+      const lostProducts = previouslySaved.filter(id => !currentProductIds.includes(id));
+  
+      if (lostProducts.length > 0) {
+        const lostProductId = lostProducts[0];
+        const lostProduct = products.find(p => (p.productID || p.id) === lostProductId);
+        if (lostProduct) {
+          setJustSoldProduct(lostProduct.name);
+          setShowSnackbar(true);
+        }
+        removeFavorite(lostProductId);
       }
+  
+      setFavoriteProducts(normalizedProducts);
+      setLoading(false);
+  
+      localStorage.setItem(
+        "lastFavorites",
+        JSON.stringify(normalizedProducts.map((p) => p.productID || p.id))
+      );
     };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
+  
+    loadFavorites();
+  
+    window.addEventListener("storage", (e) => {
+      if (e.key === "favorites") loadFavorites();
+    });
+  
+    return () => window.removeEventListener("storage", () => {});
   }, []);
+  
 
   const handleRemoveFromFavorites = (productId) => {
     // Use utility function to remove from favorites
@@ -147,28 +164,31 @@ const Favorites = () => {
         return !isTest && isAvailable;
       });
   
+      const normalizedProducts = filteredProducts.map((p) => ({
+        ...p,
+        category: p.category?.trim().toLowerCase(), // Normalize here too
+      }));
+  
       // Detect newly sold item
-      const currentProductIds = filteredProducts.map(p => p.productID || p.id);
+      const currentProductIds = normalizedProducts.map(p => p.productID || p.id);
       const lostProducts = previouslySaved.filter(id => !currentProductIds.includes(id));
   
       if (lostProducts.length > 0) {
-        const lostProductId = lostProducts[0]; // show only one alert
+        const lostProductId = lostProducts[0];
         const lostProduct = products.find(p => (p.productID || p.id) === lostProductId);
         if (lostProduct) {
           setJustSoldProduct(lostProduct.name);
           setShowSnackbar(true);
         }
-        // Remove it from favorites
         removeFavorite(lostProductId);
       }
   
-      setFavoriteProducts(filteredProducts);
+      setFavoriteProducts(normalizedProducts);
       setLoading(false);
   
-      // Save current favorites to compare next time
       localStorage.setItem(
         "lastFavorites",
-        JSON.stringify(filteredProducts.map((p) => p.productID || p.id))
+        JSON.stringify(normalizedProducts.map((p) => p.productID || p.id))
       );
     };
   
@@ -180,6 +200,7 @@ const Favorites = () => {
   
     return () => window.removeEventListener("storage", () => {});
   }, []);
+  
   
 
 
@@ -317,7 +338,7 @@ const Favorites = () => {
                 paragraph
                 sx={{ maxWidth: "85%" }}
               >
-                Items you favorite while browsing will appear here.
+               
               </Typography>
               <Button
                 variant="contained"
@@ -341,41 +362,39 @@ const Favorites = () => {
               {/* Categories filter chips - only show if we have products */}
               {favoriteProducts.length > 0 && (
                 <Box
-                  sx={{
-                    mb: 3,
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 1,
-                    overflowX: isMobile ? "auto" : "visible",
-                    pb: isMobile ? 1 : 0,
-                  }}
-                >
-                 
-                  {/* Get unique categories */}
+                sx={{
+                  mb: 3,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 1,
+                  overflowX: isMobile ? "auto" : "visible",
+                  pb: isMobile ? 1 : 0,
+                }}
+              >
+                <Chip
+                  label="All"
+                  color={selectedCategory === "All" ? "primary" : "default"}
+                  variant={selectedCategory === "All" ? "filled" : "outlined"}
+                  size="small"
+                  sx={{ borderRadius: 2 }}
+                  onClick={() => setSelectedCategory("All")}
+                />
+              
+                {Array.from(
+                  new Set(favoriteProducts.map((p) => p.category).filter(Boolean))
+                ).map((category) => (
                   <Chip
-  label="All"
-  color={selectedCategory === "All" ? "primary" : "default"}
-  variant={selectedCategory === "All" ? "filled" : "outlined"}
-  size="small"
-  sx={{ borderRadius: 2 }}
-  onClick={() => setSelectedCategory("All")}
-/>
-
-{Array.from(
-  new Set(favoriteProducts.map((p) => p.category).filter(Boolean))
-).map((category) => (
-  <Chip
-    key={category}
-    label={category}
-    color={selectedCategory === category ? "primary" : "default"}
-    variant={selectedCategory === category ? "filled" : "outlined"}
-    size="small"
-    sx={{ borderRadius: 2 }}
-    onClick={() => setSelectedCategory(category)}
-  />
-))}
-
-                </Box>
+                    key={category}
+                    label={category.charAt(0).toUpperCase() + category.slice(1)} // Capitalize
+                    color={selectedCategory === category ? "primary" : "default"}
+                    variant={selectedCategory === category ? "filled" : "outlined"}
+                    size="small"
+                    sx={{ borderRadius: 2 }}
+                    onClick={() => setSelectedCategory(category)}
+                  />
+                ))}
+              </Box>
+              
               )}
 
               {/* Products Grid */}
@@ -392,7 +411,9 @@ const Favorites = () => {
                 {favoriteProducts
   .filter(
     (product) =>
-      selectedCategory === "All" || product.category === selectedCategory
+      selectedCategory === "All" || 
+    product.category?.toLowerCase() === selectedCategory.toLowerCase()
+
   )
   .map((product) => {
                     
