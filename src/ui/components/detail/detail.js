@@ -7,27 +7,21 @@ import {
   faComments,
   faCheck,
   faTag,
-  faInfoCircle,
   faHeart as solidHeart,
 } from "@fortawesome/free-solid-svg-icons";
 import { faHeart as regularHeart } from "@fortawesome/free-regular-svg-icons";
 import { supabase } from "../../../supabaseClient";
 import "./detail.css";
-// Import favorite utilities
 import { isFavorite, toggleFavorite } from "../../../utils/favoriteUtils";
 import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
-// Import message prevention utilities
 import {
   shouldPreventMessage,
   markMessageSent,
-  getPreventionKey,
 } from "../messageArea/messageHelper";
-// Import snackbar for notifications
 import { useSnackbar } from "notistack";
-// Add API_CONFIG import if not already present
 import API_CONFIG from "../../../config/api.js";
-import { Link } from "react-router-dom";
 
+const clickTracker = {};
 
 export const Detail = () => {
   const { id } = useParams();
@@ -273,26 +267,17 @@ export const Detail = () => {
       );
 
       // Check if we've already clicked this button in the last few seconds
-      if (
-        window.__recentSellerClicks &&
-        window.__recentSellerClicks[contactKey]
-      ) {
-        console.log(
-          "Preventing duplicate Chat with Seller click for:",
-          product.name
-        );
+      if (clickTracker[contactKey]) {
+        console.log("Preventing duplicate Chat with Seller click for:", product.name);
         return;
       }
 
       // Mark this conversation as initiated to prevent duplicates
-      if (!window.__recentSellerClicks) window.__recentSellerClicks = {};
-      window.__recentSellerClicks[contactKey] = true;
+      clickTracker[contactKey] = true;
 
       // Clear the click tracking after a reasonable timeout
       setTimeout(() => {
-        if (window.__recentSellerClicks) {
-          delete window.__recentSellerClicks[contactKey];
-        }
+        delete clickTracker[contactKey];
       }, 5000);
 
       // Check if we should prevent this message based on our helper
@@ -382,13 +367,9 @@ export const Detail = () => {
               />
             </div>
             <div className="detail-seller-info">
-            <span className="detail-seller-name">
-  Seller:{" "}
-  <Link to={`/users/${product.userID}`} className="seller-link">
-    {product.users?.firstName} {product.users?.lastName}
-  </Link>
-</span>
-
+              <span className="detail-seller-name">
+                Seller: {product.users?.firstName} {product.users?.lastName}
+              </span>
             </div>
             <button
               className="detail-chat-button"
@@ -450,9 +431,8 @@ export const Detail = () => {
 
               {/* Add Favorite button */}
               <button
-                className={`detail-favorite-button ${
-                  favorited ? "favorited" : ""
-                }`}
+                className={`detail-favorite-button ${favorited ? "favorited" : ""
+                  }`}
                 onClick={handleToggleFavorite}
                 aria-label={
                   favorited ? "Remove from favorites" : "Add to favorites"
