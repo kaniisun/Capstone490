@@ -795,7 +795,7 @@ const Account = () => {
                             fontWeight: 500,
                             "&:hover": {
                               borderColor: "#ffc72c",
-                              backgroundColor: "rgba(255, 199, 44, 0.04)",
+                              backgroundColor: "#ffc72c",
                             },
                           }}
                         >

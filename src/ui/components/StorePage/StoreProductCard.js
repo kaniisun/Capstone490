@@ -5,10 +5,24 @@ import {
   CardMedia,
   Typography,
   Box,
-  Chip,
   IconButton,
   Skeleton,
+  Stack,
 } from "@mui/material";
+import {
+  AccountCircle as AccountCircleIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Save as SaveIcon,
+  Lock as LockIcon,
+  LockReset as LockResetIcon,
+  Store as StoreIcon,
+  LocalOffer as LocalOfferIcon,
+  Category as CategoryIcon,
+  Star as StarIcon,
+  Sell as Sell,
+} from "@mui/icons-material";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
@@ -25,6 +39,27 @@ export default function StoreProductCard({ product }) {
   const [favorite, setFavorite] = useState(false);
 
   const productID = product?.productID || product?.id;
+
+  // Get product condition stars
+  const getConditionStars = (condition) => {
+    const conditionLower = condition?.toLowerCase() || "";
+
+    switch (conditionLower) {
+      case "new":
+        return 5;
+      case "like new":
+      case "like_new":
+        return 4;
+      case "good":
+        return 3;
+      case "fair":
+        return 2;
+      case "poor":
+        return 1;
+      default:
+        return 3;
+    }
+  };
 
   useEffect(() => {
     if (productID) {
@@ -98,31 +133,86 @@ export default function StoreProductCard({ product }) {
 
       {/* Content Section */}
       <CardContent sx={{ flexGrow: 1, p: 2 }}>
-        <Typography variant="subtitle1" noWrap title={product.name} gutterBottom>
-          {product.name}
-        </Typography>
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          {formatPrice(product.price)}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-          {product.condition && (
-            <Chip
-              label={product.condition}
-              size="small"
-              color={product.condition.toLowerCase() === 'new' ? 'success' : 'default'}
-              sx={{ height: 24, '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' } }}
-            />
-          )}
-          {product.category && (
-            <Chip
-              label={product.category}
-              size="small"
-              variant="outlined"
-              sx={{ height: 24, '& .MuiChip-label': { px: 0.5, fontSize: '0.75rem' } }}
-            />
-          )}
-        </Box>
-      </CardContent>
+                                    <Typography
+                                      variant="subtitle1"
+                                      fontWeight="500"
+                                      gutterBottom
+                                      title={product.name}
+                                    >
+                                      {product.name?.length > 24
+                                        ? `${product.name.substring(0, 24)}...`
+                                        : product.name}
+                                    </Typography>
+
+                                    <Typography
+                                      variant="h6"
+                                      sx={{
+                                        fontWeight: 500,
+                                        my: 1,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                        color: "#0f2044", // UNCG Blue
+                                      }}
+                                    >
+                                      <LocalOfferIcon fontSize="small" />$
+                                      {parseFloat(product.price).toFixed(2)}
+                                    </Typography>
+
+                                    <Stack spacing={1} sx={{ mb: 1 }}>
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 0.5,
+                                        }}
+                                      >
+                                        <CategoryIcon
+                                          fontSize="small"
+                                          color="action"
+                                          sx={{ fontSize: 18 }}
+                                        />
+                                        <Typography
+                                          variant="body2"
+                                          color="text.secondary"
+                                        >
+                                          {product.category}
+                                        </Typography>
+                                      </Box>
+
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 0.5,
+                                        }}
+                                      >
+                                        <Box sx={{ display: "flex" }}>
+                                          {[...Array(5)].map((_, i) => (
+                                            <StarIcon
+                                              key={i}
+                                              sx={{
+                                                color:
+                                                  i <
+                                                  getConditionStars(
+                                                    product.condition
+                                                  )
+                                                    ? "warning.main"
+                                                    : "text.disabled",
+                                                fontSize: "0.8rem",
+                                              }}
+                                            />
+                                          ))}
+                                        </Box>
+                                        <Typography
+                                          variant="body2"
+                                          color="text.secondary"
+                                        >
+                                          {product.condition}
+                                        </Typography>
+                                      </Box>
+                                    </Stack>
+                                  </CardContent>
     </Card>
   );
 }

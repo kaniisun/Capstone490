@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "../../../supabaseClient";
 import "./StorePage.css";
 import StoreProductCard from "./StoreProductCard";
@@ -16,18 +16,20 @@ import {
   Chip,
 } from "@mui/material";
 import EmailIcon from '@mui/icons-material/Email';
-import { Link } from "react-router-dom";
 
 const StorePage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sellerInfo, setSellerInfo] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [sortOrder, setSortOrder] = useState("low-high");
 
   useEffect(() => {
     const fetchData = async () => {
+      // Seller info
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("firstName, lastName")
@@ -36,14 +38,14 @@ const StorePage = () => {
       if (userError) console.error(userError);
       else setSellerInfo(userData);
 
+      // Products
       const { data: productData, error: productError } = await supabase
-      .from("products")
-      .select("*", { count: "exact" })
-      .eq("userID", userId)
-      .eq("is_deleted", false)
-      .eq("moderation_status", "approved")
-      .ilike("status", "available");
-
+        .from("products")
+        .select("*", { count: "exact" })
+        .eq("userID", userId)
+        .eq("is_deleted", false)
+        .eq("moderation_status", "approved")
+        .ilike("status", "available");
       if (productError) console.error(productError);
       else {
         setProducts(
@@ -61,6 +63,17 @@ const StorePage = () => {
 
   const openChatWithSeller = () => navigate(`/messaging/${userId}`);
 
+  // Filter and sort products
+  const displayProducts = products
+    .filter(
+      p => selectedCategory === "All" || p.category === selectedCategory
+    )
+    .sort((a, b) =>
+      sortOrder === "low-high"
+        ? parseFloat(a.price) - parseFloat(b.price)
+        : parseFloat(b.price) - parseFloat(a.price)
+    );
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
       {loading ? (
@@ -69,7 +82,7 @@ const StorePage = () => {
         </Box>
       ) : (
         <>
-          {/* Header with Message button aligned right */}
+          {/* Header with Message Seller */}
           <Paper
             elevation={3}
             sx={{
@@ -80,7 +93,6 @@ const StorePage = () => {
               justifyContent: 'space-between',
               background: 'linear-gradient(to right, #fffbe6, #fff6cc)',
               borderRadius: 3,
-              boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -100,35 +112,51 @@ const StorePage = () => {
               </Box>
             </Box>
             <Button
-  size="small"
-  variant="contained"
-  startIcon={<EmailIcon sx={{ fontSize: 16 }} />}
-  onClick={openChatWithSeller}
-  sx={{
-    textTransform: 'none',
-    py: 0.3,
-    px: 1,
-    fontSize: '0.75rem',
-    minWidth: 'auto',
-    width: 'fit-content',
-  }}
->
-  Message Seller
-</Button>
+              size="small"
+              variant="outlined"
+              onClick={openChatWithSeller}
+              sx={{
+                textTransform: 'none',
+                borderRadius: 2,
+                px: 1.5,
+                py: 0.5,
+                fontSize: '0.75rem',
+                backgroundColor: '#0f2044',
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#1a3366',
+                  transform: 'translateY(-2px)',
+                  color: '#ffffff',
+                },
+                minWidth: 'auto',
+                width: 'fit-content',
+              }}
+              startIcon={<EmailIcon sx={{ fontSize: 16 }} />}
+            >
+              Message Seller
+            </Button>
           </Paper>
 
           {/* Category Filters */}
-          {products.length > 0 && (
-            <Box sx={{ mb: 3, display: 'flex', gap: 1, overflowX: 'auto' }}>
-              <Chip
-                label="All"
-                size="small"
-                color={selectedCategory === 'All' ? 'primary' : 'default'}
-                variant={selectedCategory === 'All' ? 'filled' : 'outlined'}
-                onClick={() => setSelectedCategory('All')}
-                sx={{ borderRadius: 2 }}
-              />
-              {Array.from(new Set(products.map(p => p.category).filter(Boolean))).map(cat => (
+          <Box sx={{ mb: 1, display: 'flex', gap: 1, overflowX: 'auto' }}>
+            <Chip
+              label="All"
+              size="small"
+              color={selectedCategory === 'All' ? 'primary' : 'default'}
+              variant={selectedCategory === 'All' ? 'filled' : 'outlined'}
+              onClick={() => setSelectedCategory('All')}
+              sx={{
+                borderRadius: 2,
+                '&:hover': {
+                  backgroundColor: '#1a3366',
+                  transform: 'translateY(-2px)',
+                  color: '#ffffff',
+                },
+              }}
+            />
+
+            {Array.from(new Set(products.map(p => p.category).filter(Boolean))).map(
+              cat => (
                 <Chip
                   key={cat}
                   label={cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -136,30 +164,72 @@ const StorePage = () => {
                   color={selectedCategory === cat ? 'primary' : 'default'}
                   variant={selectedCategory === cat ? 'filled' : 'outlined'}
                   onClick={() => setSelectedCategory(cat)}
-                  sx={{ borderRadius: 2 }}
+                  sx={{ borderRadius: 2,
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                    },
+                   }}
                 />
-              ))}
-            </Box>
-          )}
+              )
+            )}
+          </Box>
 
-          {/* Product Grid or Empty Message */}
-          {products.length === 0 ? (
+          {/* Sort Toggle Button */}
+          <Box sx={{ mb: 3, display: 'flex' }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() =>
+                setSortOrder(prev => (prev === 'low-high' ? 'high-low' : 'low-high'))
+              }
+              sx={{
+                textTransform: 'none',
+                borderRadius: 2,
+                px: 2,
+                py: 0.5,
+                fontSize: '0.75rem',
+                minWidth: 'auto',
+                width: 'fit-content',
+                backgroundColor: '#0f2044',
+                color: '#ffffff',
+                '&:hover': {
+                  backgroundColor: '#1a3366',
+                  transform: 'translateY(-2px)',
+                  color: '#ffffff',
+                },
+              }}
+            >
+              {sortOrder === 'low-high'
+                ? 'Price: Low → High'
+                : 'Price: High → Low'}
+            </Button>
+          </Box>
+
+          {/* Products Grid */}
+          {displayProducts.length === 0 ? (
             <Typography variant="body1" color="text.secondary">
-              This seller currently has no available products.
+              No products to display.
             </Typography>
           ) : (
             <Grid container spacing={3}>
-              {products
-                .filter(p => selectedCategory === 'All' || p.category === selectedCategory)
-                .map(product => (
-                  <Grid item xs={12} sm={6} md={4} key={product.id}>
-                    <Link to={`/product/${product.productID || product.id}`} style={{ textDecoration: 'none' }}>
-                      <Box className="product-card-hover">
-                        <StoreProductCard product={product} />
-                      </Box>
-                    </Link>
-                  </Grid>
-                ))}
+              {displayProducts.map(product => (
+                <Grid
+                  item
+                  xs={12}
+                  sm={6}
+                  md={4}
+                  key={product.productID || product.id}
+                >
+                  <Link
+                    to={`/product/${product.productID || product.id}`}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <Box className="product-card-hover">
+                      <StoreProductCard product={product} />
+                    </Box>
+                  </Link>
+                </Grid>
+              ))}
             </Grid>
           )}
         </>
