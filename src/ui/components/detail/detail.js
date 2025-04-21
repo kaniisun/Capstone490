@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import {
@@ -368,7 +368,13 @@ export const Detail = () => {
             </div>
             <div className="detail-seller-info">
               <span className="detail-seller-name">
-                Seller: {product.users?.firstName} {product.users?.lastName}
+              Seller:{" "}
+        <Link
+          to={`/users/${product.userID}`}
+          className="seller-link"
+        >
+          {product.users?.firstName} {product.users?.lastName}
+        </Link>
               </span>
             </div>
             <button
