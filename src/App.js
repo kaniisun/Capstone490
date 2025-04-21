@@ -49,7 +49,7 @@ import About from "./ui/components/footer/About";
 import Privacy from "./ui/components/footer/Privacy";
 import Terms from "./ui/components/footer/Terms";
 import Contact from "./ui/components/footer/Contact";
-import UserProfile from "./ui/components/UserProfile/UserProfile";
+import UserProfile from "./ui/components/StorePage/StorePage";
 
 
 
