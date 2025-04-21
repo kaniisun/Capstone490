@@ -26,13 +26,8 @@ import {
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { getFormattedImageUrl } from "../ChatSearch/utils/imageUtils";
-import { isFavorite, toggleFavorite } from "../../../utils/favoriteUtils"; 
+import { isFavorite, toggleFavorite } from "../../../utils/favoriteUtils";
 
-/**
- * StoreProductCard
- * A simplified product card for the storefront layout.
- * Hides contact button and fits grid display.
- */
 export default function StoreProductCard({ product }) {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -97,21 +92,35 @@ export default function StoreProductCard({ product }) {
         position: "relative",
         display: "flex",
         flexDirection: "column",
-        height: '100%',
+        height: "100%",
       }}
     >
       {/* Favorite Icon */}
       <IconButton
         size="small"
         onClick={handleToggleFavorite}
-        sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(255,255,255,0.8)' }}
+        sx={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          bgcolor: "rgba(255,255,255,0.8)",
+        }}
       >
-        {favorite ? <FavoriteIcon fontSize="small" color="error" /> : <FavoriteBorderIcon fontSize="small" />}
+        {favorite ? (
+          <FavoriteIcon fontSize="small" color="error" />
+        ) : (
+          <FavoriteBorderIcon fontSize="small" />
+        )}
       </IconButton>
 
       {/* Image Section */}
-      <Box sx={{ width: '100%', height: 0, pt: '75%', position: 'relative' }}>
-        {imageLoading && <Skeleton variant="rectangular" sx={{ position: 'absolute', inset: 0 }} />}
+      <Box sx={{ width: "100%", height: 0, pt: "75%", position: "relative" }}>
+        {imageLoading && (
+          <Skeleton
+            variant="rectangular"
+            sx={{ position: "absolute", inset: 0 }}
+          />
+        )}
         <CardMedia
           component="img"
           image={imageUrl}
@@ -119,13 +128,13 @@ export default function StoreProductCard({ product }) {
           onLoad={handleImageLoad}
           onError={handleImageError}
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: imageError ? 'none' : 'block',
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: imageError ? "none" : "block",
           }}
           loading="lazy"
         />
@@ -133,86 +142,77 @@ export default function StoreProductCard({ product }) {
 
       {/* Content Section */}
       <CardContent sx={{ flexGrow: 1, p: 2 }}>
-                                    <Typography
-                                      variant="subtitle1"
-                                      fontWeight="500"
-                                      gutterBottom
-                                      title={product.name}
-                                    >
-                                      {product.name?.length > 24
-                                        ? `${product.name.substring(0, 24)}...`
-                                        : product.name}
-                                    </Typography>
+        <Typography
+          variant="subtitle1"
+          fontWeight="500"
+          gutterBottom
+          title={product.name}
+        >
+          {product.name?.length > 24
+            ? `${product.name.substring(0, 24)}...`
+            : product.name}
+        </Typography>
 
-                                    <Typography
-                                      variant="h6"
-                                      sx={{
-                                        fontWeight: 500,
-                                        my: 1,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 0.5,
-                                        color: "#0f2044", // UNCG Blue
-                                      }}
-                                    >
-                                      <LocalOfferIcon fontSize="small" />$
-                                      {parseFloat(product.price).toFixed(2)}
-                                    </Typography>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 500,
+            my: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+            color: "#0f2044", // UNCG Blue
+          }}
+        >
+          <LocalOfferIcon fontSize="small" />$
+          {parseFloat(product.price).toFixed(2)}
+        </Typography>
 
-                                    <Stack spacing={1} sx={{ mb: 1 }}>
-                                      <Box
-                                        sx={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 0.5,
-                                        }}
-                                      >
-                                        <CategoryIcon
-                                          fontSize="small"
-                                          color="action"
-                                          sx={{ fontSize: 18 }}
-                                        />
-                                        <Typography
-                                          variant="body2"
-                                          color="text.secondary"
-                                        >
-                                          {product.category}
-                                        </Typography>
-                                      </Box>
+        <Stack spacing={1} sx={{ mb: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+            }}
+          >
+            <CategoryIcon
+              fontSize="small"
+              color="action"
+              sx={{ fontSize: 18 }}
+            />
+            <Typography variant="body2" color="text.secondary">
+              {product.category}
+            </Typography>
+          </Box>
 
-                                      <Box
-                                        sx={{
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 0.5,
-                                        }}
-                                      >
-                                        <Box sx={{ display: "flex" }}>
-                                          {[...Array(5)].map((_, i) => (
-                                            <StarIcon
-                                              key={i}
-                                              sx={{
-                                                color:
-                                                  i <
-                                                  getConditionStars(
-                                                    product.condition
-                                                  )
-                                                    ? "warning.main"
-                                                    : "text.disabled",
-                                                fontSize: "0.8rem",
-                                              }}
-                                            />
-                                          ))}
-                                        </Box>
-                                        <Typography
-                                          variant="body2"
-                                          color="text.secondary"
-                                        >
-                                          {product.condition}
-                                        </Typography>
-                                      </Box>
-                                    </Stack>
-                                  </CardContent>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+            }}
+          >
+            <Box sx={{ display: "flex" }}>
+              {[...Array(5)].map((_, i) => (
+                <StarIcon
+                  key={i}
+                  sx={{
+                    color:
+                      i < getConditionStars(product.condition)
+                        ? "warning.main"
+                        : "text.disabled",
+                    fontSize: "0.8rem",
+                  }}
+                />
+              ))}
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              {product.condition}
+            </Typography>
+          </Box>
+        </Stack>
+      </CardContent>
     </Card>
   );
 }
