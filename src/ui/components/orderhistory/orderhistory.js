@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { Box, Button } from '@mui/material';
 import { supabase } from '../../../supabaseClient';
 import './orderhistory.css';
 import { useLocation } from 'react-router-dom';
@@ -16,6 +17,7 @@ const OrderHistory = () => {
   const [activeView, setActiveView] = useState('purchase-confirmations');
   const [expandedConfirmations, setExpandedConfirmations] = useState({});
 
+  
   useEffect(() => {
     if (orderData) {
       setPurchaseConfirmations(prev => [orderData, ...prev]);
@@ -238,8 +240,8 @@ const OrderHistory = () => {
           )}
           {type === 'sale' && c.status === 'confirmed' && (
             <div className="confirmation-actions">
-              <button className="complete-order-btn" onClick={() => handleCompleteOrder(c.orderId)}>Mark as Complete</button>
-              <button className="cancel-order-btn" onClick={() => handleCancelOrder(c.orderId)}>Cancel Order</button>
+              <button className="confirm-order-btn" onClick={() => handleCompleteOrder(c.orderId)}>Mark as Complete</button>
+              <button className="reject-order-btn" onClick={() => handleCancelOrder(c.orderId)}>Cancel Order</button>
             </div>
           )}
           {expanded && (
@@ -285,7 +287,6 @@ const OrderHistory = () => {
 
   return (
     <div className="order-history-container">
-      <h2>Order History</h2>
       {notifications.length > 0 && (
         <div className="notifications-section">
           <h3>Notifications</h3>
@@ -305,6 +306,7 @@ const OrderHistory = () => {
           </div>
         </div>
       )}
+       <h2>Order History</h2>
       <div className="view-toggle">
         <button className={activeView === 'purchase-confirmations' ? 'active' : ''} onClick={() => setActiveView('purchase-confirmations')}>Purchase Confirmations</button>
         <button className={activeView === 'sale-confirmations' ? 'active' : ''} onClick={() => setActiveView('sale-confirmations')}>Sale Confirmations</button>

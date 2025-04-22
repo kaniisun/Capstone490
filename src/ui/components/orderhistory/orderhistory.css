@@ -45,7 +45,9 @@
 /* Content Section */
 .content-section {
   position: relative;
+  align-content: center;
   min-height: 400px;
+  min-width: 550px;
 }
 
 .order-section {
@@ -127,9 +129,8 @@ tr:hover {
 
 .confirmation-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
+  justify-content: center; /* all items will sit in the middle */
+  align-items: center;
 }
 
 .confirmation-header-content h4 {
@@ -334,6 +335,7 @@ tr:hover {
 
   .confirmation-header {
     flex-direction: column;
+    align-items: center;
     gap: 1rem;
   }
 
@@ -355,6 +357,7 @@ tr:hover {
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
   color: #2c3e50;
+  margin-top: auto;
 }
 
 .notifications-list {
@@ -396,7 +399,8 @@ tr:hover {
   cursor: pointer;
   font-size: 0.65rem;
   margin-left: 0.5rem;
-  min-height: 16px;
+  min-height: 20px;
+  max-width: fit-content;
 }
 
 .mark-read-btn:hover {
