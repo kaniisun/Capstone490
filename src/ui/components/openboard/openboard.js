@@ -312,14 +312,14 @@ const OpenBoard = () => {
         setLoadingVotes(true);
         console.log("Fetching votes for threads:", threadIds);
 
-    const { data, error } = await supabase
+        const { data, error } = await supabase
           .from("user_votes")
           .select("target_id, vote_value")
           .eq("user_id", auth.currentUser.id)
           .eq("target_type", "thread")
           .in("target_id", threadIds.map(String));
 
-    if (error) {
+        if (error) {
           console.error("Error fetching thread vote data:", error);
           return;
         }
@@ -746,6 +746,104 @@ const OpenBoard = () => {
     }
   };
 
+  // state to track which posts this user has already saved
+  const [savedPosts, setSavedPosts] = useState(new Set());
+  // state to track which communities contain at least one saved post
+  const [savedCommunities, setSavedCommunities] = useState(new Set());
+
+  useEffect(() => {
+    if (!user) return;
+
+    async function loadSaved() {
+      // 1) Pull this user's saved post IDs
+      const { data: spRows, error: spErr } = await supabase
+        .from("saved_posts")
+        .select("post_id")
+        .eq("user_id", user.id);
+
+      if (spErr) {
+        console.error("Could not load saved posts", spErr);
+        return;
+      }
+
+      const postIds = spRows.map((r) => r.post_id);
+      setSavedPosts(new Set(postIds));
+
+      // 2) If none, clear communities
+      if (postIds.length === 0) {
+        setSavedCommunities(new Set());
+        return;
+      }
+
+      // 3) Otherwise fetch those posts' community IDs
+      const { data: obRows, error: obErr } = await supabase
+        .from("open_board")
+        .select("community")
+        .in("open_board_id", postIds);
+
+      if (obErr) {
+        console.error("Could not load saved post communities", obErr);
+        setSavedCommunities(new Set());
+        return;
+      }
+
+      const commIds = obRows.map((r) => r.community);
+      setSavedCommunities(new Set(commIds));
+    }
+
+    loadSaved();
+  }, [user]);
+
+  //Order post
+  // inside OpenBoard, before your return:
+  const sortedCommunities = React.useMemo(() => {
+    // pull out the "all" view
+    const allView = communities.find((c) => c.name === "all");
+    // everything else
+    const others = communities.filter((c) => c.name !== "all");
+
+    // sort the rest: saved first, then by name
+    others.sort((a, b) => {
+      const aSaved = savedCommunities.has(a.community_id);
+      const bSaved = savedCommunities.has(b.community_id);
+      if (aSaved === bSaved) {
+        return a.name.localeCompare(b.name);
+      }
+      return aSaved ? -1 : 1;
+    });
+
+    // put "all" at the front
+    return allView ? [allView, ...others] : others;
+  }, [communities, savedCommunities]);
+
+  // Save post
+  const handleSavePost = useCallback(
+    async (postId) => {
+      if (!auth.currentUser) {
+        setOpenLoginDialog(true);
+        return;
+      }
+
+      const isSaved = savedPosts.has(postId);
+      if (isSaved) {
+        await supabase
+          .from("saved_posts")
+          .delete()
+          .match({ user_id: auth.currentUser.id, post_id: postId });
+        savedPosts.delete(postId);
+      } else {
+        await supabase
+          .from("saved_posts")
+          .upsert({ user_id: auth.currentUser.id, post_id: postId });
+        savedPosts.add(postId);
+      }
+
+      // force re‑render with the updated Set
+      setSavedPosts(new Set(savedPosts));
+    },
+    [auth.currentUser, savedPosts]
+  );
+
   // Modify fetchMessages to fetch posts by community
   const fetchMessages = useCallback(async () => {
     try {
@@ -789,6 +887,10 @@ const OpenBoard = () => {
             score: post.score || 0,
           }))
         );
+        if (selectedSort === "saved") {
+          // only keep posts the user has bookmarked
+          data = data.filter(post => savedPosts.has(post.open_board_id));
+        }
 
         setMessages(data);
 
@@ -1360,24 +1462,31 @@ const OpenBoard = () => {
 
   const handleSortChange = (sort) => {
     setSelectedSort(sort);
-
+  
     if (messages.length > 0) {
       let sortedMessages = [...messages];
-
+  
       if (sort === "top") {
         // Sort by score (highest first)
         sortedMessages.sort((a, b) => (b.score || 0) - (a.score || 0));
-      } else if (sort === "new") {
+      }
+      else if (sort === "new") {
         // Sort by created_at (newest first)
         sortedMessages.sort(
-          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
       }
-
+      else if (sort === "saved") {
+        // Filter down to only the posts this user has saved
+        sortedMessages = sortedMessages.filter(m =>
+          savedPosts.has(m.open_board_id)
+        );
+      }
+  
       setMessages(sortedMessages);
     }
   };
-
+  
   // Function to sort comments
   const sortComments = (sortType) => {
     if (expandedThreadComments.length > 0) {
@@ -1745,7 +1854,7 @@ const OpenBoard = () => {
     // Get current vote for this comment
     const userVote = commentVotes[comment.comment_id] || 0;
 
-  return (
+    return (
       <Box
         key={comment.comment_id}
         sx={{
@@ -1946,8 +2055,8 @@ const OpenBoard = () => {
                   maxWidth: "32px",
                 },
               }}
-                  onClick={(e) => {
-                    e.stopPropagation();
+              onClick={(e) => {
+                e.stopPropagation();
                 handleCommentMenuOpen(e, comment.comment_id);
               }}
             >
@@ -3116,7 +3225,7 @@ const OpenBoard = () => {
             </Button>
 
             <List sx={{ mb: 2 }}>
-              {communities.map((community) => (
+              {sortedCommunities.map((community) => (
                 <ListItem key={community.name} disablePadding sx={{ mb: 0.5 }}>
                   <ListItemButton
                     onClick={() => setSelectedCommunity(community.name)}
@@ -3159,6 +3268,12 @@ const OpenBoard = () => {
                             >
                               (view)
                             </Typography>
+                          )}
+                          {savedCommunities.has(community.community_id) && (
+                            <BookmarkIcon
+                              fontSize="small"
+                              sx={{ ml: 1, color: "secondary.main" }}
+                            />
                           )}
                         </Typography>
                       }
@@ -3288,6 +3403,8 @@ const OpenBoard = () => {
                   <ToggleButton value="top" aria-label="sort by top">
                     Top
                   </ToggleButton>
+                  <ToggleButton value="saved">
+    <BookmarkIcon fontSize="small" sx={{ mr: .5 }}/></ToggleButton>
                 </ToggleButtonGroup>
               </Box>
 
@@ -3297,7 +3414,29 @@ const OpenBoard = () => {
                 </Box>
               ) : messages.length > 0 ? (
                 messages.map((message) => (
-                  <Box key={message.open_board_id} sx={{ mb: 3 }}>
+                  <Box
+                    key={message.open_board_id}
+                    sx={{ mb: 3, position: "relative" }}
+                  >
+                    {savedPosts.has(message.open_board_id) && (
+                      <Box
+                        sx={{
+                          position: "absolute",
+                          top: 0,
+                          right: 0,
+                          bgcolor: "primary.main",
+                          color: "white",
+                          px: 1.5,
+                          py: 0.5,
+                          borderBottomLeftRadius: 4,
+                          zIndex: 2,
+                          fontSize: "0.75rem",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        Saved
+                      </Box>
+                    )}
                     {/* Post Card */}
                     <Card
                       sx={{
@@ -3354,7 +3493,7 @@ const OpenBoard = () => {
                             Posted by u/
                             {usernames[message.creator_id] ||
                               "Anonymous"} •{" "}
-                  {formatDateTime(message.created_at)}
+                            {formatDateTime(message.created_at)}
                           </Typography>
 
                           {/* Post Title (clickable to toggle thread) */}
@@ -3547,8 +3686,8 @@ const OpenBoard = () => {
                                     setMessageToDelete(message.open_board_id);
                                     setOpenDeleteDialog(true);
                                   }}
-                    >
-                      Delete
+                                >
+                                  Delete
                                 </Button>
                               )}
 
@@ -3604,14 +3743,18 @@ const OpenBoard = () => {
                           >
                             <MenuItem
                               onClick={() => {
-                                /* Save functionality */
+                                handleSavePost(message.open_board_id);
                                 handleMenuClose();
                               }}
                             >
                               <ListItemIcon>
                                 <BookmarkIcon fontSize="small" />
                               </ListItemIcon>
-                              <ListItemText>Save</ListItemText>
+                              <ListItemText>
+                                {savedPosts.has(message.open_board_id)
+                                  ? "Unsave"
+                                  : "Save"}
+                              </ListItemText>
                             </MenuItem>
 
                             {auth.currentUser &&
@@ -3713,6 +3856,26 @@ const OpenBoard = () => {
                             >
                               Comment
                             </Button>
+                            <Box>
+                              <Button
+                                size="small"
+                                onClick={() => setExpandedThreadId(null)}
+                                sx={{
+                                  borderRadius: 28,
+                                  marginTop: 1,
+                                  px: 2,
+                                  height: "36px",
+                                  textTransform: "none",
+                                  boxShadow: 2,
+                                  "&:hover": {
+                                    boxShadow: 3,
+                                    backgroundColor: "#0f2044",
+                                    color: "#ffffff",
+                                  }, }}
+                              >
+                                Close
+                              </Button>
+                            </Box>
                           </Box>
                         ) : (
                           <Box
@@ -3780,8 +3943,14 @@ const OpenBoard = () => {
                                 aria-label="sort by top"
                                 size="small"
                               >
-                                Top
+                                
                               </ToggleButton>
+
+                              <ToggleButton 
+                                value="saved" 
+                                aria-label="show saved">
+                                <BookmarkIcon fontSize="small" />
+                             </ToggleButton>
                             </ToggleButtonGroup>
                           )}
                         </Box>
@@ -3884,15 +4053,15 @@ const OpenBoard = () => {
           </Box>
         </Box>
 
-      {/* Add Snackbar at the end of the return */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={5000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
+        {/* Add Snackbar at the end of the return */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={5000}
           onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={handleCloseSnackbar}
             severity={
               snackbar.severity === "success"
                 ? "success"
@@ -3902,19 +4071,19 @@ const OpenBoard = () => {
                 ? "warning"
                 : "info"
             }
-          variant="filled"
-          sx={{
-            width: "100%",
-            borderRadius: 1,
-            ...(snackbar.severity === "success" && {
+            variant="filled"
+            sx={{
+              width: "100%",
+              borderRadius: 1,
+              ...(snackbar.severity === "success" && {
                 bgcolor: "#FFB71B", // UNCG Gold for success alerts
                 color: "#0F2044", // UNCG Navy for text
-            }),
-          }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+              }),
+            }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
 
         {/* Reply Dialog */}
         <Dialog
@@ -3938,7 +4107,7 @@ const OpenBoard = () => {
                 sx={{
                   mb: 2,
                   p: 1.5,
-                  backgroundColor: "rgba(15, 32, 68, 0.04)",
+                  backgroundColor: "#0f2044",
                   borderRadius: 1,
                   borderLeft: "3px solid",
                   borderColor: "secondary.main",
