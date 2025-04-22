@@ -1,0 +1,18 @@
+.product-card-link {
+    display: block;
+  }
+  
+  .product-card-hover {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    will-change: transform;
+    border-radius: 12px;
+  }
+  
+  .product-card-hover:hover {
+    transform: translateY(-4px) scale(1.015);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  }
+  
+  .product-card-hover:hover {
+    cursor: pointer;
+  }

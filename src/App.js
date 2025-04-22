@@ -45,6 +45,13 @@ import OpenBoard from "./ui/components/openboard/openboard";
 import AdminDashboard from "./ui/components/admin/AdminDashboard";
 import AdminSetup from "./ui/components/admin/AdminSetup";
 import Confirmation from "./ui/components/confirmation/confirmation";
+import About from "./ui/components/footer/About";
+import Privacy from "./ui/components/footer/Privacy";
+import Terms from "./ui/components/footer/Terms";
+import Contact from "./ui/components/footer/Contact";
+import UserProfile from "./ui/components/StorePage/StorePage";
+
+
 
 function AppContent() {
   const location = useLocation();
@@ -100,8 +107,20 @@ function AppContent() {
                 <Route path="/product/:id" element={<Detail />} />
                 <Route path="/search-results" element={<SearchResults />} />
                 <Route path="/orderhistory" element={<OrderHistory />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/contact" element={<Contact />} />
 
                 {/* Protected routes */}
+                <Route
+                  path="/users/:userId"
+                  element={
+                    <ProtectedRoute>
+                      <UserProfile />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/favorites"
                   element={
