@@ -388,11 +388,11 @@ const OpenBoard = () => {
       const currentVote = threadVotes[threadId] || 0;
       let newVoteValue;
 
-      // If clicking the same vote button, toggle it off
+    
       if (currentVote === voteValue) {
         newVoteValue = 0;
       }
-      // If clicking a different vote button, switch to that vote
+    
       else {
         newVoteValue = voteValue;
       }
@@ -754,7 +754,7 @@ const OpenBoard = () => {
   useEffect(() => {
     if (!user) return;
 
-    async function loadSaved() {
+    const loadSaved = async () => {
       // 1) Pull this user's saved post IDs
       const { data: spRows, error: spErr } = await supabase
         .from("saved_posts")
@@ -769,13 +769,13 @@ const OpenBoard = () => {
       const postIds = spRows.map((r) => r.post_id);
       setSavedPosts(new Set(postIds));
 
-      // 2) If none, clear communities
+      
       if (postIds.length === 0) {
         setSavedCommunities(new Set());
         return;
       }
 
-      // 3) Otherwise fetch those posts' community IDs
+      // 2) Pull the communities for those posts
       const { data: obRows, error: obErr } = await supabase
         .from("open_board")
         .select("community")
@@ -786,6 +786,7 @@ const OpenBoard = () => {
         setSavedCommunities(new Set());
         return;
       }
+      
 
       const commIds = obRows.map((r) => r.community);
       setSavedCommunities(new Set(commIds));
@@ -3228,7 +3229,11 @@ const OpenBoard = () => {
               {sortedCommunities.map((community) => (
                 <ListItem key={community.name} disablePadding sx={{ mb: 0.5 }}>
                   <ListItemButton
-                    onClick={() => setSelectedCommunity(community.name)}
+                   onClick={() => {
+                    setSelectedCommunity(community.name);
+                    setSelectedSort("new");    
+                  }}
+                    
                     selected={selectedCommunity === community.name}
                     sx={{
                       borderRadius: 1,
@@ -3251,7 +3256,7 @@ const OpenBoard = () => {
                                 ? "bold"
                                 : "normal",
                             fontStyle:
-                              community.name === "all" ? "italic" : "normal", // Italicize "all" to indicate it's special
+                              community.name === "all" ? "italic" : "normal", 
                           }}
                         >
                           s/{community.name}
@@ -3308,7 +3313,7 @@ const OpenBoard = () => {
                 sx={{
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "flex-start", // Change to flex-start for proper alignment with description
+                  alignItems: "flex-start", 
                   mb: 1,
                 }}
               >
@@ -3359,9 +3364,9 @@ const OpenBoard = () => {
                     height: "36px",
                     textTransform: "none",
                     boxShadow: 2,
-                    mt: 0.5, // Add margin top to align with heading
+                    mt: 0.5, 
                     transition: "all 0.2s ease-in-out",
-                    bgcolor: "#0F2044", // UNCG Navy for consistency
+                    bgcolor: "#0F2044", // UNCG Navy 
                     "&:hover": {
                       boxShadow: 3,
                       bgcolor: "#1a305e", // Slightly lighter on hover
@@ -3544,8 +3549,8 @@ const OpenBoard = () => {
                               mt: 1,
                               width: "100%",
                               overflow: "hidden",
-                              gap: 2, // Increase gap between buttons
-                              flexWrap: "nowrap", // Prevent buttons from wrapping
+                              gap: 2, 
+                              flexWrap: "nowrap",
                             }}
                           >
                             {/* Voting controls */}
@@ -3553,7 +3558,7 @@ const OpenBoard = () => {
                               sx={{
                                 display: "flex",
                                 alignItems: "center",
-                                mr: 0, // Reset right margin
+                                mr: 0,
                                 flexShrink: 0,
                                 justifyContent: "flex-start",
                               }}
@@ -3629,7 +3634,7 @@ const OpenBoard = () => {
                                 maxWidth: "fit-content",
                                 flexShrink: 0,
                                 px: 1,
-                                ml: 8, // Increase left margin even more to move it further right
+                                ml: 8, 
                                 "&:hover": {
                                   backgroundColor: "rgba(0, 0, 0, 0.04)",
                                   width: "auto",
@@ -4316,7 +4321,7 @@ const OpenBoard = () => {
             position: "fixed",
             bottom: 24,
             right: 24,
-            display: { xs: "flex", sm: "none" }, // Only show on mobile
+            display: { xs: "flex", sm: "none" }, 
             alignItems: "center",
             justifyContent: "flex-start",
             bgcolor: "#0F2044", // UNCG Navy
@@ -4328,7 +4333,7 @@ const OpenBoard = () => {
               boxShadow:
                 "0px 5px 8px -1px rgba(0,0,0,0.2), 0px 8px 12px 0px rgba(0,0,0,0.14), 0px 3px 20px 0px rgba(0,0,0,0.12)",
             },
-            zIndex: 1300, // Ensure it's above other elements
+            zIndex: 1300,
             "& .MuiSvgIcon-root": {
               marginRight: "8px",
             },
