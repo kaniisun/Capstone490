@@ -71,31 +71,43 @@ export const Home = () => {
     }
   }, [location, checkEmailVerification, navigate]);
 
-  // fetch products, limit to first 5 products in the database
+  // fetch products, limit to first 10 products in the database
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // Fetch products that are available, not flagged, not deleted, and approved
-        const result = await supabase
+        // First try to get available products
+        let result = await supabase
           .from("products")
           .select("*")
-          .eq("status", "Available") // Only get available products
-          .eq("flag", false) // Don't show flagged products
-          .eq("is_deleted", false) // Don't show deleted products
-          .eq("moderation_status", "approved") // Only show approved products
-          .order("created_at", { ascending: false }) // Get newest first
-          .limit(10); // Limit to 10 products
+          .eq("status", "Available")
+          .eq("flag", false)
+          .eq("is_deleted", false)
+          .eq("moderation_status", "approved")
+          .order("created_at", { ascending: false })
+          .limit(10);
 
-        // Store data and error from the response
-        const data = result.data;
-        const error = result.error;
+        let data = result.data || [];
 
-        if (error) {
-          console.error("Error fetching products:", error);
-        } else {
-          console.log("Fetched featured products:", data);
-          setProducts(data || []);
+        // If we don't have 10 items, try to get more with relaxed status filter
+        if (data.length < 10) {
+          const remainingCount = 10 - data.length;
+          const additionalResult = await supabase
+            .from("products")
+            .select("*")
+            .eq("flag", false)
+            .eq("is_deleted", false)
+            .eq("moderation_status", "approved")
+            .not("productID", "in", `(${data.map(p => p.productID).join(",")})`)
+            .order("created_at", { ascending: false })
+            .limit(remainingCount);
+
+          if (additionalResult.data) {
+            data = [...data, ...additionalResult.data];
+          }
         }
+
+        console.log("Fetched featured products:", data);
+        setProducts(data);
       } catch (err) {
         console.error("Exception when fetching products:", err);
       } finally {
@@ -110,9 +122,8 @@ export const Home = () => {
     <div className="home">
       {showVerificationSuccess && (
         <NotificationBanner
-          message={`Registration successful! Welcome${
-            userName ? ` ${userName}` : ""
-          } to Spartan Marketplace!`}
+          message={`Registration successful! Welcome${userName ? ` ${userName}` : ""
+            } to Spartan Marketplace!`}
           type="success"
           show={true}
           duration={6000}
@@ -121,42 +132,13 @@ export const Home = () => {
       )}
 
       {showVerificationFixNotification && (
-        <div
-          style={{
-            backgroundColor: "#fff3cd",
-            color: "#856404",
-            padding: "10px",
-            borderRadius: "4px",
-            margin: "10px 0",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div className="verification-fix-banner">
           <div>
             <strong>Notice:</strong> If Supabase still shows "waiting for
             verification",
-            <a
-              href="/fix-verification"
-              style={{
-                marginLeft: "5px",
-                color: "#856404",
-                fontWeight: "bold",
-              }}
-            >
-              click here to fix it
-            </a>
-            .
+            <a href="/fix-verification">click here to fix it</a>.
           </div>
-          <button
-            onClick={() => setShowVerificationFixNotification(false)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "16px",
-            }}
-          >
+          <button onClick={() => setShowVerificationFixNotification(false)}>
             ✕
           </button>
         </div>
