@@ -211,7 +211,7 @@ const EditProduct = () => {
           else if (fileExt.toLowerCase() === "webp") contentType = "image/webp";
           else if (fileExt.toLowerCase() === "svg")
             contentType = "image/svg+xml";
-          else contentType = "image/jpeg"; // Default to JPEG
+          else contentType = "image/jpeg"; 
 
           console.log(
             "Content type not detected, using extension-based type:",
@@ -223,7 +223,7 @@ const EditProduct = () => {
           .from("product-images")
           .upload(filePath, product.imageFile, {
             upsert: true,
-            contentType: contentType, // Explicitly set the MIME type
+            contentType: contentType, 
           });
 
         if (uploadError) {
@@ -340,23 +340,33 @@ const EditProduct = () => {
             mb: 3,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
           }}
         >
           <Typography variant="h5" component="h1" fontWeight="500">
             Edit Product
           </Typography>
+
           <IconButton
-            color="primary"
+            size="small"
             onClick={() => navigate("/account")}
-            sx={{ borderRadius: 1 }}
+            sx={{
+              ml: "auto",
+              p: 0.5,
+              minWidth: "auto",
+              width: "fit-content",
+              transition: "background-color 0.2s",
+              "&:hover": {
+                bgcolor: "rgba(0, 0, 0, 0.04)",
+              },
+            }}
           >
-            <ArrowBackIcon />
-            <Typography variant="body2" sx={{ ml: 0.5 }}>
+            <ArrowBackIcon fontSize="small" />
+            <Typography variant="body2" sx={{ ml: 0.5, lineHeight: 1 }}>
               Back
             </Typography>
           </IconButton>
         </Box>
+
         <Divider sx={{ mb: 4 }} />
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
@@ -582,16 +592,23 @@ const EditProduct = () => {
             {/* Submit button */}
             <Grid item xs={12}>
               <Divider sx={{ mb: 3 }} />
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 2, 
+                  alignItems: "center", 
+                }}
+              >
                 <Button
                   variant="outlined"
                   onClick={() => navigate("/account")}
                   sx={{
+                    flex: 1,
+                    height: 48,
                     borderRadius: 1,
-                    py: 1.2,
-                    px: 3,
                     textTransform: "none",
                     borderColor: "#0f2044",
+                    marginTop: 2.5,
                     color: "#0f2044",
                     "&:hover": {
                       borderColor: "#ffc72c",
@@ -614,9 +631,9 @@ const EditProduct = () => {
                     )
                   }
                   sx={{
+                    flex: 1,
+                    height: 48,
                     borderRadius: 1,
-                    py: 1.2,
-                    px: 4,
                     textTransform: "none",
                     bgcolor: "#0f2044",
                     "&:hover": {
