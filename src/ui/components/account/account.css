@@ -52,10 +52,6 @@
     font-size: 14px;
 }
 
-/* .product-actions button:hover {
-    background-color: #2d572f;
-} */
-
 .product-actions button:nth-child(2) {
     background-color: #df3b30;
 }

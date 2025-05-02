@@ -29,7 +29,7 @@ export const Detail = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [showSuccess] = useState(false);
   // Add favorited state
   const [favorited, setFavorited] = useState(false);
   const navigate = useNavigate();
@@ -91,55 +91,6 @@ export const Detail = () => {
     fetchProduct();
   }, [id]);
 
-  const handleAddToCart = async () => {
-    if (!userId) {
-      navigate("/login");
-      return;
-    }
-
-    try {
-      // First check if the item is already in the cart
-      const { data: existingCartItem } = await supabase
-        .from("cart")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("product_id", id)
-        .single();
-
-      if (existingCartItem) {
-        // Update quantity if item exists
-        const { error: updateError } = await supabase
-          .from("cart")
-          .update({ quantity: existingCartItem.quantity + 1 })
-          .eq("user_id", userId)
-          .eq("product_id", id);
-
-        if (updateError) throw updateError;
-      } else {
-        // Add new item if it doesn't exist
-        const { error: insertError } = await supabase.from("cart").insert([
-          {
-            user_id: userId,
-            product_id: id,
-            quantity: 1,
-            product_name: product.name,
-            product_price: product.price,
-            product_image: product.image,
-          },
-        ]);
-
-        if (insertError) throw insertError;
-      }
-
-      // Show success message
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-    }
-  };
-
-  // delete product function - implements soft delete
   const handleDelete = async () => {
     try {
       // Use the API endpoint for soft delete

@@ -4,7 +4,7 @@ import MessageArea from "./messageArea";
 import UserList from "./userList";
 import "./messages.css";
 import { useParams, useSearchParams, useLocation } from "react-router-dom";
-import { Grid, Box, Paper } from "@mui/material";
+import { Grid, Paper } from "@mui/material";
 
 const MessageHome = () => {
   const [user, setUser] = useState(null);
@@ -14,7 +14,6 @@ const MessageHome = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const [productDetails, setProductDetails] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch unread message counts
   const fetchUnreadCounts = useCallback(async () => {
@@ -139,7 +138,6 @@ const MessageHome = () => {
             .single();
 
           const secondTryData = secondTryResult.data;
-          const secondTryError = secondTryResult.error;
 
           if (secondTryData) {
             console.log("Found product by ID:", secondTryData);
@@ -214,8 +212,6 @@ const MessageHome = () => {
         }
       } catch (err) {
         console.error("Exception in fetchReceiverData:", err);
-      } finally {
-        setIsLoading(false);
       }
     };
 

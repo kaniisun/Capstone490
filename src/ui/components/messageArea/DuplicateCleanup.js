@@ -1,10 +1,10 @@
 // DuplicateCleanup.js - Run this in your browser console to clean up duplicate messages
 import { supabase } from "../../../supabaseClient";
 
-/**
- * This utility finds and removes duplicate "interested in your product" messages
- * It can be run directly from the browser console
- */
+// Declare the type for the window property
+/** @type {Window & { cleanupDuplicateMessages?: Function }} */
+const customWindow = window;
+
 const cleanupDuplicateMessages = async () => {
   try {
     // Get current user ID
@@ -52,8 +52,7 @@ const cleanupDuplicateMessages = async () => {
       // If more than one message in the group, we have duplicates
       if (messageGroup.length > 1) {
         console.log(
-          `Found ${messageGroup.length} duplicate messages for "${
-            key.split("_")[0]
+          `Found ${messageGroup.length} duplicate messages for "${key.split("_")[0]
           }..."`
         );
 
@@ -104,4 +103,4 @@ const cleanupDuplicateMessages = async () => {
 export { cleanupDuplicateMessages };
 
 // Also make it available globally for console use
-window.cleanupDuplicateMessages = cleanupDuplicateMessages;
+customWindow.cleanupDuplicateMessages = cleanupDuplicateMessages;

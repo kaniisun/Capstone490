@@ -15,7 +15,6 @@ import {
   Twitter as TwitterIcon,
   Instagram as InstagramIcon,
   YouTube as YouTubeIcon,
-  Pinterest as PinterestIcon,
   School as SchoolIcon,
 } from "@mui/icons-material";
 

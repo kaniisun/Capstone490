@@ -15,17 +15,12 @@ import {
   MenuItem,
   Tooltip,
   Typography,
-  useTheme,
-  useMediaQuery,
 } from "@mui/material";
 import {
   Home as HomeIcon,
-  ShoppingCart as ShoppingCartIcon,
   Person as PersonIcon,
-  Notifications as NotificationsIcon,
   ChatBubble as ChatIcon,
   LocalShipping as ShippingIcon,
-  Settings as SettingsIcon,
   Logout as LogoutIcon,
   Login as LoginIcon,
   PersonAdd as PersonAddIcon,
@@ -62,13 +57,11 @@ const TempLogo = ({ isAuthenticated, isEmailVerified }) => {
 };
 
 const Header = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const [userInfo, setUserInfo] = useState(null);
-  const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, isEmailVerified, user, logout, isAdmin } = useAuth();
+  const [userInfo, setUserInfo] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [notificationCount, setNotificationCount] = useState(0);
 
@@ -368,24 +361,6 @@ const Header = () => {
                   Messages
                 </MenuItem>
 
-              
-
-                {/* <MenuItem
-                  onClick={() => handleNavigate("/notifications")}
-                  className="menu-item"
-                >
-                  <ListItemIcon className="menu-item-icon">
-                    <Badge
-                      badgeContent={3}
-                      color="secondary"
-                      className="notification-badge"
-                    >
-                      <NotificationsIcon fontSize="small" />
-                    </Badge>
-                  </ListItemIcon>
-                  Notifications
-                </MenuItem> */}
-
                 <MenuItem
                   onClick={() => handleNavigate("/orderhistory")}
                   className="menu-item"
@@ -397,16 +372,6 @@ const Header = () => {
                   </ListItemIcon>
                   Orders
                 </MenuItem>
-
-                {/* <MenuItem
-                  onClick={() => handleNavigate("/cart")}
-                  className="menu-item"
-                >
-                  <ListItemIcon className="menu-item-icon">
-                    <ShoppingCartIcon fontSize="small" />
-                  </ListItemIcon>
-                  Cart
-                </MenuItem> */}
 
                 <MenuItem
                   onClick={() => handleNavigate("/favorites")}

@@ -1,12 +1,20 @@
-/**
- * Message helper functions to prevent duplicate messages
- */
-
 // In-memory cache to prevent multiple messages in the same session
 const sentMessages = new Set();
 
 // In-memory cache for deleted messages
 const deletedMessageIds = new Set();
+
+/** @type {Window & typeof globalThis & {
+  initialMessageRef?: boolean;
+  __sentProductMessages?: Set<string>;
+  __processedMessages?: Set<string>;
+  __fetchingMessages?: Record<string, boolean>;
+  __initialMessageFetch?: Record<string, boolean>;
+  __sessionsByProduct?: Record<string, any>;
+  __deletedMessageIds?: Set<string>;
+  initiatedConversations?: Set<string>;
+}} */
+const customWindow = window;
 
 /**
  * Clear all prevention flags for a specific product
@@ -64,30 +72,30 @@ export const clearPreventionFlags = (senderId, receiverId, product) => {
     sentMessages.delete(key);
 
     // Clear in-memory ref that tracks message sending
-    if (window.initialMessageRef) window.initialMessageRef = false;
+    if (customWindow.initialMessageRef) customWindow.initialMessageRef = false;
 
     // Clear from window.__sentProductMessages
-    if (window.__sentProductMessages) {
+    if (customWindow.__sentProductMessages) {
       const productMsgKey = `product_msg_${senderId}_${receiverId}_${productId}`;
-      window.__sentProductMessages.delete(productMsgKey);
+      customWindow.__sentProductMessages.delete(productMsgKey);
       // Also try other formats
-      window.__sentProductMessages.delete(key);
-      window.__sentProductMessages.delete(`${receiverId}:${productId}`);
+      customWindow.__sentProductMessages.delete(key);
+      customWindow.__sentProductMessages.delete(`${receiverId}:${productId}`);
     }
 
     // Clear from window.__processedMessages
-    if (window.__processedMessages) {
+    if (customWindow.__processedMessages) {
       // Try different key formats that might be used
-      window.__processedMessages.delete(
+      customWindow.__processedMessages.delete(
         `${senderId}_${receiverId}_Hi, I'm interested in your`
       );
-      window.__processedMessages.delete(
+      customWindow.__processedMessages.delete(
         `${senderId}_${receiverId}_${productId}`
       );
 
       // Also search and clear any keys containing both IDs
       const processedKeysToDelete = [];
-      window.__processedMessages.forEach((key) => {
+      customWindow.__processedMessages.forEach((key) => {
         if (key.includes(senderId) && key.includes(receiverId)) {
           processedKeysToDelete.push(key);
         }
@@ -95,23 +103,23 @@ export const clearPreventionFlags = (senderId, receiverId, product) => {
 
       processedKeysToDelete.forEach((k) => {
         console.log(`Removing processed message key: ${k}`);
-        window.__processedMessages.delete(k);
+        customWindow.__processedMessages.delete(k);
       });
     }
 
     // Clear from window.__fetchingMessages
-    if (window.__fetchingMessages) {
+    if (customWindow.__fetchingMessages) {
       const fetchKey = `messages_${senderId}_${receiverId}`;
-      if (window.__fetchingMessages[fetchKey]) {
-        delete window.__fetchingMessages[fetchKey];
+      if (customWindow.__fetchingMessages[fetchKey]) {
+        delete customWindow.__fetchingMessages[fetchKey];
       }
     }
 
     // Clear from window.__initialMessageFetch
-    if (window.__initialMessageFetch) {
+    if (customWindow.__initialMessageFetch) {
       const initialFetchKey = `initialFetch_${senderId}_${receiverId}`;
-      if (window.__initialMessageFetch[initialFetchKey]) {
-        delete window.__initialMessageFetch[initialFetchKey];
+      if (customWindow.__initialMessageFetch[initialFetchKey]) {
+        delete customWindow.__initialMessageFetch[initialFetchKey];
       }
     }
 
@@ -134,9 +142,9 @@ export const clearPreventionFlags = (senderId, receiverId, product) => {
     });
 
     // Also clear prevention flags in api-optimizer.js
-    if (window.initiatedConversations) {
+    if (customWindow.initiatedConversations) {
       const conversationKey = `${receiverId}:${productId}`;
-      window.initiatedConversations.delete(conversationKey);
+      customWindow.initiatedConversations.delete(conversationKey);
     }
 
     console.log(`✅ Cleared prevention flags for: ${key} and related keys`);
@@ -150,11 +158,6 @@ export const clearPreventionFlags = (senderId, receiverId, product) => {
 /**
  * Resets all message prevention mechanisms
  * This allows previously prevented duplicate messages to be sent again
- *
- * Can be used in two ways:
- * 1. With no parameters: Resets ALL prevention state (global reset)
- * 2. With specific parameters: Resets prevention for a specific product conversation
- *
  * @param {string} senderId - The sender ID (optional for targeted reset)
  * @param {string} receiverId - The receiver ID (optional for targeted reset)
  * @param {Object} productDetails - Product details (optional for targeted reset)
@@ -179,11 +182,11 @@ export const resetAllMessagePrevention = (
     localStorage.removeItem(storageKey);
 
     // Also clear any in-memory prevention flags
-    if (window.__sentProductMessages) {
+    if (customWindow.__sentProductMessages) {
       const productMsgKey = `product_msg_${senderId}_${receiverId}_${
         productDetails.id || productDetails.productID
       }`;
-      window.__sentProductMessages.delete(productMsgKey);
+      customWindow.__sentProductMessages.delete(productMsgKey);
     }
 
     // Also reset the product-specific session if it exists
@@ -191,10 +194,10 @@ export const resetAllMessagePrevention = (
       productDetails.id || productDetails.productID
     }_${receiverId}`;
     if (
-      window.__sessionsByProduct &&
-      window.__sessionsByProduct[productSessionId]
+      customWindow.__sessionsByProduct &&
+      customWindow.__sessionsByProduct[productSessionId]
     ) {
-      window.__sessionsByProduct[productSessionId] = {
+      customWindow.__sessionsByProduct[productSessionId] = {
         initialMessageSent: false,
         processedMessageIds: new Set(),
         fetchingMessages: false,
@@ -209,26 +212,17 @@ export const resetAllMessagePrevention = (
   // GLOBAL RESET - only if no parameters were provided
   // This resets ALL prevention mechanisms
 
-  // Clear all message prevention flags from localStorage
-  // Loop through all localStorage items and remove those that look like prevention flags
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith("msg_prevent_")) {
-      localStorage.removeItem(key);
-    }
-  }
-
   // Clear global window variables used for tracking
-  if (window.__sentProductMessages) {
-    window.__sentProductMessages.clear();
+  if (customWindow.__sentProductMessages) {
+    customWindow.__sentProductMessages.clear();
   }
 
-  if (window.__processedMessageIds) {
-    window.__processedMessageIds.clear();
+  if (customWindow.__processedMessages) {
+    customWindow.__processedMessages.clear();
   }
 
-  if (window.__sessionsByProduct) {
-    window.__sessionsByProduct = {};
+  if (customWindow.__sessionsByProduct) {
+    customWindow.__sessionsByProduct = {};
   }
 
   console.log("All message prevention state has been reset");
@@ -330,8 +324,8 @@ export const trackDeletedMessage = (messageId) => {
     }
 
     // Also update window-level tracking for cross-component access
-    if (!window.__deletedMessageIds) window.__deletedMessageIds = new Set();
-    window.__deletedMessageIds.add(messageId);
+    if (!customWindow.__deletedMessageIds) customWindow.__deletedMessageIds = new Set();
+    customWindow.__deletedMessageIds.add(messageId);
 
     console.log(`Message ${messageId} marked as permanently deleted`);
   } catch (err) {
@@ -352,7 +346,7 @@ export const isMessageDeleted = (messageId) => {
     if (deletedMessageIds.has(messageId)) return true;
 
     // Then check window-level tracking
-    if (window.__deletedMessageIds && window.__deletedMessageIds.has(messageId))
+    if (customWindow.__deletedMessageIds && customWindow.__deletedMessageIds.has(messageId))
       return true;
 
     // Finally check localStorage
@@ -376,10 +370,10 @@ export const getDeletedMessageIds = () => {
   const combinedSet = new Set(deletedMessageIds);
 
   // Add window-level tracking
-  if (window.__deletedMessageIds) {
-    for (const id of window.__deletedMessageIds) {
+  if (customWindow.__deletedMessageIds) {
+    Array.from(customWindow.__deletedMessageIds).forEach(id => {
       combinedSet.add(id);
-    }
+    });
   }
 
   // Add from localStorage

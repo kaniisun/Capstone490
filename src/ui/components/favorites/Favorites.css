@@ -221,23 +221,23 @@
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .favorites-title {
     font-size: 1.25rem;
   }
-  
+
   .empty-state-card {
     padding: 24px;
   }
-  
+
   .empty-state-icon {
     font-size: 60px;
   }
-  
+
   .products-grid-container {
     padding: 16px;
   }
-  
+
   .product-grid {
     grid-template-columns: 1fr;
     gap: 16px;
@@ -255,4 +255,4 @@
   .product-grid {
     gap: 24px;
   }
-} 
+}

@@ -17,9 +17,8 @@ export const Home = () => {
     useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, checkEmailVerification } = useAuth();
+  const { checkEmailVerification } = useAuth();
 
-  // Scroll to top on initial page load only
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
