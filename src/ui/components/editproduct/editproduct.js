@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../../supabaseClient";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams} from "react-router-dom";
 import "./editproduct.css";
 // Import image utility function
 import {
@@ -13,7 +13,6 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
   Checkbox,
   Container,
   Divider,
@@ -30,7 +29,6 @@ import {
   Snackbar,
   IconButton,
   CircularProgress,
-  useTheme,
 } from "@mui/material";
 import {
   CloudUpload as CloudUploadIcon,
@@ -41,7 +39,6 @@ import {
 
 const EditProduct = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
   const { productID } = useParams();
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);

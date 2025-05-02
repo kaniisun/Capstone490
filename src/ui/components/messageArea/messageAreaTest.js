@@ -1,6 +1,5 @@
 // Simple test file to verify our import fixes
 import React from "react";
-import MessageArea from "./messageArea";
 
 const MessageAreaTest = () => {
   return (

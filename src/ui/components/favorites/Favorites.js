@@ -37,7 +37,6 @@ const Favorites = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.down("md"));
   const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -201,7 +200,6 @@ const Favorites = () => {
               <Typography
                 variant="body1"
                 className="empty-state-description"
-                paragraph
               >
                 Items you favorite while browsing will appear here.
               </Typography>

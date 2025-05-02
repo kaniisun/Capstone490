@@ -58,12 +58,10 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(15, 32, 68, 0.1),
-    transparent
-  );
+  background: linear-gradient(to bottom,
+      transparent,
+      rgba(15, 32, 68, 0.1),
+      transparent);
 }
 
 .prod-image {
@@ -304,6 +302,7 @@
     transform: translateY(100%);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -671,8 +670,10 @@
 
 /* Special styling for bundle tag */
 .detail-bundle-tag {
-  background-color: #fff0c2; /* Light gold background */
-  border-left: 2px solid #ffb71b; /* UNCG gold border */
+  background-color: #fff0c2;
+  /* Light gold background */
+  border-left: 2px solid #ffb71b;
+  /* UNCG gold border */
   font-weight: 600;
 }
 
@@ -773,6 +774,7 @@
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -939,4 +941,3 @@
 .seller-link:hover {
   color: #ffb71b;
 }
-

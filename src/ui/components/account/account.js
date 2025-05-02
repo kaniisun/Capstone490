@@ -6,11 +6,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../../supabaseClient";
 import { useAuth } from "../../../contexts/AuthContext";
 import "./account.css";
-import placeholderImage from "../../../assets/placeholder.js";
-import fallbackImage from "../../../assets/placeholder-fallback.js";
+import placeholderImage from "../../../assets/placeholder.js"; 
 import {
   getFormattedImageUrl,
-  getProductImageUrl,
   handleImageError,
 } from "../ChatSearch/utils/imageUtils";
 import API_CONFIG from "../../../config/api.js";
@@ -38,8 +36,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  useTheme,
-  useMediaQuery,
   CircularProgress,
   Tooltip,
   Chip,
@@ -58,12 +54,11 @@ import {
   LocalOffer as LocalOfferIcon,
   Category as CategoryIcon,
   Star as StarIcon,
-  Sell as Sell,
+  Sell,
 } from "@mui/icons-material";
-import { useTheme as useMuiTheme } from "@mui/material/styles";
 
 const Account = () => {
-  const { user, logout } = useAuth();
+  const { user} = useAuth();
   const [profile, setProfile] = useState({
     email: "",
     fullName: "",
@@ -88,8 +83,6 @@ const Account = () => {
     severity: "success",
   });
 
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -436,7 +429,7 @@ const Account = () => {
       console.log("New image URL:", publicUrlData.publicUrl);
 
       // Now update the product record in the database to ensure it has the correct URL
-      const { data: updateData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("products")
         .update({
           image: publicUrlData.publicUrl,
@@ -479,7 +472,7 @@ const Account = () => {
   const handleMarkAsSold = async (productID) => {
     try {
       const modifiedAt = new Date().toISOString();
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("products")
         .update({ status: "sold", modified_at: modifiedAt })
         .eq("productID", productID)
@@ -553,7 +546,6 @@ const Account = () => {
   useEffect(() => {
     if (tabValue !== 2) return; // only animate when "Sold" tab is open
 
-    let start = 0;
     const duration = 800;
     const frameRate = 60;
     const totalFrames = Math.round((duration / 1000) * frameRate);
@@ -618,8 +610,8 @@ const Account = () => {
     return standardStatus === "available"
       ? "Available"
       : standardStatus === "sold"
-      ? "Sold"
-      : product.status || "Unknown";
+        ? "Sold"
+        : product.status || "Unknown";
   };
 
   if (loading) {
@@ -776,80 +768,80 @@ const Account = () => {
                         />
                       </Grid>
                       <Grid item xs={12}>
-                      <Stack direction="row" spacing={2} mt={1}>
-                        {/* Change Password Button */}
-                        <Button
-                          fullWidth
-                          variant="outlined"
-                          startIcon={<LockResetIcon />}
-                          onClick={() => setShowPasswordForm(!showPasswordForm)}
-                          sx={{
-                            borderRadius: 1,
-                            textTransform: "none",
-                            py: 1.5,
-                            px: 3,
-                            minWidth: 160,
-                            borderColor: "#0f2044",
-                            color: "#0f2044",
-                            height: 48,
-                            fontWeight: 500,
-                            "&:hover": {
-                              borderColor: "#ffc72c",
-                              backgroundColor: "#ffc72c",
-                            },
-                          }}
-                        >
-                          {showPasswordForm ? "Cancel" : "Change Password"}
-                        </Button>
+                        <Stack direction="row" spacing={2} mt={1}>
+                          {/* Change Password Button */}
+                          <Button
+                            fullWidth
+                            variant="outlined"
+                            startIcon={<LockResetIcon />}
+                            onClick={() => setShowPasswordForm(!showPasswordForm)}
+                            sx={{
+                              borderRadius: 1,
+                              textTransform: "none",
+                              py: 1.5,
+                              px: 3,
+                              minWidth: 160,
+                              borderColor: "#0f2044",
+                              color: "#0f2044",
+                              height: 48,
+                              fontWeight: 500,
+                              "&:hover": {
+                                borderColor: "#ffc72c",
+                                backgroundColor: "#ffc72c",
+                              },
+                            }}
+                          >
+                            {showPasswordForm ? "Cancel" : "Change Password"}
+                          </Button>
 
-                        {/* Animated Save Changes Button */}
-                        <Button
-                          fullWidth
-                          type="submit"
-                          variant="contained"
-                          startIcon={
-                            !updating && <SaveIcon />
-                          }
-                          disabled={updating}
-                          sx={{
-                            borderRadius: 1,
-                            textTransform: "none",
-                            py: 1.5,
-                            px: 3,
-                            minWidth: 160,
-                            height: 48,
-                            fontWeight: 500,
-                            backgroundColor: "#0f2044",
-                            color: "white",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 1,
-                            position: "relative",
-                            overflow: "hidden",
-                            "&:hover": {
-                              backgroundColor: "#1a365d",
-                            },
-                          }}
-                        >
-                          <Fade in={updating} timeout={300} unmountOnExit>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                position: "absolute",
-                              }}
-                            >
-                              <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
-                              Saving...
-                            </Box>
-                          </Fade>
+                          {/* Animated Save Changes Button */}
+                          <Button
+                            fullWidth
+                            type="submit"
+                            variant="contained"
+                            startIcon={
+                              !updating && <SaveIcon />
+                            }
+                            disabled={updating}
+                            sx={{
+                              borderRadius: 1,
+                              textTransform: "none",
+                              py: 1.5,
+                              px: 3,
+                              minWidth: 160,
+                              height: 48,
+                              fontWeight: 500,
+                              backgroundColor: "#0f2044",
+                              color: "white",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 1,
+                              position: "relative",
+                              overflow: "hidden",
+                              "&:hover": {
+                                backgroundColor: "#1a365d",
+                              },
+                            }}
+                          >
+                            <Fade in={updating} timeout={300} unmountOnExit>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  position: "absolute",
+                                }}
+                              >
+                                <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
+                                Saving...
+                              </Box>
+                            </Fade>
 
-                          <Fade in={!updating} timeout={300} unmountOnExit>
-                            <Box component="span">Save Changes</Box>
-                          </Fade>
-                        </Button>
-                      </Stack>
+                            <Fade in={!updating} timeout={300} unmountOnExit>
+                              <Box component="span">Save Changes</Box>
+                            </Fade>
+                          </Button>
+                        </Stack>
                       </Grid>
                     </Grid>
                   </Box>
@@ -1076,10 +1068,13 @@ const Account = () => {
                                         mr: 2,
                                       }}
                                     >
-                                      {console.log(
-                                        `Loading image for ${product.name}:`,
-                                        product.image
-                                      )}
+                                      {(() => {
+                                        console.log(
+                                          `Loading image for ${product.name}:`,
+                                          product.image
+                                        );
+                                        return null;
+                                      })()}
                                       <img
                                         src={
                                           getProductImageUrl(product) ||
@@ -1292,10 +1287,13 @@ const Account = () => {
                                       bgcolor: "grey.50",
                                     }}
                                   >
-                                    {console.log(
-                                      `Loading product card image for ${product.name}:`,
-                                      product.image
-                                    )}
+                                    {(() => {
+                                      console.log(
+                                        `Loading product card image for ${product.name}:`,
+                                        product.image
+                                      );
+                                      return null;
+                                    })()}
                                     <img
                                       src={
                                         getProductImageUrl(product) ||
@@ -1380,9 +1378,9 @@ const Account = () => {
                                               sx={{
                                                 color:
                                                   i <
-                                                  getConditionStars(
-                                                    product.condition
-                                                  )
+                                                    getConditionStars(
+                                                      product.condition
+                                                    )
                                                     ? "warning.main"
                                                     : "text.disabled",
                                                 fontSize: "0.8rem",
@@ -1646,9 +1644,9 @@ const Account = () => {
 
               {/* If there are no sold products */}
               {products.length > 0 &&
-              products.some(
-                (p) => p.status === "Sold" || p.status === "sold"
-              ) ? (
+                products.some(
+                  (p) => p.status === "Sold" || p.status === "sold"
+                ) ? (
                 <Grid container spacing={3}>
                   {products
                     .filter(
@@ -1761,7 +1759,7 @@ const Account = () => {
                                       sx={{
                                         color:
                                           i <
-                                          getConditionStars(product.condition)
+                                            getConditionStars(product.condition)
                                             ? "warning.main"
                                             : "text.disabled",
                                         fontSize: "0.8rem",
