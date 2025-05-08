@@ -38,7 +38,7 @@ A smart chat assistant for a college marketplace platform that helps users find 
 ## 🚀 Features
 
 - Natural language product search
-- Guided selling process
+- Generate product listings from images
 - Post-listing follow-up conversations
 - Product recommendations
 - OpenAI-powered chat interface
@@ -115,7 +115,7 @@ The API integration is implemented in `src/services/openaiService.js` and includ
 Users can:
 
 1. Search for products using natural language
-2. List items for sale through a guided chat flow
+2. Generate product listings from images
 3. Browse product recommendations
 4. Contact sellers about products
 5. Manage their listings
@@ -128,6 +128,10 @@ Users can:
 - Add multi-modal capabilities for image understanding
 - Implement fine-tuning for domain-specific improvements
 
+## 📹 Video Walkthrough
+
+Watch the walkthrough here: [YouTube Video](https://youtu.be/5FPOsDh9m3A)
+
 ## 📄 License
 
 MIT
@@ -135,17 +139,3 @@ MIT
 ## Project Status
 
 Project is: _Incomplete_
-
-## AI Product Creator
-
-The AI Product Creator is an integrated feature of our Marketplace Assistant chatbot that uses OpenAI Vision API to automatically generate product listings from images. Users can upload a photo of an item directly in the chat interface, and the AI will analyze it to generate a product title, description, suggested price, condition, and category.
-
-### Using the Image Analysis Feature
-
-1. Open the Marketplace Assistant chat interface in the app
-2. Click the camera icon in the chat input field
-3. Upload a product image
-4. The AI will analyze the image and generate product details
-5. Edit the details if needed and click "Create Listing"
-
-This seamless integration allows users to create listings without leaving the chat interface, making the selling process faster and more intuitive. The feature requires OpenAI API access to the `gpt-4-turbo` model.
