@@ -1,9 +1,12 @@
 # Spartan Marketplace
 
-## Table of Contents
+# Table of Contents
 
 - [General Info](#general-info)
 - [Technologies](#technologies)
+- [Final Report](#finalreport)
+- [Video Walkthrough](#videowalkthrough)
+- [Deployment](#deployment)
 - [Setup](#setup)
 - [Marketplace Assistant](#marketplace-assistant)
 - [Project Status](#project-status)
@@ -23,27 +26,15 @@ Spartan Marketplace is an exclusive online marketplace designed specifically for
 - Supabase
 - OpenAI
 
-## Setup
+## Final Report 
 
-- "npm install"
-- open two terminals
-- in the root directory terminal, do "npm start"
-- in one terminal, do "cd server", and then "nodemon server.js"
+Our final report of Spartan Marketplace: [Final Report](https://docs.google.com/document/d/1Sn_Q7ohpRkc4gQnwGkh3GCW2SYAUOVckiIAPf9azCJc/edit?usp=sharing) 
 
-# Marketplace Assistant
+## Video Walkthrough
 
-A smart chat assistant for a college marketplace platform that helps users find products, list items for sale, and interact naturally with the marketplace.
+Watch the walkthrough here: [YouTube Video](https://youtu.be/5FPOsDh9m3A)
 
-## 🚀 Features
-
-- Natural language product search
-- Generate product listings from images
-- Post-listing follow-up conversations
-- Product recommendations
-- OpenAI-powered chat interface
-- Supabase for authentication and database
-
-## 🌐 Deployment
+## Deployment
 
 Live Demo: [Spartan Marketplace](https://spartan-marketplace.onrender.com)
 
@@ -59,7 +50,27 @@ Note for Reviewers:
 - To test features like the AI-powered chat assistant, you'll need to create an account
 - While you can sign up and interact with the interface, please note this is a demo environment with sample data
 
-## 📋 Requirements
+## Setup
+
+- "npm install"
+- open two terminals
+- in the root directory terminal, do "npm start"
+- in one terminal, do "cd server", and then "nodemon server.js"
+
+# MARKETPLACE ASSISTANT
+
+A smart chat assistant for a college marketplace platform that helps users find products, list items for sale, and interact naturally with the marketplace.
+
+## Features
+
+- Natural language product search
+- Generate product listings from images
+- Post-listing follow-up conversations
+- Product recommendations
+- OpenAI-powered chat interface
+- Supabase for authentication and database
+
+## Requirements
 
 - Node.js 16+
 - React 18+
@@ -85,7 +96,7 @@ Note for Reviewers:
    npm start
    ```
 
-## 🧠 AI Implementation
+## AI Implementation
 
 The application uses OpenAI's API for:
 
@@ -100,7 +111,7 @@ The API integration is implemented in `src/services/openaiService.js` and includ
 - Error handling and fallbacks
 - Context-aware responses
 
-## 📦 Structure
+## Structure
 
 - `/src/services/openaiService.js` - OpenAI API integration
 - `/src/ui/components/ChatSearch/ChatInterface.js` - Main chat interface
@@ -109,7 +120,7 @@ The API integration is implemented in `src/services/openaiService.js` and includ
 - `/src/services` - API service modules
 - `/src/contexts` - React context providers
 
-## 📝 Usage
+## Usage
 
 Users can:
 
@@ -119,7 +130,7 @@ Users can:
 4. Contact sellers about products
 5. Manage their listings
 
-## 💡 Future Improvements
+## Future Improvements
 
 - Add streaming responses for better user experience
 - Implement message history persistence
@@ -127,14 +138,10 @@ Users can:
 - Add multi-modal capabilities for image understanding
 - Implement fine-tuning for domain-specific improvements
 
-## 📹 Video Walkthrough
-
-Watch the walkthrough here: [YouTube Video](https://youtu.be/5FPOsDh9m3A)
-
-## 📄 License
+## License
 
 MIT
 
 ## Project Status
 
-Project is: _Incomplete_
+Project is: _Complete!_
