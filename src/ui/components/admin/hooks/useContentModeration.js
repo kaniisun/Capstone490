@@ -16,7 +16,7 @@ export const useContentModeration = (
 
     try {
       // Update post status in database
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("open_board")
         .update({
           status: "flagged",
@@ -57,7 +57,7 @@ export const useContentModeration = (
 
     try {
       // Update post status in database
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("open_board")
         .update({
           status: "active",
@@ -98,7 +98,7 @@ export const useContentModeration = (
 
     try {
       // Update message status in database (matching the post flagging logic)
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("messages")
         .update({
           status: "flagged",
@@ -144,7 +144,7 @@ export const useContentModeration = (
 
     try {
       // Update message status in database (matching the post unflagging logic)
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("messages")
         .update({
           status: "active",

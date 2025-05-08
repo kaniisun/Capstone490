@@ -118,13 +118,6 @@ export const useAdminData = (setSnackbar) => {
         }
       };
 
-      // Calculate user statistics
-      const activeUsers =
-        userData?.filter((u) => u.accountStatus === "active") || [];
-      const suspendedUsers =
-        userData?.filter((u) => u.accountStatus === "suspended") || [];
-      const adminUsers = userData?.filter((u) => u.role === "admin") || [];
-
       // Update state with fetched data
       setUsers(userData || []);
       setPosts(postData || []);

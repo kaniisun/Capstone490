@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Alert, Typography, Paper } from "@mui/material";
+import { Box, Alert, Typography } from "@mui/material";
 
 const BasicTab = ({ title, infoMessage, keyPrefix }) => {
   return (

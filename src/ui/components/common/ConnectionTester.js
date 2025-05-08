@@ -9,7 +9,7 @@ function ConnectionTester() {
   const testConnection = async () => {
     try {
       // Try a simple query to test the connection
-      const { data, count, error } = await supabase
+      const { count, error } = await supabase
         .from("users")
         .select("*", { count: "exact", head: true });
 
@@ -53,7 +53,7 @@ function ConnectionTester() {
 
     // Test 2: Try to fetch public data
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("users")
         .select("count", { count: "exact", head: true });
 
@@ -64,7 +64,7 @@ function ConnectionTester() {
 
     // Test 3: Test auth functionality
     try {
-      const { data, error } = await supabase.auth.getSession();
+      const { error } = await supabase.auth.getSession();
       addTestResult("Auth Service", !error, error);
     } catch (error) {
       addTestResult("Auth Service", false, error);
@@ -182,7 +182,7 @@ function ConnectionTester() {
         </ol>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .connection-tester {
           max-width: 800px;
           margin: 0 auto;

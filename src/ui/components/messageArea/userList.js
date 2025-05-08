@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../../supabaseClient";
 import "./messages.css";
-import SearchIcon from "@mui/icons-material/Search";
 import Badge from "@mui/material/Badge";
 import MailIcon from "@mui/icons-material/Mail";
 import {
@@ -130,8 +129,7 @@ const UserList = ({
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
-          const { sender_id, receiver_id, created_at, conversation_id } =
-            payload.new;
+          const { sender_id, receiver_id, created_at } = payload.new;
 
           // If this message belongs to a conversation with the current user
           if (sender_id === currentUserID || receiver_id === currentUserID) {

@@ -141,14 +141,14 @@ const Sidebar = () => {
       <Divider />
 
       <List>
-        <ListItem button onClick={() => handleNavigate("/home")}>
+        <ListItem component="button" onClick={() => handleNavigate("/home")}>
           <ListItemIcon>
             <HomeIcon />
           </ListItemIcon>
           <ListItemText primary="Home" />
         </ListItem>
 
-        <ListItem button onClick={() => handleNavigate("/products")}>
+        <ListItem component="button" onClick={() => handleNavigate("/products")}>
           <ListItemIcon>
             <ViewListIcon />
           </ListItemIcon>
@@ -157,14 +157,14 @@ const Sidebar = () => {
 
         {isAuthenticated && (
           <>
-            <ListItem button onClick={() => handleNavigate("/messaging")}>
+            <ListItem component="button" onClick={() => handleNavigate("/messaging")}>
               <ListItemIcon>
                 <ChatIcon />
               </ListItemIcon>
               <ListItemText primary="Messages" />
             </ListItem>
 
-            <ListItem button onClick={() => handleNavigate("/notifications")}>
+            <ListItem component="button" onClick={() => handleNavigate("/notifications")}>
               <ListItemIcon>
                 <Badge badgeContent={3} color="secondary">
                   <NotificationsIcon />
@@ -173,42 +173,42 @@ const Sidebar = () => {
               <ListItemText primary="Notifications" />
             </ListItem>
 
-            <ListItem button onClick={() => handleNavigate("/orderhistory")}>
+            <ListItem component="button" onClick={() => handleNavigate("/orderhistory")}>
               <ListItemIcon>
                 <ShippingIcon />
               </ListItemIcon>
               <ListItemText primary="Orders" />
             </ListItem>
 
-            <ListItem button onClick={() => handleNavigate("/cart")}>
+            <ListItem component="button" onClick={() => handleNavigate("/cart")}>
               <ListItemIcon>
                 <ShoppingCartIcon />
               </ListItemIcon>
               <ListItemText primary="Cart" />
             </ListItem>
 
-            <ListItem button onClick={() => handleNavigate("/favorites")}>
+            <ListItem component="button" onClick={() => handleNavigate("/favorites")}>
               <ListItemIcon>
                 <FavoriteIcon />
               </ListItemIcon>
               <ListItemText primary="Favorites" />
             </ListItem>
 
-            <ListItem button onClick={() => handleNavigate("/uploadProduct")}>
+            <ListItem component="button" onClick={() => handleNavigate("/uploadProduct")}>
               <ListItemIcon>
                 <AddIcon />
               </ListItemIcon>
               <ListItemText primary="Sell Item" />
             </ListItem>
 
-            <ListItem button onClick={() => handleNavigate("/account")}>
+            <ListItem component="button" onClick={() => handleNavigate("/account")}>
               <ListItemIcon>
                 <PersonIcon />
               </ListItemIcon>
               <ListItemText primary="Account" />
             </ListItem>
 
-            <ListItem button onClick={handleLogout}>
+            <ListItem component="button" onClick={handleLogout}>
               <ListItemIcon>
                 <LogoutIcon />
               </ListItemIcon>
@@ -219,14 +219,14 @@ const Sidebar = () => {
 
         {!isAuthenticated && (
           <>
-            <ListItem button onClick={() => handleNavigate("/login")}>
+            <ListItem component="button" onClick={() => handleNavigate("/login")}>
               <ListItemIcon>
                 <LoginIcon />
               </ListItemIcon>
               <ListItemText primary="Login" />
             </ListItem>
 
-            <ListItem button onClick={() => handleNavigate("/register")}>
+            <ListItem component="button" onClick={() => handleNavigate("/register")}>
               <ListItemIcon>
                 <PersonAddIcon />
               </ListItemIcon>

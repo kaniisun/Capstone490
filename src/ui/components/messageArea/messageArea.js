@@ -7,19 +7,10 @@ import "./messages.css";
 import { Snackbar, Alert } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import {
-  shouldPreventMessage,
-  markMessageSent,
   trackDeletedMessage,
-  isMessageDeleted,
-  getDeletedMessageIds,
-  resetAllMessagePrevention,
   createProductInquiryMessage,
-  clearPreventionFlags,
 } from "./messageHelper";
-import { useSnackbar } from "notistack";
 
-
-// Create a local reference to the deletedMessageIds from messageHelper
 // to avoid the "not defined" errors
 let localDeletedMessageIds = new Set();
 
@@ -90,11 +81,11 @@ const customWindow = window;
 
 /**
  * MessageArea component for displaying and managing chat messages
- * @param {Object} props - Component props
- * @param {Object} props.user - Current user information
- * @param {Object} props.receiver - Receiver user information
- * @param {Function} props.onCloseChat - Function to close the chat
- * @param {Object} props.productDetails - Details about the product being discussed
+ * @param {Object} props  
+ * @param {Object} props.user 
+ * @param {Object} props.receiver 
+ * @param {Function} props.onCloseChat 
+ * @param {Object} props.productDetails 
  */
 const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
   const [messages, setMessages] = useState([]);
@@ -108,8 +99,6 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
   const inputRef = useRef(null); // Add reference to input element
 
   // Add ref for last sender to handle message grouping
-  // const lastSenderRef = useRef(null);
-  // const lastMessageTimeRef = useRef(null);
 
   const [showReportPopup, setShowReportPopup] = useState(false);
   const [selectedReasons, setSelectedReasons] = useState([]);
@@ -123,9 +112,7 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
   });
 
   // Add reset button state
-  const [showReset, setShowReset] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const { enqueueSnackbar } = useSnackbar();
 
   const reportReasons = [
     "Spam",
@@ -146,9 +133,8 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
 
     // Create unique session ID for this product conversation
     if (productDetails && receiver) {
-      const productSessionId = `${
-        productDetails.id || productDetails.productID
-      }_${receiver.userID}`;
+      const productSessionId = `${productDetails.id || productDetails.productID
+        }_${receiver.userID}`;
       productSessionRef.current = productSessionId;
 
       // Initialize this product session if it doesn't exist
@@ -162,10 +148,8 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
         };
 
         console.log(`Created new session for product: ${productSessionId}`);
-        setShowReset(false);
       } else {
         console.log(`Using existing session for product: ${productSessionId}`);
-        setShowReset(true);
       }
     }
   }, [productDetails, receiver]);
@@ -310,76 +294,6 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
     initializeLocalTracking();
   };
 
-  // Update setupRealTimeListener to ignore deleted messages
-  /* Keeping this function commented in case it's needed in the future
-  const setupRealTimeListener = useCallback(() => {
-    if (!userID || !receiver?.userID) return;
-
-    // Setup global variables on first run
-    setupGlobalVariables();
-
-    // Create unique channel key for this conversation
-    const channelKey = `messages:${userID}:${receiver.userID}`;
-
-    // Check if we're already subscribed to this channel
-    if (
-      customWindow.__activeChannels &&
-      customWindow.__activeChannels[channelKey]
-    ) {
-      console.log(
-        "Already subscribed to this channel, skipping duplicate subscription"
-      );
-      return;
-    }
-
-    console.log(
-      `Setting up real-time listener for messages between ${userID} and ${receiver.userID}`
-    );
-
-    // Mark channel as active
-    if (!customWindow.__activeChannels) customWindow.__activeChannels = {};
-    customWindow.__activeChannels[channelKey] = true;
-
-    const channel = supabase
-      .channel("public:messages")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `receiver_id=eq.${userID}`,
-        },
-        (payload) => {
-          console.log("New message received:", payload);
-
-          // Skip processing if the message is from a different sender
-          // than the one we're chatting with
-          if (payload.new.sender_id !== receiver.userID) return;
-
-          // Skip if the message was deleted (additional check)
-          if (isMessageDeleted(payload.new.id)) {
-            console.log("Ignoring deleted message:", payload.new.id);
-            return;
-          }
-
-          // Add new message to the messages list
-          setMessages((prevMessages) => [...prevMessages, payload.new]);
-        }
-      )
-      .subscribe();
-
-    // Cleanup function for useEffect
-    return () => {
-      console.log("Cleaning up real-time listener");
-      channel.unsubscribe();
-      if (customWindow.__activeChannels) {
-        delete customWindow.__activeChannels[channelKey];
-      }
-    };
-  }, [userID, receiver?.userID]);
-  */
-
   // Add effect to focus input field after navigation and message loading
   useEffect(() => {
     // Focus the input field after a short delay to ensure the component is fully rendered
@@ -410,9 +324,8 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
       }
 
       // Add transaction lock to prevent multiple simultaneous attempts
-      const lockKey = `sending_product_message_${userID}_${receiver.userID}_${
-        productDetails.id || productDetails.productID
-      }`;
+      const lockKey = `sending_product_message_${userID}_${receiver.userID}_${productDetails.id || productDetails.productID
+        }`;
       if (localStorage.getItem(lockKey) === "true") {
         console.log(
           "Another process is already sending the product message, skipping"
@@ -429,9 +342,8 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
         console.log("Product context from URL:", directProductContext);
 
         // Check localStorage for this specific product inquiry to prevent duplicates
-        const preventionKey = `product_inquiry_${userID}_${receiver.userID}_${
-          productDetails.id || productDetails.productID
-        }`;
+        const preventionKey = `product_inquiry_${userID}_${receiver.userID}_${productDetails.id || productDetails.productID
+          }`;
 
         if (localStorage.getItem(preventionKey)) {
           console.log(
@@ -695,7 +607,6 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
       setIsLoading(true);
 
       // Clear input and reply state immediately to improve UI responsiveness
-      const savedNewMessage = newMessage;
       const savedReplyTo = replyingTo;
       setNewMessage("");
       setReplyingTo(null);
@@ -898,8 +809,7 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
             }
           } else {
             console.log(
-              `Successfully marked message ${messageId} as deleted on attempt ${
-                attempt + 1
+              `Successfully marked message ${messageId} as deleted on attempt ${attempt + 1
               }`
             );
             isDeleted = true;
@@ -999,9 +909,8 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
         reported_item_id: messageIdentifier, // Using a smaller integer value
         report_type: "message",
         status: "open",
-        report: `${selectedReasons.join(", ")} | Message ID: ${
-          messageToReport.id
-        }`, // Include UUID in report text
+        report: `${selectedReasons.join(", ")} | Message ID: ${messageToReport.id
+          }`, // Include UUID in report text
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -1074,128 +983,8 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
     setTimeout(focusInput, 1500);
   }, [userID, receiver?.userID, fetchMessages]);
 
-  // Add reset session button for product-specific conversations
-  const resetProductSession = () => {
-    const productSessionId = productSessionRef.current;
-    if (
-      productSessionId &&
-      customWindow.__sessionsByProduct[productSessionId]
-    ) {
-      console.log(`Resetting session for product: ${productSessionId}`);
-
-      // Reset the session state
-      customWindow.__sessionsByProduct[productSessionId] = {
-        initialMessageSent: false,
-        processedMessageIds: new Set(),
-        fetchingMessages: false,
-        activeChannel: null,
-        messagesLoaded: false,
-      };
-
-      // Clear message prevention flags for this product
-      if (productDetails && receiver) {
-        resetAllMessagePrevention(userID, receiver.userID, productDetails);
-      }
-
-      // Reset refs and trigger fetch
-      initialMessageRef.current = false;
-      setMessages([]);
-      setShowReset(false);
-      fetchMessages();
-
-      setSnackbar({
-        open: true,
-        message: "Product session has been reset",
-        severity: "success",
-      });
-    }
-  };
-
-  // Handler for resetting message prevention for this product conversation
-  const handleResetConversation = () => {
-    if (!userID || !receiver?.userID || !productDetails) return;
-
-    resetAllMessagePrevention(userID, receiver.userID, productDetails);
-
-    // Reset window flags specific to this product
-    if (customWindow.__sessionsByProduct) {
-      const sessionKey = `${productDetails.id || ""}_${receiver.userID || ""}`;
-      if (customWindow.__sessionsByProduct[sessionKey]) {
-        delete customWindow.__sessionsByProduct[sessionKey];
-      }
-    }
-
-    if (customWindow.__sentProductMessages) {
-      const productKey = `${userID}_${receiver.userID}_${
-        productDetails.id || productDetails.productID
-      }`;
-      customWindow.__sentProductMessages.delete(productKey);
-    }
-
-    setShowResetConfirm(true);
-
-    // Refresh messages
-    fetchMessages();
-
-    enqueueSnackbar("Conversation reset successfully", {
-      variant: "success",
-      autoHideDuration: 3000,
-    });
-  };
-
-  // Function to check if there's a product inquiry message in the conversation
-  const hasProductInquiryMessage = useCallback(() => {
-    if (!productDetails || !messages || messages.length === 0) {
-      // When there are no messages but we're coming from a product page,
-      // we should still show the product header
-      if (productDetails && isProductContext() && messages.length === 0) {
-        return true;
-      }
-      return false;
-    }
-
-    const productName = productDetails.name;
-
-    // Check more thoroughly for product-related messages
-    return messages.some((msg) => {
-      // Check for standard inquiry text
-      if (
-        msg.content.includes("I'm interested in your") &&
-        msg.content.includes(productName)
-      ) {
-        return true;
-      }
-
-      // Check for product image
-      if (msg.content.includes("<img") && msg.content.includes(productName)) {
-        return true;
-      }
-
-      // Check for product mentions
-      if (
-        msg.content.includes(productName) &&
-        (msg.content.includes("product") ||
-          msg.content.includes("available") ||
-          msg.content.includes("interested"))
-      ) {
-        return true;
-      }
-
-      // Check for explicit product ID reference
-      if (
-        msg.product_id &&
-        (msg.product_id === productDetails.id ||
-          msg.product_id === productDetails.productID)
-      ) {
-        return true;
-      }
-
-      return false;
-    });
-  }, [messages, productDetails]);
-
   // Enhanced function to check if we're coming from a product page
-  const isProductContext = () => {
+  const isProductContext = useCallback(() => {
     // Cache check results to prevent re-running too often
     const cacheKey = "product_context_check";
     const lastCheckTime = parseInt(
@@ -1286,7 +1075,58 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
     }
 
     return isProductCtx;
-  };
+  }, [productDetails]);
+
+  // Function to check if there's a product inquiry message in the conversation
+  const hasProductInquiryMessage = useCallback(() => {
+    if (!productDetails || !messages || messages.length === 0) {
+      // When there are no messages but we're coming from a product page,
+      // we should still show the product header
+      if (productDetails && isProductContext() && messages.length === 0) {
+        return true;
+      }
+      return false;
+    }
+
+    const productName = productDetails.name;
+
+    // Check more thoroughly for product-related messages
+    return messages.some((msg) => {
+      // Check for standard inquiry text
+      if (
+        msg.content.includes("I'm interested in your") &&
+        msg.content.includes(productName)
+      ) {
+        return true;
+      }
+
+      // Check for product image
+      if (msg.content.includes("<img") && msg.content.includes(productName)) {
+        return true;
+      }
+
+      // Check for product mentions
+      if (
+        msg.content.includes(productName) &&
+        (msg.content.includes("product") ||
+          msg.content.includes("available") ||
+          msg.content.includes("interested"))
+      ) {
+        return true;
+      }
+
+      // Check for explicit product ID reference
+      if (
+        msg.product_id &&
+        (msg.product_id === productDetails.id ||
+          msg.product_id === productDetails.productID)
+      ) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [messages, productDetails, isProductContext]);
 
   // Add a function to permanently delete tracked messages from the database
   // using the trigger-based approach
@@ -1402,7 +1242,7 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
   }, [attemptPermanentDeletion]);
 
   // Add a function to help with message persistence monitoring
-  const logMessageState = (message, messageArray = messages) => {
+  const logMessageState = useCallback((message, messageArray = messages) => {
     console.log(`${message} - Current message count: ${messageArray.length}`);
     if (messageArray.length > 0) {
       console.log(
@@ -1411,15 +1251,15 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
         ].content.substring(0, 30)}...`
       );
     }
-  };
+  }, [messages]);
 
   // Add effect to safeguard against disappearing messages
   useEffect(() => {
     // When messages change, log the count
     logMessageState("Messages array updated");
 
-    // If we see an empty messages array but initialMessageRef says we sent something
-    // This could be a race condition where re-fetching cleared the temporary message
+    // Check if we have a product context and the initial message was sent
+   
     if (
       messages.length === 0 &&
       initialMessageRef.current &&
@@ -1440,7 +1280,7 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
         }
       }, 1000);
     }
-  }, [messages, productDetails]);
+  }, [messages, productDetails, isProductContext, logMessageState]);
 
   // Update fetchMessages with additional message persistence check
   useEffect(() => {
@@ -1469,9 +1309,8 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
       return;
 
     // Add a verification counter to localStorage to prevent infinite loops
-    const verificationCountKey = `verify_count_${userID}_${receiver.userID}_${
-      productDetails.id || productDetails.productID
-    }`;
+    const verificationCountKey = `verify_count_${userID}_${receiver.userID}_${productDetails.id || productDetails.productID
+      }`;
     const currentCount = parseInt(
       localStorage.getItem(verificationCountKey) || "0",
       10
@@ -1491,8 +1330,7 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
       // Set up periodic check with a longer timeout (2.5 seconds)
       const checkTimer = setTimeout(async () => {
         console.log(
-          `Running verification check for product message (attempt ${
-            currentCount + 1
+          `Running verification check for product message (attempt ${currentCount + 1
           })`
         );
 
@@ -1589,10 +1427,11 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
     messages.length,
     initialMessageRef.current,
     fetchMessages,
+    isProductContext,
   ]);
 
-  // Clean up the component by removing the CleanupButton and RequestDebouncer components
-  // and simplify the UI by removing the reset button from message input
+  // Render the message area with a header, messages, and input
+  // Show loading spinner if messages are being fetched
   return (
     <div className="message-area-chat">
       {receiver ? (
@@ -1643,9 +1482,8 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
               messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`message-area-message ${
-                    msg.sender_id === userID ? "sent" : "received"
-                  }`}
+                  className={`message-area-message ${msg.sender_id === userID ? "sent" : "received"
+                    }`}
                   data-temp={msg.is_temp === true ? "true" : "false"}
                 >
                   <div className="message-content">
@@ -1665,34 +1503,34 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
                     )}
                     {/* Render message content with HTML support - but don't show product image if header is already shown */}
                     {msg.content.includes("<div") ||
-                    msg.content.includes("<img") ? (
+                      msg.content.includes("<img") ? (
                       <div
                         className="message-content-html"
                         dangerouslySetInnerHTML={{
                           __html:
                             productDetails &&
-                            hasProductInquiryMessage() &&
-                            msg.content.includes(
-                              `Hi, I'm interested in your ${productDetails.name}`
-                            )
+                              hasProductInquiryMessage() &&
+                              msg.content.includes(
+                                `Hi, I'm interested in your ${productDetails.name}`
+                              )
                               ? // Remove all div/img tags related to product images
-                                msg.content
-                                  .replace(
-                                    /<div[^>]*style=["']margin-top[^>]*>[\s\S]*?<img[^>]*\/>[\s\S]*?<\/div>/g,
-                                    ""
-                                  )
-                                  .replace(
-                                    /<div[^>]*>[\s\S]*?<img[^>]*\/>[\s\S]*?<\/div>/g,
-                                    ""
-                                  )
-                                  .replace(
-                                    /Looking forward to your response!?/g,
-                                    ""
-                                  )
-                                  .replace(/\n+/g, "<br/>")
-                                  .replace(/<br\/><br\/>/g, "<br/>")
+                              msg.content
+                                .replace(
+                                  /<div[^>]*style=["']margin-top[^>]*>[\s\S]*?<img[^>]*\/>[\s\S]*?<\/div>/g,
+                                  ""
+                                )
+                                .replace(
+                                  /<div[^>]*>[\s\S]*?<img[^>]*\/>[\s\S]*?<\/div>/g,
+                                  ""
+                                )
+                                .replace(
+                                  /Looking forward to your response!?/g,
+                                  ""
+                                )
+                                .replace(/\n+/g, "<br/>")
+                                .replace(/<br\/><br\/>/g, "<br/>")
                               : // Keep original content for regular messages
-                                msg.content.replace(/\n/g, "<br/>"),
+                              msg.content.replace(/\n/g, "<br/>"),
                         }}
                       />
                     ) : (
@@ -1804,10 +1642,10 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
                 type="text"
                 placeholder={
                   productDetails &&
-                  productDetails.userID === receiver.userID &&
-                  messages.length === 0 &&
-                  isProductContext() &&
-                  !hasProductInquiryMessage()
+                    productDetails.userID === receiver.userID &&
+                    messages.length === 0 &&
+                    isProductContext() &&
+                    !hasProductInquiryMessage()
                     ? `Send a message about ${productDetails.name}...`
                     : "Type your message..."
                 }
@@ -1828,10 +1666,10 @@ const MessageArea = ({ user, receiver, onCloseChat, productDetails }) => {
                 disabled={!newMessage.trim()}
                 className={
                   productDetails &&
-                  productDetails.userID === receiver.userID &&
-                  messages.length === 0 &&
-                  isProductContext() &&
-                  !hasProductInquiryMessage()
+                    productDetails.userID === receiver.userID &&
+                    messages.length === 0 &&
+                    isProductContext() &&
+                    !hasProductInquiryMessage()
                     ? "product-message-button"
                     : ""
                 }

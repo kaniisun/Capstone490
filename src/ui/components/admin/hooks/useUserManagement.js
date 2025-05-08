@@ -174,7 +174,7 @@ export const useUserManagement = (
       const roleChanged = currentUser.role !== editedUser.role;
 
       // Update user info through API for fields like firstName, lastName, email
-      const { data: updateData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("users")
         .update({
           firstName: editedUser.firstName,

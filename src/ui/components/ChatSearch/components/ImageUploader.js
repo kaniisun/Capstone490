@@ -7,16 +7,12 @@ import {
   CircularProgress,
   TextField,
   Grid,
-  Card,
-  CardContent,
-  CardMedia,
   MenuItem,
   InputAdornment,
   Alert,
   AlertTitle,
 } from "@mui/material";
 import { supabase } from "../../../../supabaseClient.js";
-import API_CONFIG from "../../../../config/api.js";
 
 const ImageUploader = () => {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -184,7 +180,7 @@ const ImageUploader = () => {
         .substring(2, 15)}.${fileExt}`;
       const filePath = `${session.session.user.id}/${fileName}`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("product-images")
         .upload(filePath, selectedImage);
 
@@ -198,7 +194,7 @@ const ImageUploader = () => {
         .getPublicUrl(filePath);
 
       // Create product in database
-      const { data: productResponse, error: productError } = await supabase
+      const { error: productError } = await supabase
         .from("products")
         .insert([
           {

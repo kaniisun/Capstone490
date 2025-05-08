@@ -5,15 +5,12 @@ import Footer from "../footer/footer";
 import Home from "../home/home";
 import { Detail } from "../detail/detail";
 import Products from "../products/products";
-import { Cart } from "../cart/cart";
 import SearchResults from "../search/SearchResults";
 import SignUp from "../registration/SignUp";
 import Account from "../account/account";
 import UploadProduct from "../uploadproduct/uploadProduct";
-import Chatroom from "../chatroom/chatroom";
 import Editproduct from "../editproduct/editproduct";
 import Login from "../login/Login";
-import MessageArea from "../messageArea/messageArea";
 import MessageHome from "../messageArea/messageHome";
 import VerifySuccess from "../registration/VerifySuccess";
 import ConnectionTester from "../common/ConnectionTester";
@@ -25,32 +22,8 @@ import ProtectedRoute from "../auth/ProtectedRoute";
 import AdminRoute from "../auth/AdminRoute";
 import FixVerification from "../auth/FixVerification";
 import Favorites from "../favorites/Favorites";
-import { useAuth } from "../../../contexts/AuthContext";
 import AdminDashboard from "../admin/AdminDashboard";
 import AdminSetup from "../admin/AdminSetup";
-import TestAI from "../pages/TestAI";
-
-// Wrapper component for MessageArea that provides required props
-const MessageAreaWrapper = () => {
-  const { user } = useAuth();
-
-  // Default empty receiver or get from state/context if available
-  const receiver = { id: null, name: "Select a recipient" };
-
-  // Handler to close the chat
-  const handleCloseChat = () => {
-    // Add close chat logic if needed
-    console.log("Chat closed");
-  };
-
-  return (
-    <MessageArea
-      user={user || {}}
-      receiver={receiver}
-      onCloseChat={handleCloseChat}
-    />
-  );
-};
 
 function AppRoutes() {
   return (
@@ -81,26 +54,10 @@ function AppRoutes() {
 
         {/* Protected routes */}
         <Route
-          path="/cart"
-          element={
-            <ProtectedRoute>
-              <Cart />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/favorites"
           element={
             <ProtectedRoute>
               <Favorites />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/chatroom"
-          element={
-            <ProtectedRoute>
-              <Chatroom />
             </ProtectedRoute>
           }
         />
@@ -173,9 +130,6 @@ function AppRoutes() {
         <Route path="/connection-test" element={<ConnectionTester />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/update-password" element={<UpdatePassword />} />
-
-        {/* TestAI route */}
-        <Route path="/test-ai" element={<TestAI />} />
       </Routes>
       <Footer />
     </div>

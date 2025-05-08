@@ -1,4 +1,3 @@
-//filter.js
 //This is the filter component that allows the user to filter the products
 
 import React, { useState, useEffect } from "react";

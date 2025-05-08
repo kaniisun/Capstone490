@@ -10,9 +10,6 @@ const COUNTDOWN_INTERVAL = 1000;
 // How often to check if we should show the warning (twice per second for responsive checks)
 const CHECK_INTERVAL = 500;
 
-// How long before the session expires to show the warning (in milliseconds)
-const WARNING_BEFORE_TIMEOUT = 60000;
-
 // Function to find or create a DOM element for the portal
 const getOrCreatePortalRoot = () => {
   let portalRoot = document.getElementById("session-timeout-portal");
@@ -414,7 +411,7 @@ function SessionTimeoutModal() {
       window.removeEventListener("storage", handleStorageEvent);
       document.removeEventListener("sessionExpired", handleSessionExpired);
     };
-  }, []); // Empty dependency array - only run once
+  }, [checkSessionWarning, handleAutoLogout, showModal, startCountdownTimer]);
 
   // Update state when warning status changes
   useEffect(() => {
