@@ -8,7 +8,6 @@ import {
   Box,
   Button,
   Typography,
-  CircularProgress,
   Paper,
   IconButton,
   Alert,
@@ -26,7 +25,6 @@ import {
 } from "../../../../services/imageProcessingService";
 import { fileToBase64 } from "../../../../services/imageProcessingService";
 import { analyzeImage } from "../../../../services/apiService";
-import { supabase } from "../../../../supabaseClient.js";
 import LoadingOverlay from "./LoadingOverlay";
 
 // Default error timeout in ms
@@ -40,7 +38,6 @@ const ImageUploadUI = ({
   initialImage = null, // Add initialImage prop with default value
 }) => {
   // Component states
-  const [selectedFile, setSelectedFile] = useState(null);
   const [optimizedImage, setOptimizedImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -121,7 +118,7 @@ const ImageUploadUI = ({
           return;
         }
 
-        setSelectedFile(file);
+        setOptimizedImage(file);
         setProcessingStage("optimizing");
         setLoading(true);
         setProgress(10);
@@ -232,7 +229,6 @@ const ImageUploadUI = ({
         onImageAnalyzed(enhancedData);
 
         // Reset states
-        setSelectedFile(null);
         setOptimizedImage(null);
         setPreviewUrl(null);
         setProgress(0);
@@ -279,7 +275,6 @@ const ImageUploadUI = ({
   // Cancel upload
   const handleCancel = useCallback(() => {
     // Reset all states
-    setSelectedFile(null);
     setOptimizedImage(null);
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -303,7 +298,6 @@ const ImageUploadUI = ({
 
   // Reset the component
   const handleReset = useCallback(() => {
-    setSelectedFile(null);
     setOptimizedImage(null);
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);

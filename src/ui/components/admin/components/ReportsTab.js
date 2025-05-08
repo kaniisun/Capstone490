@@ -9,7 +9,6 @@ import {
   IconButton,
   Tabs,
   Tab,
-  Divider,
   Button,
   Badge,
   Dialog,
@@ -26,7 +25,6 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import BlockIcon from "@mui/icons-material/Block";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import PersonOffIcon from "@mui/icons-material/PersonOff";
-import InfoIcon from "@mui/icons-material/Info";
 import ReportItem from "./ReportItem";
 import { useReportManagement } from "../hooks/useReportManagement";
 

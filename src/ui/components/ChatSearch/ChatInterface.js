@@ -17,14 +17,11 @@ import {
   Card,
   useTheme,
   Tooltip,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  MenuItem,
-  InputAdornment,
 } from "@mui/material";
+import Grid from "@mui/material/Grid";
 import SendIcon from "@mui/icons-material/Send";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import PersonIcon from "@mui/icons-material/Person";
@@ -34,9 +31,9 @@ import AddPhotoAlternateIcon from "@mui/icons-material/AddPhotoAlternate";
 // Import our new components
 import ProductsDisplay from "./components/ProductsDisplay";
 import { extractProductsFromMessage } from "./utils/productParser";
+import ProductCard from "./components/ProductCard";
 // Import markdown renderer
 import Markdown from "markdown-to-jsx";
-import ProductCard from "./components/ProductCard";
 import API_CONFIG from "../../../config/api.js";
 import { markMessageSent } from "../messageArea/messageHelper";
 import ImageUploadUI from "./components/ImageUploadUI";

@@ -10,18 +10,9 @@ import {
   Stack,
 } from "@mui/material";
 import {
-  AccountCircle as AccountCircleIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Add as AddIcon,
-  Save as SaveIcon,
-  Lock as LockIcon,
-  LockReset as LockResetIcon,
-  Store as StoreIcon,
   LocalOffer as LocalOfferIcon,
   Category as CategoryIcon,
   Star as StarIcon,
-  Sell as Sell,
 } from "@mui/icons-material";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
@@ -73,11 +64,6 @@ export default function StoreProductCard({ product }) {
     setImageError(true);
     setImageLoading(false);
   };
-
-  const formatPrice = (price) =>
-    typeof price === "number"
-      ? `$${price.toFixed(2)}`
-      : `$${parseFloat(price).toFixed(2)}`;
 
   const imageUrl = imageError
     ? "/images/no-image.png"

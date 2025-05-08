@@ -3,7 +3,6 @@ import { supabase } from "../../../supabaseClient";
 import { useNavigate } from "react-router-dom";
 import "./uploadProduct.css";
 import {
-  getFormattedImageUrl,
   fixImageContentType,
 } from "../ChatSearch/utils/imageUtils";
 
@@ -12,7 +11,6 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
   Checkbox,
   Container,
   Divider,
@@ -23,14 +21,11 @@ import {
   InputAdornment,
   MenuItem,
   Paper,
-  Select,
   TextField,
   Typography,
   Alert,
   Snackbar,
-  IconButton,
   CircularProgress,
-  useTheme,
 } from "@mui/material";
 import {
   CloudUpload as CloudUploadIcon,
@@ -41,7 +36,6 @@ import {
 
 const UploadProduct = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
   const [userId, setUserId] = useState(null);
   const [product, setProduct] = useState({
     name: "",
@@ -237,7 +231,7 @@ const UploadProduct = () => {
         }
       }
 
-      const { data, error: productError } = await supabase
+      const { error: productError } = await supabase
         .from("products")
         .insert([
           {

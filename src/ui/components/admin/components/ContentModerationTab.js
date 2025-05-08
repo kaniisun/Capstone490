@@ -5,8 +5,6 @@ import {
   Alert,
   Paper,
   List,
-  ListItem,
-  ListItemText,
   Divider,
   FormControlLabel,
   Switch,
@@ -19,14 +17,12 @@ import {
   Card,
   CardContent,
   CircularProgress,
-  Tooltip,
   Chip,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ClearIcon from "@mui/icons-material/Clear";
 import FlagIcon from "@mui/icons-material/Flag";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import DeleteIcon from "@mui/icons-material/Delete";
 import ContentItem from "./ContentItem";
 import { supabase } from "../../../../supabaseClient";
 
@@ -656,7 +652,7 @@ const ContentModerationTab = ({
       );
       return [];
     }
-  }, [contentType, posts, privateMessages, showFlaggedPosts]);
+  }, [contentType, posts, privateMessages]);
 
   // Determine which content to display
   const displayedContent = showFlaggedPosts ? flaggedContent : activeContent;
@@ -1040,6 +1036,21 @@ const ContentModerationTab = ({
                       }}
                     >
                       Approve
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      onClick={() => handleDeletePrivateMessage(message)}
+                      sx={{
+                        fontSize: "0.75rem",
+                        py: 0.5,
+                        px: 1,
+                        minWidth: "60px",
+                        maxWidth: "80px",
+                      }}
+                    >
+                      Delete
                     </Button>
                   </Box>
                 </Card>
