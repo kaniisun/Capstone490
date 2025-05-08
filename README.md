@@ -4,8 +4,8 @@
 
 - [General Info](#general-info)
 - [Technologies](#technologies)
-- [Final Report](#finalreport)
-- [Video Walkthrough](#videowalkthrough)
+- [Final Report](#final-report)
+- [Video Walkthrough](#video-walkthrough)
 - [Deployment](#deployment)
 - [Setup](#setup)
 - [Marketplace Assistant](#marketplace-assistant)
