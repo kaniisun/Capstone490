@@ -7,7 +7,6 @@
 - [Setup](#setup)
 - [Marketplace Assistant](#marketplace-assistant)
 - [Project Status](#project-status)
-- [AI Product Creator](#ai-product-creator)
 
 
 ## General Info
