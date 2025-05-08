@@ -8,7 +8,6 @@ import {
   Chip,
   Divider,
   Avatar,
-  IconButton,
   Tooltip,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";

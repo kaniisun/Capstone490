@@ -111,6 +111,8 @@ const ProductsDisplay = ({ products, onContactSeller }) => {
               key={key}
               product={product}
               onContactClick={handleContactClick}
+              isFavoritesPage={false}
+              onRemoveFavorite={() => {}}
             />
           );
         })}

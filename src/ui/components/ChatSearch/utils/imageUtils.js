@@ -130,7 +130,7 @@ export async function fixNintendoSwitchImageContentType() {
     );
 
     // Re-upload the file with the correct content type
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("product-images")
       .upload(filePath, fileData, {
         upsert: true,
@@ -211,7 +211,7 @@ export async function fixImageContentType(imagePath) {
     );
 
     // Re-upload the file with the correct content type
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("product-images")
       .upload(filePath, fileData, {
         upsert: true,
@@ -278,9 +278,11 @@ export async function fixImageContentType(imagePath) {
   }
 }
 
-// Export default for convenience
-export default {
+// Create object for default export
+const imageUtils = {
   getProductImageUrl,
   getFormattedImageUrl,
   handleImageError,
 };
+
+export default imageUtils;

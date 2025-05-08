@@ -23,7 +23,6 @@ import ErrorIcon from "@mui/icons-material/Error";
 import HelpIcon from "@mui/icons-material/Help";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DnsIcon from "@mui/icons-material/Dns";
-import API_CONFIG from "../../../config/api.js";
 
 const AdminSetup = () => {
   // Form state
@@ -94,8 +93,6 @@ const AdminSetup = () => {
       try {
         // Check database connection - fix the count query
         const {
-          data,
-          count,
           error: dbError,
         } = await supabase
           .from("users")
@@ -108,8 +105,7 @@ const AdminSetup = () => {
         }));
 
         // Check auth connection
-        const { data: authData, error: authError } =
-          await supabase.auth.getSession();
+        const { error: authError } = await supabase.auth.getSession();
         setConnectionStatus((prev) => ({
           ...prev,
           auth: authError ? "error" : "success",

@@ -24,8 +24,6 @@ const EditUserDialog = ({
   onInputChange,
   onSave,
 }) => {
-  const isAdmin = currentUser?.role === "admin";
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>

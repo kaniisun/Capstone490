@@ -9,8 +9,6 @@ import {
   TextField,
   InputAdornment,
   IconButton,
-  FormControlLabel,
-  Switch,
   Tab,
   Tabs,
 } from "@mui/material";

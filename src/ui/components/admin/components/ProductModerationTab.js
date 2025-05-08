@@ -18,10 +18,6 @@ import {
   DialogContentText,
   DialogActions,
   Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   IconButton,
   Divider,
   Grid,
@@ -39,7 +35,6 @@ import { supabase } from "../../../../supabaseClient";
 import {
   getFormattedImageUrl,
   getProductImageUrl,
-  handleImageError,
 } from "../../ChatSearch/utils/imageUtils";
 import API_CONFIG from "../../../../config/api.js";
 
@@ -366,51 +361,6 @@ const ProductModerationTab = ({ setSnackbar }) => {
       case "pending":
       default:
         return "warning";
-    }
-  };
-
-  // Debug function to check product database directly - useful for troubleshooting
-  const checkProductsDatabase = async () => {
-    try {
-      console.log("Directly checking products database...");
-
-      const { data: allProducts, error: allError } = await supabase
-        .from("products")
-        .select("productID, name, status, moderation_status, userID")
-        .eq("is_deleted", false)
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      if (allError) {
-        console.error("Error checking all products:", allError);
-        return;
-      }
-
-      console.log("Latest 20 products:", allProducts);
-
-      // Check status distributions
-      if (allProducts && allProducts.length > 0) {
-        const moderationStatusCounts = {};
-        const statusCounts = {};
-
-        allProducts.forEach((product) => {
-          // Count moderation statuses
-          const modStatus = product.moderation_status || "null";
-          moderationStatusCounts[modStatus] =
-            (moderationStatusCounts[modStatus] || 0) + 1;
-
-          // Count availability statuses
-          const status = product.status || "null";
-          statusCounts[status] = (statusCounts[status] || 0) + 1;
-        });
-
-        console.log("Moderation status distribution:", moderationStatusCounts);
-        console.log("Status distribution:", statusCounts);
-      }
-
-      return allProducts;
-    } catch (error) {
-      console.error("Error in checkProductsDatabase:", error);
     }
   };
 
