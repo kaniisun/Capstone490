@@ -79,6 +79,6 @@ This project was developed as part of a capstone course at UNC Greensboro.
 ### 📊 Project Status
 Status: Complete for Academic Evaluation
 
-## 📄 License
+## License
 
 MIT
