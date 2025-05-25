@@ -1,147 +1,84 @@
 # Spartan Marketplace
 
-# Table of Contents
+An exclusive online marketplace for UNC Greensboro students, featuring AI-powered search and listing creation, plus a Reddit-style community board for campus discussions.
 
-- [General Info](#general-info)
-- [Technologies](#technologies)
-- [Final Report](#final-report)
-- [Video Walkthrough](#video-walkthrough)
-- [Deployment](#deployment)
-- [Setup](#setup)
-- [Marketplace Assistant](#marketplace-assistant)
-- [Project Status](#project-status)
+## Table of Contents
 
+- [Live Demo](#-live-demo)
+- [Test Account](#-test-account)
+- [Standout Features](#-standout-features)
+- [Technologies](#-technologies)
+- [How to Use](#-how-to-use)
+- [Perfect For](#-perfect-for)
+- [Academic Project](#-academic-project)
+- [License](#-license)
 
-## General Info
+## 🌐 Live Demo
 
-Spartan Marketplace is an exclusive online marketplace designed specifically for students at UNC Greensboro. Accessible only to users with a valid UNCG email address, this platform provides a secure and student-focused space for buying, selling, and engaging with the campus community. These all could be assisted with the help of our AI Chatbot, Marketplace Assistant.
+**Access the application:** [Spartan Marketplace](https://spartan-marketplace.onrender.com)
 
-## Technologies
+## 🔑 Test Account
 
-- React
-- NodeJS
-- HTML
-- CSS
-- Javascript
-- Supabase
-- OpenAI
+**Email:** `test@uncg.edu`  
+**Password:** `test123`
 
-## Final Report 
+Use this account to explore all features including the AI-powered chat assistant and community boards.
 
-Our final report of Spartan Marketplace: [Final Report](https://docs.google.com/document/d/1Sn_Q7ohpRkc4gQnwGkh3GCW2SYAUOVckiIAPf9azCJc/edit?usp=sharing) 
+## ⭐ Standout Features
 
-## Video Walkthrough
+### 🤖 AI Marketplace Assistant
+- **Natural Language Product Search** - Find products using conversational language
+- **Image-to-Listing Creation** - Upload photos and AI generates complete product listings
+- **Smart Chat Interface** - Powered by OpenAI's GPT-4 and Vision API
 
-Watch the walkthrough here: [YouTube Video](https://youtu.be/5FPOsDh9m3A)
+### 💬 Reddit-Style Community Board
+- **Campus Discussions** - Create threads and engage in conversations
+- **Voting System** - Upvote/downvote posts and comments
+- **Nested Comments** - Reply to specific comments for organized discussions
+- **Community Categories** - Organized spaces for different topics
 
-## Deployment
+### 🛒 Marketplace Features
+- **UNCG-exclusive access** - Only students with @uncg.edu emails
+- **Classic Listings Page** - Traditional form-based listing creation for users who prefer it
+- **Secure messaging** - Direct buyer-seller communication
+- **Product management** - Easy listing creation and editing
+- **Advanced search & filters** - Find exactly what you need
 
-Live Demo: [Spartan Marketplace](https://spartan-marketplace.onrender.com)
+## 🛠 Technologies
 
-The application is deployed using Render:
+- React & Node.js
+- Supabase (Database & Authentication)
+- OpenAI API (GPT-4 & Vision)
 
-- Frontend: https://spartan-marketplace.onrender.com
-- Backend API: https://marketplace-backend-8tag.onrender.com
+## 📝 How to Use
 
-Note for Reviewers:
+1. **Sign up** with your UNCG email or use the test account above
+2. **Browse the marketplace** or search using natural language
+3. **Create listings** 
+   - By uploading photos using image button in the chat assistant
+    - Use the classic listings page for traditional form-based creation
+4. **Join community discussions** on the board - ask questions, share experiences
+5. **Message other students** directly for buying/selling
+6. **Vote and engage** with community content
 
-- The site currently contains demo/sample data for evaluation purposes
-- You can explore the basic UI and landing page without signing up
-- To test features like the AI-powered chat assistant, you'll need to create an account
-- While you can sign up and interact with the interface, please note this is a demo environment with sample data
+## 🎯 Perfect For
 
-## Setup
+- **Buying & Selling** - Textbooks, electronics, furniture, and more
+- **Campus Community** - Ask questions, share tips, find study groups
+- **Quick Listings** - AI makes selling as easy as taking a photo
+- **Traditional Users** - Classic form interface for those who prefer it
 
-- "npm install"
-- open two terminals
-- in the root directory terminal, do "npm start"
-- in one terminal, do "cd server", and then "nodemon server.js"
+## 📚 Academic Project
 
-# MARKETPLACE ASSISTANT
+This project was developed as part of a capstone course at UNC Greensboro.
 
-A smart chat assistant for a college marketplace platform that helps users find products, list items for sale, and interact naturally with the marketplace.
+### 📋 Project Documentation
+- **Final Report** - [Spartan Marketplace Final Report](https://docs.google.com/document/d/1Sn_Q7ohpRkc4gQnwGkh3GCW2SYAUOVckiIAPf9azCJc/edit?tab=t.0)
+- **Video Walkthrough** - [Project Demo Video](https://www.youtube.com/watch?v=5FPOsDh9m3A)
 
-## Features
-
-- Natural language product search
-- Generate product listings from images
-- Post-listing follow-up conversations
-- Product recommendations
-- OpenAI-powered chat interface
-- Supabase for authentication and database
-
-## Requirements
-
-- Node.js 16+
-- React 18+
-- OpenAI API key
-- Supabase account
-
-## 🔧 Setup
-
-1. Clone the repository
-2. Install dependencies:
-   ```
-   npm install
-   ```
-3. Create a `.env` file in the root directory based on `.env.example`
-4. Add your OpenAI API key and Supabase credentials:
-   ```
-   REACT_APP_OPENAI_API_KEY=your-api-key-goes-here
-   REACT_APP_SUPABASE_URL=your-supabase-url
-   REACT_APP_SUPABASE_KEY=your-supabase-anon-key
-   ```
-5. Start the development server:
-   ```
-   npm start
-   ```
-
-## AI Implementation
-
-The application uses OpenAI's API for:
-
-- Natural language understanding of search queries
-- Extracting product information during the selling process
-- Analyzing user intent in post-listing interactions
-- Providing contextual responses based on conversation history
-
-The API integration is implemented in `src/services/openaiService.js` and includes:
-
-- Function calling capabilities to extract structured data
-- Error handling and fallbacks
-- Context-aware responses
-
-## Structure
-
-- `/src/services/openaiService.js` - OpenAI API integration
-- `/src/ui/components/ChatSearch/ChatInterface.js` - Main chat interface
-- `/public` - Static assets
-- `/src/models` - Data models and types
-- `/src/services` - API service modules
-- `/src/contexts` - React context providers
-
-## Usage
-
-Users can:
-
-1. Search for products using natural language
-2. Generate product listings from images
-3. Browse product recommendations
-4. Contact sellers about products
-5. Manage their listings
-
-## Future Improvements
-
-- Add streaming responses for better user experience
-- Implement message history persistence
-- Enhance product recommendations with collaborative filtering
-- Add multi-modal capabilities for image understanding
-- Implement fine-tuning for domain-specific improvements
+### 📊 Project Status
+Status: Complete for Academic Evaluation
 
 ## License
 
 MIT
-
-## Project Status
-
-Project is: _Complete!_
