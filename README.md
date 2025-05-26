@@ -17,6 +17,12 @@ An exclusive online marketplace for UNC Greensboro students, featuring AI-powere
 
 **Access the application:** [Spartan Marketplace](https://spartan-marketplace.onrender.com)
 
+## ⚠️ Disclaimer
+All listings, messages, and content shown in Spartan Marketplace are **for testing and demonstration purposes only**.  
+The platform was developed as part of a student capstone project and does **not host any real transactions or user data**.  
+Any product listings were generated using mock data or AI tools to showcase functionality.
+
+
 ## 🔑 Test Account
 
 **Email:** `test@uncg.edu`  
