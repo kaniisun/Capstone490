@@ -227,6 +227,26 @@ function Login() {
 
           <Box component="form" onSubmit={handleSubmit} noValidate>
             <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Box
+                  sx={{
+                    px: 1.5,
+                    py: 1,
+                    borderRadius: 1,
+                    textAlign: "center",
+                    border: `1px solid ${theme.palette.primary.main}44`,
+                    background: `linear-gradient(90deg, ${theme.palette.primary.main}1A, ${theme.palette.secondary.main}1A)`,
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{ color: theme.palette.text.primary, fontWeight: 700 }}
+                  >
+                    Test account: test@uncg.edu / test123
+                  </Typography>
+                </Box>
+              </Grid>
+
               {/* Email Field */}
               <Grid item xs={12}>
                 <TextField
