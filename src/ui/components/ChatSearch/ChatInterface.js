@@ -629,7 +629,12 @@ export default function ChatInterface() {
             response.statusText || "Unknown Error"
           }`,
         }));
-        throw new Error(errorData.message || `API Error: ${response.status}`);
+        // In development, show server's details (e.g. OpenAI error) so you can fix 500s
+        const msg =
+          errorData.details ||
+          errorData.message ||
+          `API Error: ${response.status}`;
+        throw new Error(msg);
       }
 
       debugLog("API response received");

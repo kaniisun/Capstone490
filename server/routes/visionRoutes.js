@@ -8,6 +8,22 @@ const router = express.Router();
 const { OpenAI } = require("openai");
 require("dotenv").config();
 
+// Helper: fetch image from URL and return as base64 data URL (OpenAI now requires data URLs)
+async function imageUrlToDataUrl(imageUrl) {
+  const response = await fetch(imageUrl, { method: "GET" });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+  }
+  const contentType = response.headers.get("content-type") || "image/jpeg";
+  const mime = contentType.split(";")[0].trim();
+  if (!mime.startsWith("image/")) {
+    throw new Error("URL did not return an image");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  return `data:${mime};base64,${base64}`;
+}
+
 // Initialize OpenAI client with error handling
 let openai;
 try {
@@ -89,26 +105,25 @@ router.post("/analyze", validateRequest, async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
+    // Build the image data URL: OpenAI now requires base64 data URLs, not plain HTTP URLs
+    let imageDataUrl;
+    if (image_url) {
+      imageDataUrl = await imageUrlToDataUrl(image_url);
+    } else if (image) {
+      imageDataUrl = `data:image/jpeg;base64,${image}`;
+    }
+
     // Prepare content for API call
     const content = [
       {
         type: "text",
         text: "Analyze this image and create a marketplace listing. Return a JSON object with these fields ONLY: name (short title), description (detailed but brief), price (numeric, USD), condition (one of: new, like_new, good, fair, poor), category (one of: electronics, furniture, textbooks, clothing, miscellaneous). IMPORTANT: Return ONLY the JSON object, no explanations or additional text.",
       },
+      {
+        type: "image_url",
+        image_url: { url: imageDataUrl },
+      },
     ];
-
-    // Add image content - prefer URL if provided
-    if (image_url) {
-      content.push({
-        type: "image_url",
-        image_url: { url: image_url },
-      });
-    } else if (image) {
-      content.push({
-        type: "image_url",
-        image_url: { url: `data:image/jpeg;base64,${image}` },
-      });
-    }
 
     // Make the OpenAI API call
     const result = await openai.chat.completions.create({
@@ -163,7 +178,9 @@ router.post("/analyze", validateRequest, async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Vision API error:", error);
+    // Log full error so you can see the real cause in the server terminal
+    console.error("Vision API error:", error.message);
+    console.error("Vision API error (full):", error);
 
     // Determine appropriate status code
     let statusCode = 500;
